@@ -132,6 +132,13 @@ Resources:
                   - bedrock-agentcore:ListEvents
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:memory/customersupport*
+              - Sid: BedrockKnowledgeBaseAccess
+                Effect: Allow
+                Action:
+                  - bedrock-agent-runtime:Retrieve
+                  - bedrock-agent-runtime:RetrieveAndGenerate
+                Resource:
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*
 
   GatewayAgentCoreRole:
     Type: AWS::IAM::Role
