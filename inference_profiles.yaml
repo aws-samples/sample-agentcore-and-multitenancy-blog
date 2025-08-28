@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Bedrock Inference Profiles for Multi-Tenant Cost Tracking'
+
+Resources:
+  # Basic Tenant Inference Profile - Claude 3.7 Sonnet (current model)
+  BasicTenantInferenceProfile:
+    Type: AWS::Bedrock::InferenceProfile
+    Properties:
+      InferenceProfileName: basic-tenant-profile
+      Description: Inference profile for basic tier tenants - Claude 3.7 Sonnet
+      ModelSource:
+        CopyFrom: us.anthropic.claude-3-7-sonnet-20250219-v1:0
+      Tags:
+        - Key: Tenant
+          Value: basic
+        - Key: Tier
+          Value: basic
+
+  # Premium Tenant Inference Profile - Claude 4 (most advanced model)
+  PremiumTenantInferenceProfile:
+    Type: AWS::Bedrock::InferenceProfile
+    Properties:
+      InferenceProfileName: premium-tenant-profile
+      Description: Inference profile for premium tier tenants - Claude 4
+      ModelSource:
+        CopyFrom: us.anthropic.claude-4-20250115-v1:0
+      Tags:
+        - Key: Tenant
+          Value: premium
+        - Key: Tier
+          Value: premium
+
+Outputs:
+  BasicInferenceProfileArn:
+    Description: ARN of the basic tenant inference profile
+    Value: !GetAtt BasicTenantInferenceProfile.InferenceProfileArn
+    
+  PremiumInferenceProfileArn:
+    Description: ARN of the premium tenant inference profile
+    Value: !GetAtt PremiumTenantInferenceProfile.InferenceProfileArn

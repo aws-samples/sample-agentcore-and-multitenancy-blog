@@ -1,0 +1,34 @@
+default_agent: customersupport
+agents:
+  customersupport:
+    name: customersupport
+    entrypoint: main.py
+    platform: linux/arm64
+    container_runtime: finch
+    aws:
+      execution_role: arn:aws:iam::962309198534:role/CustomerSupportStackInfra-RuntimeAgentCoreRole-ZvRf8KjwCMzZ
+      execution_role_auto_create: true
+      account: '962309198534'
+      region: us-east-1
+      ecr_repository: 962309198534.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-customersupport
+      ecr_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+      protocol_configuration:
+        server_protocol: HTTP
+      observability:
+        enabled: true
+    bedrock_agentcore:
+      agent_id: customersupport-ctReUmCdkw
+      agent_arn: arn:aws:bedrock-agentcore:us-east-1:962309198534:runtime/customersupport-ctReUmCdkw
+      agent_session_id: null
+    codebuild:
+      project_name: bedrock-agentcore-customersupport-builder
+      execution_role: arn:aws:iam::962309198534:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1-c11328f763
+      source_bucket: bedrock-agentcore-codebuild-sources-962309198534-us-east-1
+    authorizer_configuration:
+      customJWTAuthorizer:
+        discoveryUrl: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_JlX0bKAgU/.well-known/openid-configuration
+        allowedClients:
+        - 1amjs2urmd54i5hlerind8b7sg
+    oauth_configuration: null

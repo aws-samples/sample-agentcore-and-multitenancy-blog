@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Cognito User Pool with multi-tenancy support'
+
+Resources:
+  # User Pool with custom tenant_id attribute
+  MultiTenantUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: agentcore-multitenant-pool
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: tenant_id
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+          StringAttributeConstraints:
+            MinLength: 1
+            MaxLength: 50
+
+  # User Pool Client
+  MultiTenantUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref MultiTenantUserPool
+      ClientName: agentcore-multitenant-client
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - http://localhost:8501/
+      LogoutURLs:
+        - http://localhost:8501/
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+      ReadAttributes:
+        - email
+        - custom:tenant_id
+      WriteAttributes:
+        - email
+        - custom:tenant_id
+
+  # User Pool Domain
+  MultiTenantUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub 'agentcore-multitenant-${AWS::AccountId}'
+      UserPoolId: !Ref MultiTenantUserPool
+
+Outputs:
+  UserPoolId:
+    Value: !Ref MultiTenantUserPool
+  UserPoolClientId:
+    Value: !Ref MultiTenantUserPoolClient
+  UserPoolDomain:
+    Value: !Sub 'https://agentcore-multitenant-${AWS::AccountId}.auth.us-east-1.amazoncognito.com'

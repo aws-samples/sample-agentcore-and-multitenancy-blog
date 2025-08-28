@@ -1,0 +1,211 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'API Gateway with throttling for AgentCore multitenancy'
+
+Parameters:
+  LambdaCodeBucket:
+    Type: String
+    Description: S3 bucket containing Lambda code
+  LambdaCodeKey:
+    Type: String
+    Description: S3 key for Lambda code zip file
+    Default: api_gateway_lambda.zip
+
+Resources:
+  # Lambda Function
+  AgentCoreProxyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: agentcore-api-gateway-proxy
+      Runtime: python3.11
+      Handler: api_gateway_lambda.lambda_handler
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Ref LambdaCodeKey
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 120
+
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAgentCoreAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeAgent
+                  - bedrock-agentcore:*
+                Resource: '*'
+
+  # API Gateway
+  AgentCoreApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: agentcore-multitenant-api
+      Description: API Gateway for AgentCore with tenant throttling
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # API Gateway Resource
+  AgentCoreResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AgentCoreApiGateway
+      ParentId: !GetAtt AgentCoreApiGateway.RootResourceId
+      PathPart: 'runtimes'
+
+  AgentArnResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AgentCoreApiGateway
+      ParentId: !Ref AgentCoreResource
+      PathPart: '{proxy+}'
+
+  # API Gateway Method
+  AgentCoreMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AgentCoreApiGateway
+      ResourceId: !Ref AgentArnResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      ApiKeyRequired: true  # Enable API key requirement
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AgentCoreProxyLambda.Arn}/invocations'
+
+  # Lambda Permission for API Gateway
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AgentCoreProxyLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AgentCoreApiGateway}/*/*'
+
+  # Usage Plans for Tenant Throttling
+  BasicTenantUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: basic-tenant-plan
+      Description: Basic tenant with 100 requests per minute
+      Throttle:
+        RateLimit: 100
+        BurstLimit: 200
+      ApiStages:
+        - ApiId: !Ref AgentCoreApiGateway
+          Stage: !Ref ApiGatewayStage
+
+  PremiumTenantUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: premium-tenant-plan
+      Description: Premium tenant with 1000 requests per minute
+      Throttle:
+        RateLimit: 1000
+        BurstLimit: 2000
+      ApiStages:
+        - ApiId: !Ref AgentCoreApiGateway
+          Stage: !Ref ApiGatewayStage
+
+  # API Gateway Deployment
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: AgentCoreMethod
+    Properties:
+      RestApiId: !Ref AgentCoreApiGateway
+
+  # API Gateway Stage
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref AgentCoreApiGateway
+      DeploymentId: !Ref ApiGatewayDeployment
+      StageName: prod
+
+  # Usage Plans for demo - very low limits to show throttling
+  PremiumUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: premium-tier-demo
+      Description: Premium tier for demo - higher limits
+      Throttle:
+        RateLimit: 2    # 2 requests per second
+        BurstLimit: 5   # 5 burst requests
+      Quota:
+        Limit: 20       # 20 requests per day
+        Period: DAY
+      ApiStages:
+        - ApiId: !Ref AgentCoreApiGateway
+          Stage: prod
+
+  BasicUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: basic-tier-demo
+      Description: Basic tier for demo - very low limits
+      Throttle:
+        RateLimit: 0.5  # 1 request per 2 seconds
+        BurstLimit: 2   # 2 burst requests
+      Quota:
+        Limit: 5        # 5 requests per day
+        Period: DAY
+      ApiStages:
+        - ApiId: !Ref AgentCoreApiGateway
+          Stage: prod
+
+  # API Keys for tenants
+  PremiumApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: premium-tenant-key
+      Description: API Key for premium tenants
+      Enabled: true
+
+  BasicApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: basic-tenant-key
+      Description: API Key for basic tenants
+      Enabled: true
+
+  # Link API Keys to Usage Plans
+  PremiumUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref PremiumApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref PremiumUsagePlan
+
+  BasicUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref BasicApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref BasicUsagePlan
+
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${AgentCoreApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiGatewayUrl'
+  PremiumApiKey:
+    Description: Premium API Key
+    Value: !Ref PremiumApiKey
+  BasicApiKey:
+    Description: Basic API Key  
+    Value: !Ref BasicApiKey
