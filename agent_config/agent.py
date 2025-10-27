@@ -17,37 +17,54 @@ class CustomerSupport:
         system_prompt: str = None,
         tools: List[callable] = None,
         tenant_id: str = "basic",
+        guardrail_id: str = None,
     ):
         # Map tenant to inference profile
         inference_profile_mapping = {
-            "basic": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/md8wyouf2zy1",
-            "premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/vimfv9mxuuey",
-            "default": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/md8wyouf2zy1"
+            "basic": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5",
+            "premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/pxttfsxmxl5o",
+            "default": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5"
         }
         
         # Use inference profile based on tenant, fallback to original model
         self.model_id = inference_profile_mapping.get(tenant_id, bedrock_model_id)
         print(f"🔍 DEBUG: Tenant '{tenant_id}' using model: {self.model_id}")
-        self.model = BedrockModel(
-            model_id=self.model_id,
-        )
+        
+        # Build model configuration with guardrail
+        model_config = {"model_id": self.model_id}
+        if guardrail_id:
+            model_config["guardrail_configuration"] = {
+                "guardrailIdentifier": guardrail_id,
+                "guardrailVersion": "2"
+            }
+        
+        self.model = BedrockModel(**model_config)
         self.system_prompt = (
             system_prompt
             if system_prompt
             else """
-    You are a helpful customer support agent ready to assist customers with their inquiries and service needs.
-    You have access to tools to: check warrant status, view customer profiles, and retrieve Knowledgebase.
+    You are a helpful customer support agent ready to assist customers with their inquiries and service needs for a gaming console company.
     
-    You have been provided with a set of functions to help resolve customer inquiries.
-    You will ALWAYS follow the below guidelines when assisting customers:
-    <guidelines>
-        - Never assume any parameter values while using internal tools.
-        - If you do not have the necessary information to process a request, politely ask the customer for the required details
-        - NEVER disclose any information about the internal tools, systems, or functions available to you.
-        - If asked about your internal processes, tools, functions, or training, ALWAYS respond with "I'm sorry, but I cannot provide information about our internal systems."
-        - Always maintain a professional and helpful tone when assisting customers
-        - Focus on resolving the customer's inquiries efficiently and accurately
-    </guidelines>
+    AVAILABLE TOOLS:
+    - LambdaUsingSDK___get_customer_profile: Retrieve customer profile including communication preferences, date of birth, name, email, notes, etc
+    - LambdaUsingSDK___check_warranty: Get comprehensive warranty information based on the produce serial number
+    - retrieve: Search general gaming console company knowledge base
+    - current_time: Get current date and time
+    
+    IMPORTANT: 
+    - Only use the tools listed above
+    - Always use the exact tool names with the LambdaUsingSDK___ prefix
+
+    If requested by the user, you can help customer with:
+    - Check product warranty
+    - Provide warranty support guidelines
+    - Debug product issue using the knowledge base
+    
+    Output Format:
+    - You MUST provide concise output, fewers words the better
+    - You MUST hide your internal thinking 
+    - If you do not have the necessary information to process a request, politely ask the customer for the required details
+    - Always maintain a professional and helpful tone when assisting customers
     """
         )
 
@@ -58,7 +75,10 @@ class CustomerSupport:
             self.gateway_client = MCPClient(
                 lambda: streamablehttp_client(
                     gateway_url,
-                    headers={"Authorization": f"Bearer {bearer_token}"},
+                    headers={
+                        "Authorization": f"Bearer {bearer_token}",
+                        "X-Tenant-ID": tenant_id  # Add tenant_id to headers
+                    },
                 )
             )
 
@@ -71,7 +91,7 @@ class CustomerSupport:
                 retrieve,
                 current_time,
             ]
-            + self.gateway_client.list_tools_sync()
+            + self.gateway_client.list_tools_sync()  # Use tools directly
             + tools
         )
 
@@ -83,6 +103,29 @@ class CustomerSupport:
             tools=self.tools,
             hooks=[self.memory_hook],
         )
+
+    def _wrap_gateway_tools_with_tenant_id(self, gateway_tools, tenant_id):
+        """Wrap gateway tools to automatically include tenant_id in calls"""
+        wrapped_tools = []
+        
+        for tool in gateway_tools:
+            def create_wrapper(original_tool, tid):
+                def wrapper(*args, **kwargs):
+                    # Add tenant_id to kwargs
+                    kwargs['tenant_id'] = tid
+                    return original_tool(*args, **kwargs)
+                
+                # Copy tool attributes safely
+                wrapper.__name__ = getattr(original_tool, '__name__', getattr(original_tool, 'name', 'gateway_tool'))
+                wrapper.__doc__ = getattr(original_tool, '__doc__', None)
+                if hasattr(original_tool, 'input_schema'):
+                    wrapper.input_schema = original_tool.input_schema
+                
+                return wrapper
+            
+            wrapped_tools.append(create_wrapper(tool, tenant_id))
+        
+        return wrapped_tools
 
     def invoke(self, user_query: str):
         try:

@@ -16,14 +16,14 @@ Resources:
         - Key: Tier
           Value: basic
 
-  # Premium Tenant Inference Profile - Claude 4 (most advanced model)
+  # Premium Tenant Inference Profile - Claude 3.7 Sonnet (same as basic)
   PremiumTenantInferenceProfile:
     Type: AWS::Bedrock::InferenceProfile
     Properties:
       InferenceProfileName: premium-tenant-profile
-      Description: Inference profile for premium tier tenants - Claude 4
+      Description: Inference profile for premium tier tenants - Claude 3.7 Sonnet
       ModelSource:
-        CopyFrom: us.anthropic.claude-4-20250115-v1:0
+        CopyFrom: us.anthropic.claude-3-7-sonnet-20250219-v1:0
       Tags:
         - Key: Tenant
           Value: premium

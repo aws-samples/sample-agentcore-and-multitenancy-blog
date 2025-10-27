@@ -25,8 +25,17 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         print(f"Proxy path (decoded): {decoded_proxy_path}")
         
         # Extract agent_arn from proxy path (format: agent_arn/invocations)
-        agent_arn = decoded_proxy_path.replace('/invocations', '')
-        print(f"Agent ARN: {agent_arn}")
+        original_agent_arn = decoded_proxy_path.replace('/invocations', '')
+        print(f"Original Agent ARN: {original_agent_arn}")
+        
+        # Route to appropriate agent based on tenant_id
+        if tenant_id == "premium":
+            # Replace with premium agent ARN
+            agent_arn = "arn:aws:bedrock-agentcore:us-east-1:962309198534:runtime/customersupport_premium-whZNC75vlw"
+            print(f"Routing premium tenant to: {agent_arn}")
+        else:
+            agent_arn = original_agent_arn
+            print(f"Routing basic tenant to: {agent_arn}")
         
         session_id = event['headers'].get('X-Amzn-Bedrock-AgentCore-Runtime-Session-Id')
         bearer_token = event['headers'].get('Authorization', '').replace('Bearer ', '')
