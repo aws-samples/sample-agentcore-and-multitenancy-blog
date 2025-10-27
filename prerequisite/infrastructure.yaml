@@ -135,8 +135,8 @@ Resources:
               - Sid: BedrockKnowledgeBaseAccess
                 Effect: Allow
                 Action:
-                  - bedrock-agent-runtime:Retrieve
-                  - bedrock-agent-runtime:RetrieveAndGenerate
+                  - bedrock:Retrieve
+                  - bedrock:RetrieveAndGenerate
                 Resource:
                   - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*
 
@@ -228,6 +228,45 @@ Resources:
         - Key: CostCenter
           Value: CustomerSupport
 
+  # Premium Financial Tables
+  ClientProfileTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-ClientProfiles"
+      AttributeDefinitions:
+        - AttributeName: client_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: client_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      Tags:
+        - Key: Tenant
+          Value: premium
+        - Key: Application
+          Value: CustomerSupport
+
+  PortfolioTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-Portfolios"
+      AttributeDefinitions:
+        - AttributeName: client_id
+          AttributeType: S
+        - AttributeName: portfolio_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: client_id
+          KeyType: HASH
+        - AttributeName: portfolio_id
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      Tags:
+        - Key: Tenant
+          Value: premium
+        - Key: Application
+          Value: CustomerSupport
+
   # Lambda function to populate synthetic data
   PopulateDataFunction:
     Type: AWS::Lambda::Function
@@ -252,9 +291,19 @@ Resources:
                       dynamodb = boto3.resource('dynamodb')
                       warranty_table_name = event['ResourceProperties']['WarrantyTableName']
                       customer_table_name = event['ResourceProperties']['CustomerTableName']
+                      client_table_name = event['ResourceProperties'].get('ClientTableName')
+                      portfolio_table_name = event['ResourceProperties'].get('PortfolioTableName')
 
                       warranty_table = dynamodb.Table(warranty_table_name)
                       customer_table = dynamodb.Table(customer_table_name)
+                      
+                      # Initialize premium tables if provided
+                      client_table = None
+                      portfolio_table = None
+                      if client_table_name:
+                          client_table = dynamodb.Table(client_table_name)
+                      if portfolio_table_name:
+                          portfolio_table = dynamodb.Table(portfolio_table_name)
 
                       # Customer profile data
                       customer_data = [
@@ -496,6 +545,80 @@ Resources:
 
                       print(f"Successfully populated {len(customer_data)} customer profiles")
                       print(f"Successfully populated {len(warranty_data)} warranty records")
+                      
+                      # Populate premium financial data if tables exist
+                      if client_table and portfolio_table:
+                          # Financial client data
+                          client_data = [
+                              {
+                                  'client_id': 'CLIENT001',
+                                  'name': 'Sarah Johnson',
+                                  'risk_profile': 'Conservative',
+                                  'assets_under_management': '2500000.00',
+                                  'last_meeting': '2024-08-15',
+                                  'advisor': 'Michael Chen'
+                              },
+                              {
+                                  'client_id': 'CLIENT002', 
+                                  'name': 'Robert Williams',
+                                  'risk_profile': 'Aggressive',
+                                  'assets_under_management': '5200000.00',
+                                  'last_meeting': '2024-08-20',
+                                  'advisor': 'Jennifer Davis'
+                              }
+                          ]
+                          
+                          # Portfolio data
+                          portfolio_data = [
+                              {
+                                  'client_id': 'CLIENT001',
+                                  'portfolio_id': 'PORT001',
+                                  'portfolio_name': 'Conservative Growth',
+                                  'current_value': '1500000.00',
+                                  'ytd_return': '8.5%',
+                                  'risk_level': 'Low'
+                              },
+                              {
+                                  'client_id': 'CLIENT001',
+                                  'portfolio_id': 'PORT002', 
+                                  'portfolio_name': 'Bond Portfolio',
+                                  'current_value': '1000000.00',
+                                  'ytd_return': '4.2%',
+                                  'risk_level': 'Very Low'
+                              },
+                              {
+                                  'client_id': 'CLIENT002',
+                                  'portfolio_id': 'PORT003',
+                                  'portfolio_name': 'Growth Equity',
+                                  'current_value': '3200000.00', 
+                                  'ytd_return': '15.3%',
+                                  'risk_level': 'High'
+                              },
+                              {
+                                  'client_id': 'CLIENT002',
+                                  'portfolio_id': 'PORT004',
+                                  'portfolio_name': 'Tech Innovation',
+                                  'current_value': '2000000.00',
+                                  'ytd_return': '22.1%',
+                                  'risk_level': 'Very High'
+                              }
+                          ]
+                          
+                          # Insert client data
+                          with client_table.batch_writer() as batch:
+                              for item in client_data:
+                                  item = json.loads(json.dumps(item), parse_float=Decimal)
+                                  batch.put_item(Item=item)
+                          
+                          # Insert portfolio data  
+                          with portfolio_table.batch_writer() as batch:
+                              for item in portfolio_data:
+                                  item = json.loads(json.dumps(item), parse_float=Decimal)
+                                  batch.put_item(Item=item)
+                          
+                          print(f"Successfully populated {len(client_data)} client profiles")
+                          print(f"Successfully populated {len(portfolio_data)} portfolio records")
+                      
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
 
                   else:
@@ -545,9 +668,13 @@ Resources:
       ServiceToken: !GetAtt PopulateDataFunction.Arn
       WarrantyTableName: !Ref WarrantyTable
       CustomerTableName: !Ref CustomerProfileTable
+      ClientTableName: !Ref ClientProfileTable
+      PortfolioTableName: !Ref PortfolioTable
     DependsOn:
       - WarrantyTable
       - CustomerProfileTable
+      - ClientProfileTable
+      - PortfolioTable
 
   # Lambda target
   CustomerSupportLambdaRole:
@@ -616,6 +743,12 @@ Resources:
       PackageType: Zip
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          CUSTOMER_PROFILE_TABLE: !Ref CustomerProfileTable
+          WARRANTY_TABLE: !Ref WarrantyTable
+          CLIENT_PROFILE_TABLE: !Ref ClientProfileTable
+          PORTFOLIO_TABLE: !Ref PortfolioTable
 
   # SSM Parameter to store warranty table name
   WarrantyTableNameParameter:
@@ -636,6 +769,27 @@ Resources:
       Type: String
       Value: !Ref CustomerProfileTable
       Description: DynamoDB table name for customer profiles
+      Tags:
+        Application: CustomerSupport
+
+  # SSM Parameters for Premium Financial Tables
+  ClientProfileTableNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/customersupport/dynamodb/client_profile_table_name
+      Type: String
+      Value: !Ref ClientProfileTable
+      Description: DynamoDB table name for financial client profiles
+      Tags:
+        Application: CustomerSupport
+
+  PortfolioTableNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/customersupport/dynamodb/portfolio_table_name
+      Type: String
+      Value: !Ref PortfolioTable
+      Description: DynamoDB table name for client portfolios
       Tags:
         Application: CustomerSupport
 

@@ -1,4 +1,5 @@
 import json
+import re
 import time
 import uuid
 import urllib.parse
@@ -7,6 +8,15 @@ import requests
 import streamlit as st
 from scripts.utils import read_config, get_aws_region
 from .utils import make_urls_clickable, create_safe_markdown_text
+
+
+def remove_thinking_tags(text):
+    """Remove <thinking>...</thinking> content from the response"""
+    # Remove thinking tags and their content using regex
+    cleaned_text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # Clean up any extra whitespace
+    cleaned_text = re.sub(r'\n\s*\n', '\n\n', cleaned_text.strip())
+    return cleaned_text
 
 
 class ChatManager:
@@ -93,7 +103,16 @@ class ChatManager:
             print(f"DEBUG: Response headers: {dict(response.headers)}")
             
             if response.status_code != 200:
-                yield f"API Gateway error: {response.status_code} - {response.text}"
+                if response.status_code == 429:
+                    yield "⚠️ You have exceeded your weekly quota. Please wait for the quota to reset or contact your account manager to explore options if you would like to use the service now."
+                elif response.status_code == 403:
+                    yield "🔒 Access denied. Please check your permissions or contact support."
+                elif response.status_code == 500:
+                    yield "🛠️ We're experiencing technical difficulties. Please try again in a few moments."
+                elif response.status_code == 504:
+                    yield "⏱️ The request is taking longer than expected. Please try again with a shorter message."
+                else:
+                    yield f"❌ Service temporarily unavailable (Error {response.status_code}). Please try again later."
                 return
                 
             # Debug: Print first chunk of response
@@ -208,7 +227,7 @@ class ChatManager:
                     if chunk_count % 3 == 0:
                         accumulated_response += ""
 
-                    clickable_streaming_text = make_urls_clickable(accumulated_response)
+                    clickable_streaming_text = make_urls_clickable(remove_thinking_tags(accumulated_response))
 
                     create_safe_markdown_text(
                         f'<div class="assistant-bubble streaming typing-cursor">🤖 {clickable_streaming_text}</div>',
@@ -221,7 +240,7 @@ class ChatManager:
                     time.sleep(0.02)
 
             elapsed = time.time() - start_time
-            clickable_streaming_text = make_urls_clickable(accumulated_response)
+            clickable_streaming_text = make_urls_clickable(remove_thinking_tags(accumulated_response))
 
             create_safe_markdown_text(
                 f'<div class="assistant-bubble">🤖 {clickable_streaming_text}<br><span style="font-size:0.9em;color:#888;">⏱️ Response time: {elapsed:.2f} seconds</span></div>',
@@ -231,7 +250,7 @@ class ChatManager:
             st.session_state.messages.append(
                 {
                     "role": "assistant",
-                    "content": accumulated_response,
+                    "content": remove_thinking_tags(accumulated_response),
                     "elapsed": elapsed,
                 }
             )

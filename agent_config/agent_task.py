@@ -38,6 +38,7 @@ async def agent_task(user_message: str, session_id: str, actor_id: str):
                 memory_hook=memory_hook,
                 tenant_id=tenant_id,  # Pass tenant_id to agent
                 tools=[get_calendar_events_today, create_calendar_event],
+                guardrail_id=get_ssm_parameter("/app/customersupport/agentcore/basic_guardrail_id"),
             )
 
             CustomerSupportContext.set_agent_ctx(agent)
