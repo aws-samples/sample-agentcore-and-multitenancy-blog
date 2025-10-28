@@ -1,308 +1,194 @@
-# Customer Support Agent
+# Multi-Tenant Customer Support with Amazon Bedrock AgentCore
 
-> [!IMPORTANT]
-> The examples provided in this repository are for experimental and educational purposes only. They demonstrate concepts and techniques but are not intended for direct use in production environments.
+A sophisticated multi-tenant AI customer support system built on Amazon Bedrock AgentCore, demonstrating complete tenant isolation across two distinct business domains: gaming console support and financial services.
 
-This is a customer support agent implementation using AWS Bedrock AgentCore framework. The system provides an AI-powered customer support interface with capabilities for warranty checking, customer profile management, Google calendar integration, and Amazon Bedrock Knowledge Base retrieval.
+## 🏗️ Architecture Overview
 
-![architecture](./images/architecture.png)
+This project showcases advanced multi-tenancy patterns in AI agent systems, featuring:
 
-## Table of Contents
+- **Complete Tenant Isolation**: Separate agents, knowledge bases, and tools per tenant
+- **Domain-Specific Intelligence**: Gaming console support vs. financial advisory services  
+- **Dynamic Resource Management**: Account-agnostic deployment with automatic configuration
+- **Scalable Infrastructure**: Serverless architecture with AgentCore runtime
 
-- [Customer Support Agent](#customer-support-agent)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-    - [AWS Account Setup](#aws-account-setup)
-  - [Deploy](#deploy)
-  - [Sample Queries](#sample-queries)
-  - [Scripts](#scripts)
-    - [Amazon Bedrock AgentCore Gateway](#amazon-bedrock-agentcore-gateway)
-      - [Create Amazon Bedrock AgentCore Gateway](#create-amazon-bedrock-agentcore-gateway)
-      - [Delete Amazon Bedrock AgentCore Gateway](#delete-amazon-bedrock-agentcore-gateway)
-    - [Amazon Bedrock AgentCore Memory](#amazon-bedrock-agentcore-memory)
-      - [Create Amazon Bedrock AgentCore Memory](#create-amazon-bedrock-agentcore-memory)
-      - [Delete Amazon Bedrock AgentCore Memory](#delete-amazon-bedrock-agentcore-memory)
-    - [Cognito Credentials Provider](#cognito-credentials-provider)
-      - [Create Cognito Credentials Provider](#create-cognito-credentials-provider)
-      - [Delete Cognito Credentials Provider](#delete-cognito-credentials-provider)
-    - [Google Credentials Provider](#google-credentials-provider)
-      - [Create Credentials Provider](#create-credentials-provider)
-      - [Delete Credentials Provider](#delete-credentials-provider)
-    - [Agent Runtime](#agent-runtime)
-      - [Delete Agent Runtime](#delete-agent-runtime)
-  - [Cleanup](#cleanup)
-  - [🤝 Contributing](#-contributing)
-  - [📄 License](#-license)
-  - [🆘 Support](#-support)
-  - [🔄 Updates](#-updates)
+## 🎯 Business Domains
 
-## Prerequisites
+### Basic Tier - Gaming Console Support
+- **Customer Profile Management**: Retrieve customer information and preferences
+- **Warranty Services**: Check warranty status and coverage details
+- **Technical Support**: Product troubleshooting and issue resolution
+- **Policy Guidance**: Access to warranty and support policies
 
-### AWS Account Setup
+### Premium Tier - Financial Services
+- **Client Portfolio Management**: Comprehensive portfolio analysis and reporting
+- **Investment Advisory**: Risk assessment and investment recommendations
+- **Wealth Management**: Assets under management and performance tracking
+- **Financial Planning**: Strategic financial guidance and coordination
 
-1. **AWS Account**: You need an active AWS account with appropriate permissions
-   - [Create AWS Account](https://aws.amazon.com/account/)
-   - [AWS Console Access](https://aws.amazon.com/console/)
+## 🚀 Quick Start
 
-2. **AWS CLI**: Install and configure AWS CLI with your credentials
-   - [Install AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-   - [Configure AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
+### Prerequisites
 
+- **AWS Account** with Bedrock access enabled
+- **AWS CLI** configured with appropriate permissions
+- **Python 3.8+** and pip
+- **Docker** or Finch for containerization
+- **Git** for repository management
+
+### One-Command Deployment
+
+```bash
+git clone <repository-url>
+cd agentcore-multitenancy
+chmod +x deploy.sh
+./deploy.sh
+```
+
+That's it! The deployment script will:
+1. Detect your AWS account and region
+2. Create all necessary AWS resources
+3. Configure tenant-specific agents
+4. Set up authentication and routing
+5. Deploy the complete multi-tenant system
+
+### Launch the Demo
+
+```bash
+# Start AgentCore runtime
+agentcore launch
+
+# In another terminal, start the web interface
+streamlit run app.py --server.port 8501
+```
+
+Access the demo at `http://localhost:8501`
+
+## 🏛️ Technical Architecture
+
+### Multi-Tenancy Strategy
+
+```
+┌─────────────────┐    ┌─────────────────┐
+│   Basic Tier    │    │  Premium Tier   │
+│  (Gaming)       │    │  (Financial)    │
+├─────────────────┤    ├─────────────────┤
+│ • main.py       │    │ • main_premium.py│
+│ • Gaming KB     │    │ • Financial KB  │
+│ • Basic Tools   │    │ • Premium Tools │
+│ • Basic Profile │    │ • Premium Profile│
+└─────────────────┘    └─────────────────┘
+         │                       │
+         └───────┬───────────────┘
+                 │
+    ┌─────────────────────────┐
+    │   Shared Infrastructure │
+    │ • Cognito Auth         │
+    │ • MCP Gateway          │
+    │ • AgentCore Runtime    │
+    │ • SSM Configuration    │
+    └─────────────────────────┘
+```
+
+### Key Components
+
+- **Amazon Bedrock AgentCore**: Serverless AI agent runtime
+- **Strands Framework**: Agent orchestration and tool integration
+- **Model Context Protocol (MCP)**: Tool integration and routing
+- **Amazon Cognito**: JWT-based authentication
+- **AWS Lambda**: Backend service functions
+- **SSM Parameter Store**: Configuration management
+
+## 🔧 Configuration Management
+
+The system uses dynamic configuration to eliminate hardcoded values:
+
+### Automatic Configuration
+- **AWS Account Detection**: Automatically detects your account ID and region
+- **Resource ARN Generation**: Creates account-specific ARNs for all resources
+- **Inference Profile Creation**: Sets up tenant-specific model access
+- **Parameter Store Integration**: Stores all configuration in SSM
+
+### Configuration Files
+```
+config/
+├── parameters.template.yaml    # Configuration template
+├── deployment_config.json      # Runtime configuration
+└── .bedrock_agentcore.yaml    # AgentCore deployment config
+```
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+agentcore-multitenancy/
+├── main.py                     # Basic tier entrypoint
+├── main_premium.py            # Premium tier entrypoint
+├── agent_config/              # Basic tier configuration
+│   ├── agent.py              # Agent implementation
+│   ├── context.py            # Context management
+│   └── utils.py              # Utilities
+├── agent_config_premium/      # Premium tier configuration
+│   ├── agent.py              # Premium agent implementation
+│   ├── context.py            # Premium context management
+│   └── utils.py              # Premium utilities
+├── scripts/                   # Deployment and management scripts
+│   ├── configure_deployment.py   # Dynamic configuration
+│   ├── create_inference_profiles.py  # Model setup
+│   ├── agentcore_gateway.py      # Gateway management
+│   ├── agentcore_memory.py       # Memory management
+│   └── prereq.sh                 # Infrastructure setup
+├── prerequisite/              # Infrastructure components
+│   ├── lambda/               # Backend Lambda functions
+│   └── policies/             # Knowledge base content
+├── test/                     # Test suite
+└── .kiro/                    # Kiro IDE configuration
+    └── steering/             # Development guidelines
+```
+
+### Adding New Tenants
+
+1. **Create Agent Configuration**:
    ```bash
-   aws configure
+   cp -r agent_config agent_config_new_tenant
    ```
 
-3. **Bedrock Model Access**: Enable access to Amazon Bedrock Anthropic Claude 4.0 models in your AWS region
-   - Navigate to [Amazon Bedrock Console](https://console.aws.amazon.com/bedrock/)
-   - Go to "Model access" and request access to:
-     - Anthropic Claude 4.0 Sonnet model
-     - Anthropic Claude 3.5 Haiku model
-   - [Bedrock Model Access Guide](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html)
+2. **Create Entrypoint**:
+   ```bash
+   cp main.py main_new_tenant.py
+   ```
 
-4. **Python 3.10+**: Required for running the application
-   - [Python Downloads](https://www.python.org/downloads/)
+3. **Update Configuration**:
+   - Modify `scripts/configure_deployment.py`
+   - Add tenant-specific tools and knowledge base
+   - Update `.bedrock_agentcore.yaml`
 
-5. **Create OAuth 2.0 credentials for calendar access** : For Google Calendar integration
-   - Follow [Google OAuth Setup](./prerequisite/google_oauth_setup.md)
+4. **Deploy**:
+   ```bash
+   ./deploy.sh
+   ```
 
-## Deploy
-
-1. **Create infrastructure**
-
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -r dev-requirements.txt
-
-    chmod +x scripts/prereq.sh
-    ./scripts/prereq.sh
-
-    chmod +x scripts/list_ssm_parameters.sh
-    ./scripts/list_ssm_parameters.sh
-    ```
-
-    > [!CAUTION]
-    > Please prefix all the resource name with `customersupport`.
-
-2. **Create Agentcore Gateway**
-
-    ```bash
-    python scripts/agentcore_gateway.py create --name customersupport-gw
-    ```
-
-3. **Setup Agentcore Identity**
-
-    - **Setup Cognito Credential Provider**
-
-    ```bash
-    python scripts/cognito_credentials_provider.py create --name customersupport-gateways
-
-    python test/test_gateway.py --prompt "Check warranty with serial number MNO33333333"
-    ```
-
-    - **Setup Google Credential Provider**
-
-    Follow instructions to setup [Google Credentials](./prerequisite/google_oauth_setup.md).
-
-    ```bash
-    python scripts/google_credentials_provider.py create --name customersupport-google-calendar
-
-    python test/test_google_tool.py
-    ```
-
-4. **Create Memory**
-
-    ```bash
-    python scripts/agentcore_memory.py create --name customersupport
-
-    python test/test_memory.py load-conversation
-    python test/test_memory.py load-prompt "My preference of gaming console is V5 Pro"
-    python test/test_memory.py list-memory
-    ```
-
-5. **Setup Agent Runtime**
-
-> [!CAUTION]
-> Please ensure the name of the agent starts with `customersupport`.
-    
-  ```bash
-  agentcore configure --entrypoint main.py -er arn:aws:iam::<Account-Id>:role/<Role> --name customersupport<AgentName>
-  ```
-
-  Use `./scripts/list_ssm_parameters.sh` to fill:
-  - `Role = ValueOf(/app/customersupport/agentcore/runtime_iam_role)`
-  - `OAuth Discovery URL = ValueOf(/app/customersupport/agentcore/cognito_discovery_url)`
-  - `OAuth client id = ValueOf(/app/customersupport/agentcore/web_client_id)`.
-
-  ![configure](./images/runtime_configure.png)
-
-  > [!CAUTION]
-  > Please make sure to delete `.agentcore.yaml` before running agentcore launch.
-
-  ```bash
-
-  rm .agentcore.yaml
-
-  agentcore launch
-
-  python test/test_agent.py customersupport<AgentName> -p "Hi"
-  ```
-
-  ![code](./images/code.png)
-
-6. **Local Host Streamlit UI**
-
-> [!CAUTION]
-> Streamlit app should only run on port `8501`.
+### Cleanup
 
 ```bash
-streamlit run app.py --server.port 8501 -- --agent=customersupport<AgentName>
-```
-
-## Sample Queries
-
-1. I have a Gaming Console Pro device , I want to check my warranty status, warranty serial number is MNO33333333.
-
-2. What are the warranty support guidelines ?
-
-3. What’s my agenda for today?
-
-4. Can you create an event to setup call to renew warranty?
-
-5. I have overheating issues  with my device, help me debug.
-
-## Scripts
-
-### Amazon Bedrock AgentCore Gateway
-
-#### Create Amazon Bedrock AgentCore Gateway
-
-```bash
-python scripts/agentcore_gateway.py create --name my-gateway
-python scripts/agentcore_gateway.py create --name my-gateway --api-spec-file custom/path.json
-```
-
-#### Delete Amazon Bedrock AgentCore Gateway
-
-```bash
-# Delete gateway (reads from gateway.config automatically)
-python scripts/agentcore_gateway.py delete
-
-# Delete with confirmation skip
-python scripts/agentcore_gateway.py delete --confirm
-```
-
-### Amazon Bedrock AgentCore Memory
-
-#### Create Amazon Bedrock AgentCore Memory
-
-```bash
-python scripts/agentcore_memory.py create --name MyMemory
-python scripts/agentcore_memory.py create --name MyMemory --event-expiry-days 60
-```
-
-#### Delete Amazon Bedrock AgentCore Memory
-
-```bash
-# Delete memory (reads from SSM automatically)
-python scripts/agentcore_memory.py delete
-
-# Delete with confirmation skip
-python scripts/agentcore_memory.py delete --confirm
-```
-
-### Cognito Credentials Provider
-
-#### Create Cognito Credentials Provider
-
-```bash
-python scripts/cognito_credentials_provider.py create --name customersupport-gateways
-```
-
-#### Delete Cognito Credentials Provider
-
-```bash
-# Delete provider (reads name from SSM automatically)
-python scripts/cognito_credentials_provider.py delete
-
-# Delete specific provider by name
-python scripts/cognito_credentials_provider.py delete --name customersupport-gateways
-
-# Delete with confirmation skip
-python scripts/cognito_credentials_provider.py delete --confirm
-```
-
-### Google Credentials Provider
-
-#### Create Credentials Provider
-
-```bash
-python scripts/google_credentials_provider.py create --name customersupport-google-calendar
-python scripts/google_credentials_provider.py create --name my-provider --credentials-file /path/to/credentials.json
-```
-
-#### Delete Credentials Provider
-
-```bash
-# Delete provider (reads name from SSM automatically)
-python scripts/google_credentials_provider.py delete
-
-# Delete specific provider by name
-python scripts/google_credentials_provider.py delete --name customersupport-google-calendar
-
-# Delete with confirmation skip
-python scripts/google_credentials_provider.py delete --confirm
-```
-
-### Agent Runtime
-
-#### Delete Agent Runtime
-
-```bash
-# Delete specific agent runtime by name
-python scripts/agentcore_agent_runtime.py customersupport
-
-# Preview what would be deleted without actually deleting
-python scripts/agentcore_agent_runtime.py --dry-run customersupport
-
-# Delete any agent runtime by name
-python scripts/agentcore_agent_runtime.py <agent-name>
-```
-
-## Cleanup
-
-```bash
+# Remove all resources
 chmod +x scripts/cleanup.sh
 ./scripts/cleanup.sh
-
-python scripts/google_credentials_provider.py delete
-python scripts/cognito_credentials_provider.py delete
-python scripts/agentcore_memory.py delete
-python scripts/agentcore_gateway.py delete
-python scripts/agentcore_agent_runtime.py customersupport<AgentName>
-
-rm .agentcore.yaml
-rm .bedrock_agentcore.yaml
 ```
+
+## 📚 Documentation
+
+- **[Deployment Guide](DEPLOYMENT.md)**: Detailed deployment instructions
+- **[Architecture Guide](.kiro/steering/agentcore-multitenancy-architecture.md)**: Development guidelines and best practices
+- **[API Documentation](prerequisite/lambda/api_spec.json)**: Tool and API specifications
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](../../CONTRIBUTING.md) for details on:
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/new-tenant`
+3. **Follow the steering guidelines**: Check `.kiro/steering/` for development standards
+4. **Test thoroughly**: Run the full test suite
+5. **Submit a pull request**: Include detailed description and test results
 
-- Adding new samples
-- Improving existing examples
-- Reporting issues
-- Suggesting enhancements
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](../../LICENSE) file for details.
-
-## 🆘 Support
-
-- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/awslabs/amazon-bedrock-agentcore-samples/issues)
-- **Documentation**: Check individual folder READMEs for specific guidance
-
-## 🔄 Updates
-
-This repository is actively maintained and updated with new capabilities and examples. Watch the repository to stay updated with the latest additions.
+---
