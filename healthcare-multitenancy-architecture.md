@@ -12,7 +12,7 @@ This is a **demo project** designed to showcase AgentCore's multi-tenancy capabi
 2. **Tier Differentiation**: Premium tier gets better models and higher limits
 3. **Resource Allocation**: API throttling enforced per tier
 4. **Scalability**: Multiple clinics per tier with independent configurations
-5. **Cost Allocation**: Token budget, allocate agentcore runtime and memory costs to tenant 
+5. **Cost Allocation**: Allocate agentcore runtime and memory costs to tenant 
 
 **Core Features (Minimal Viable Set)**:
 - Document search and retrieval (tenant isolation)
@@ -29,7 +29,7 @@ This streamlined approach allows rapid implementation while effectively demonstr
 
 The system implements a **two-level multi-tenancy model**:
 
-1. **Service Tiers**: Basic and Premium tiers with different capabilities
+1. **Service Tiers**: Basic and Premium tiers with different capabilities 
 2. **Tenant Isolation**: Multiple healthcare organizations (clinics) within each tier
 
 ```
@@ -228,7 +228,7 @@ inference_profiles = {
 
 #### Cognito User Pool Configuration Options
 
-**Option 1: Single User Pool with Custom Attributes (Recommended)**
+**Single User Pool with Custom Attributes (Recommended)**
 ```bash
 # Add custom attributes to existing Cognito User Pool
 aws cognito-idp add-custom-attributes \
@@ -239,28 +239,6 @@ aws cognito-idp add-custom-attributes \
 # JWT automatically includes custom:clinic_id claim
 ```
 
-**Option 2: Multiple App Clients per Clinic**
-```python
-# Different app clients for different clinics
-clinic_app_clients = {
-    "clinic-a": "1amjs2urmd54i5hlerind8b7sg",  # Basic tier
-    "clinic-b": "2bmkt3vsne65j6imfsojoe8c8t",  # Basic tier  
-    "hospital-a": "3cnlu4wtof76k7jngtpkpf9d9u", # Premium tier
-}
-
-# Each app client configured with different custom attribute defaults
-```
-
-**Option 3: Clinic-Specific Login URLs**
-```python
-# Different login URLs that set clinic context
-login_urls = {
-    "clinic-a": "https://your-app.com/login?clinic=clinic-a",
-    "hospital-a": "https://your-app.com/login?clinic=hospital-a"
-}
-
-# Login flow sets clinic_id in JWT claims during authentication
-```
 
 ### Agent Configuration Structure
 
@@ -395,7 +373,7 @@ Agent: "Lab Result Trend Analysis (Oct-Nov 2024):
 
 Clinical Insight: Glucose improvement suggests effective diabetes management.
 Recommend continuing current treatment plan.
-[Advanced analysis using Claude Sonnet 4.5 - multi-document correlation]"
+[Advanced analysis using Claude 4.5 Sonnet - multi-document correlation]"
 
 User: "Compare the Oct 1 and Nov 1 metabolic panels"
 Agent: "Metabolic Panel Comparison:
@@ -470,10 +448,10 @@ def create_clinic_inference_profiles():
         ]
     }
     
-    # Model mapping
+    # Model mapping (using system-defined inference profiles)
     models = {
         'basic': 'us.amazon.nova-micro-v1:0',
-        'premium': 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+        'premium': 'global.anthropic.claude-sonnet-4-5-20250929-v1:0'  # Claude 4.5 Sonnet
     }
     
     profile_mapping = {}
@@ -556,7 +534,7 @@ class CustomerSupport:
 ```python
 # Add metadata to Bedrock Converse API calls
 response = bedrock_runtime.converse(
-    modelId='us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+    modelId='global.anthropic.claude-sonnet-4-5-20250929-v1:0',
     messages=[...],
     requestMetadata={
         'tenantId': 'clinic-a',
@@ -609,10 +587,11 @@ Observability:
 
 **Implementation for Multi-Tenant Cost Tracking**:
 
+AgentCore automatically instruments your code when observability is enabled. You just need to add tenant context via OpenTelemetry baggage:
+
 ```python
 # In main.py and main_premium.py - Add tenant context to all operations
 from opentelemetry import baggage, context
-import os
 
 @app.entrypoint
 async def invoke(payload, context_obj):
@@ -620,80 +599,444 @@ async def invoke(payload, context_obj):
     tenant_info = process_tenant_context(payload, context_obj.headers or {})
     
     # Set OpenTelemetry baggage for cost attribution
+    # This propagates tenant context to all spans, metrics, and logs
     ctx = baggage.set_baggage("tenant_id", tenant_info['tenant_key'])
     ctx = baggage.set_baggage("tier", tenant_info['tier'])
     ctx = baggage.set_baggage("clinic_id", tenant_info['clinic_id'])
     context.attach(ctx)
     
     # All subsequent operations will include this tenant context
-    # Runtime, Memory, and Tool costs will be tagged with tenant info
+    # AgentCore automatically tags Runtime, Memory, and Tool costs with baggage
     response = await agent_task(...)
     return response
 ```
 
-**Viewing Costs in CloudWatch**:
+**How It Works**:
+1. ✅ **Observability already enabled** in your `.bedrock_agentcore.yaml`
+2. ✅ **ADOT SDK automatically configured** by AgentCore runtime
+3. ✅ **Baggage propagates** to all spans, metrics, and logs
+4. ✅ **CloudWatch receives** tenant-tagged telemetry automatically
+5. ✅ **No additional configuration** needed for hosted agents
 
-1. **GenAI Observability Dashboard**:
-   - Navigate to CloudWatch → GenAI Observability → Bedrock AgentCore
-   - Filter by `tenant_id` baggage attribute
-   - View Runtime metrics per clinic:
-     - CPU usage (vCPU-seconds)
-     - Memory usage (GB-seconds)
-     - Session duration
-     - Token consumption
+**Optional: Enhanced Observability with Custom Headers**:
 
-2. **CloudWatch Logs Insights**:
-```sql
-# Query Runtime costs per tenant
-fields @timestamp, tenant_id, tier, clinic_id, 
-       runtime.cpu_seconds, runtime.memory_gb_seconds
-| filter tenant_id like /clinic-/
-| stats sum(runtime.cpu_seconds) as total_cpu,
-        sum(runtime.memory_gb_seconds) as total_memory
-  by tenant_id, tier
-| sort total_cpu desc
+You can also pass tenant context via HTTP headers when invoking agents:
+
+```python
+# When invoking agent via API
+headers = {
+    'Authorization': f'Bearer {token}',
+    'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': session_id,
+    'baggage': f'tenant_id={tenant_key},tier={tier},clinic_id={clinic_id}'  # W3C baggage format
+}
 ```
 
-3. **Memory Service Costs**:
+**Viewing Costs in CloudWatch**:
+
+1. **GenAI Observability Dashboard** (Agents Only):
+   - Navigate to: [CloudWatch GenAI Observability](https://console.aws.amazon.com/cloudwatch/home#gen-ai-observability)
+   - Select: Bedrock AgentCore tab
+   - View: Agents View, Sessions View, Traces View
+   - Filter by baggage attributes: `tenant_id`, `tier`, `clinic_id`
+   - Metrics shown:
+     - Session count and duration
+     - Token usage (input/output)
+     - Error rates
+     - Latency percentiles
+
+**Note**: Memory, Gateway, and Tool metrics are in CloudWatch Logs/Metrics, not GenAI Observability dashboard
+
+2. **CloudWatch Logs Insights** (All Resources):
+
 ```sql
-# Query Memory usage per tenant
-fields @timestamp, tenant_id, memory.events, memory.retrievals
+# Query Runtime costs per tenant (from agent logs)
+fields @timestamp, baggage.tenant_id as tenant_id, 
+       baggage.tier as tier, baggage.clinic_id as clinic_id,
+       duration_ms, memory_mb
+| filter baggage.tenant_id like /clinic-/
+| stats count() as invocations,
+        sum(duration_ms)/1000 as total_seconds,
+        avg(memory_mb) as avg_memory_mb
+  by tenant_id, tier, clinic_id
+| sort total_seconds desc
+```
+
+```sql
+# Query Memory service costs per tenant
+# Log group: /aws/vendedlogs/bedrock-agentcore/memory/APPLICATION_LOGS/{memory-id}
+fields @timestamp, tenant_id, operation, 
+       eventCount, retrievalCount
 | filter tenant_id like /clinic-/
-| stats sum(memory.events) as total_events,
-        sum(memory.retrievals) as total_retrievals
+| stats sum(eventCount) as total_events,
+        sum(retrievalCount) as total_retrievals
   by tenant_id
 ```
 
-**Cost Calculation Example**:
+3. **CloudWatch Metrics** (Service-Provided):
+
+Navigate to CloudWatch → Metrics → bedrock-agentcore namespace:
+- **Runtime metrics**: Invocations, Duration, Errors
+- **Memory metrics**: Events, Retrievals, Storage
+- **Gateway metrics**: Requests, Latency
+- **Tool metrics**: Invocations, Duration
+
+Filter by dimension: `tenant_id`, `clinic_id` (from baggage)
+
+## End-to-End Per-Tenant Cost Calculation Flow
+
+### Visual Flow: Request to Cost Attribution
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ 1. USER REQUEST                                                     │
+│    Dr. Smith @ Clinic A: "Summarize this patient's lab results"    │
+└────────────────────────┬────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 2. API GATEWAY + LAMBDA PROXY                                       │
+│    • Extracts JWT: custom:tenant_id=basic, custom:clinic_id=clinic-a│
+│    • Adds to payload: {tenant_id: "basic", clinic_id: "clinic-a"}  │
+│    • Routes to: basic-tier AgentCore runtime                        │
+└────────────────────────┬────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 3. AGENTCORE RUNTIME (main.py)                                      │
+│    • Sets OpenTelemetry baggage:                                    │
+│      - tenant_id = "basic-clinic-a"                                 │
+│      - tier = "basic"                                               │
+│      - clinic_id = "clinic-a"                                       │
+│    • Baggage propagates to ALL subsequent operations                │
+└────────────────────────┬────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 4. OPERATIONS WITH AUTOMATIC COST TAGGING                           │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ Runtime Execution                                            │  │
+│  │ • CPU: 2 seconds                                             │  │
+│  │ • Memory: 512 MB                                             │  │
+│  │ • Tagged: baggage.tenant_id = "basic-clinic-a"              │  │
+│  │ → CloudWatch Logs: /aws/bedrock-agentcore/runtimes/...      │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ Memory Service                                               │  │
+│  │ • Events: 5 new memories                                     │  │
+│  │ • Retrievals: 10 memory lookups                              │  │
+│  │ • Tagged: tenant_id = "basic-clinic-a" (from baggage)       │  │
+│  │ → CloudWatch Logs: /aws/vendedlogs/.../memory/...           │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ Bedrock Model Invocation                                     │  │
+│  │ • Model: us.amazon.nova-micro-v1:0                           │  │
+│  │ • Inference Profile: healthcare-basic-clinic-a               │  │
+│  │ • Profile Tags: ClinicID=clinic-a, Tier=basic               │  │
+│  │ • Input: 1000 tokens, Output: 500 tokens                    │  │
+│  │ → AWS Cost Explorer: Tagged with ClinicID                    │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└────────────────────────┬────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 5. COST CALCULATION (End of Month)                                  │
+│                                                                      │
+│  Query 1: AWS Cost Explorer (Model Costs)                           │
+│  ├─ Filter: Service=Bedrock, Tag:ClinicID=clinic-a                 │
+│  └─ Result: $0.24 (1M input + 500K output tokens × Nova pricing)   │
+│                                                                      │
+│  Query 2: CloudWatch Logs (Runtime Costs)                           │
+│  ├─ Filter: baggage.tenant_id="basic-clinic-a"                     │
+│  └─ Result: $0.04 (3600 CPU-sec + 1800 GB-sec)                     │
+│                                                                      │
+│  Query 3: CloudWatch Logs (Memory Costs)                            │
+│  ├─ Filter: tenant_id="basic-clinic-a"                             │
+│  └─ Result: $0.03 (10K events + 5K retrievals)                     │
+│                                                                      │
+│  TOTAL FOR CLINIC A: $0.31                                          │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Step-by-Step: How Costs Are Tracked Per Tenant
+
+**1. Request Arrives with Tenant Context**
+- User authenticates with Cognito (JWT contains `custom:clinic_id`)
+- API Gateway validates and extracts tenant info
+- Lambda proxy adds tenant context to payload
+
+**2. Tenant Context Set in Code**
+```python
+# In main.py - Your code sets baggage (3 lines)
+ctx = baggage.set_baggage("tenant_id", "basic-clinic-a")
+ctx = baggage.set_baggage("tier", "basic")
+ctx = baggage.set_baggage("clinic_id", "clinic-a")
+context.attach(ctx)
+```
+
+**3. AgentCore Automatically Tags All Operations**
+- Every span, metric, and log includes baggage
+- Runtime invocations tagged with tenant_id
+- Memory operations tagged with tenant_id
+- Tool invocations tagged with tenant_id
+- Model calls use clinic-specific inference profile with tags
+
+**4. Costs Accumulate in Multiple Places**
+
+| Cost Component | Where It's Tracked | How Tenant Is Identified |
+|----------------|-------------------|-------------------------|
+| **Model Costs** | AWS Cost Explorer | Inference profile tags: `ClinicID=clinic-a` |
+| **Runtime CPU/Memory** | CloudWatch Logs | Baggage: `tenant_id=basic-clinic-a` |
+| **Memory Events/Retrievals** | CloudWatch Logs | Baggage: `tenant_id=basic-clinic-a` |
+| **Tool Usage** | CloudWatch Logs | Baggage: `tenant_id=basic-clinic-a` |
+| **API Gateway** | CloudWatch Metrics | Usage plan: `basic-tier` |
+
+**5. Monthly Cost Calculation Example**
+
+**Clinic A (Basic Tier) - Monthly Usage:**
 
 ```python
-# Clinic A (Basic Tier) - Monthly Usage
-runtime_cpu_seconds = 3600  # 1 hour of CPU time
-runtime_memory_gb_seconds = 1800  # 0.5 GB for 1 hour
-memory_events = 10000
-memory_retrievals = 5000
+# Data collected from CloudWatch and Cost Explorer
+monthly_metrics = {
+    # From CloudWatch Logs (Runtime)
+    'runtime_cpu_seconds': 3600,      # 1 hour of CPU time
+    'runtime_memory_gb_seconds': 1800, # 0.5 GB for 1 hour
+    
+    # From CloudWatch Logs (Memory service)
+    'memory_events': 10000,
+    'memory_retrievals': 5000,
+    
+    # From Cost Explorer (Bedrock model)
+    'input_tokens': 1000000,          # 1M input tokens
+    'output_tokens': 500000,          # 500K output tokens
+    
+    # From API Gateway metrics
+    'api_requests': 5000
+}
 
 # Calculate costs
-runtime_cpu_cost = 3600 * 0.000011 = $0.0396
-runtime_memory_cost = 1800 * 0.0000012 = $0.00216
-memory_events_cost = 10000 * 0.000001 = $0.01
-memory_retrievals_cost = 5000 * 0.000004 = $0.02
+costs = {
+    'runtime_cpu': 3600 * 0.000011,              # $0.0396
+    'runtime_memory': 1800 * 0.0000012,          # $0.00216
+    'memory_events': 10000 * 0.000001,           # $0.01
+    'memory_retrievals': 5000 * 0.000004,        # $0.02
+    'model_input': (1000000/1000) * 0.00008,     # $0.08 (Nova Micro)
+    'model_output': (500000/1000) * 0.00032,     # $0.16 (Nova Micro)
+    'api_gateway': 5000 * 0.0000035,             # $0.0175
+}
 
-total_agentcore_cost = $0.07176
-
-# Add model costs from inference profile
-model_cost = $5.00  # From tagged inference profile
-
-# Total cost for Clinic A
-total_cost = $5.07176
+total_cost = sum(costs.values())  # $0.329 for Clinic A
 ```
+
+**Hospital A (Premium Tier) - Same Usage:**
+```python
+# Same metrics but different model pricing
+costs = {
+    'runtime_cpu': 3600 * 0.000011,              # $0.0396
+    'runtime_memory': 1800 * 0.0000012,          # $0.00216
+    'memory_events': 10000 * 0.000001,           # $0.01
+    'memory_retrievals': 5000 * 0.000004,        # $0.02
+    'model_input': (1000000/1000) * 0.003,       # $3.00 (Claude Sonnet 4.5)
+    'model_output': (500000/1000) * 0.015,       # $7.50 (Claude Sonnet 4.5)
+    'api_gateway': 5000 * 0.0000035,             # $0.0175
+}
+
+total_cost = sum(costs.values())  # $10.599 for Hospital A
+```
+
+**Key Insight**: Premium costs 32x more due to Claude Sonnet 4.5 pricing!
+
+### Practical Steps to Calculate Per-Tenant Costs
+
+**Step 1: Get Model Costs from Cost Explorer**
+
+```bash
+# Via AWS CLI
+aws ce get-cost-and-usage \
+  --time-period Start=2025-02-01,End=2025-03-01 \
+  --granularity MONTHLY \
+  --metrics "UnblendedCost" \
+  --group-by Type=TAG,Key=ClinicID \
+  --filter file://filter.json
+
+# filter.json
+{
+  "Dimensions": {
+    "Key": "SERVICE",
+    "Values": ["Amazon Bedrock"]
+  }
+}
+```
+
+**Output:**
+```json
+{
+  "ResultsByTime": [{
+    "Groups": [
+      {"Keys": ["ClinicID$clinic-a"], "Metrics": {"UnblendedCost": {"Amount": "0.24"}}},
+      {"Keys": ["ClinicID$hospital-a"], "Metrics": {"UnblendedCost": {"Amount": "10.50"}}}
+    ]
+  }]
+}
+```
+
+**Step 2: Get Runtime Costs from CloudWatch Logs**
+
+```sql
+-- CloudWatch Logs Insights Query
+-- Log Group: /aws/bedrock-agentcore/runtimes/{agent-id}/runtime-logs
+
+fields @timestamp, 
+       baggage.tenant_id as tenant_id,
+       baggage.clinic_id as clinic_id,
+       duration as duration_ms,
+       memory as memory_mb
+| filter ispresent(baggage.tenant_id)
+| stats 
+    count() as invocations,
+    sum(duration_ms)/1000 as total_cpu_seconds,
+    avg(memory_mb)/1024 as avg_memory_gb,
+    sum(duration_ms)/1000 * avg(memory_mb)/1024 as total_memory_gb_seconds
+  by tenant_id, clinic_id
+| extend 
+    cpu_cost = total_cpu_seconds * 0.000011,
+    memory_cost = total_memory_gb_seconds * 0.0000012,
+    runtime_cost = cpu_cost + memory_cost
+```
+
+**Output:**
+```
+tenant_id        | clinic_id | invocations | cpu_cost | memory_cost | runtime_cost
+-----------------|-----------|-------------|----------|-------------|-------------
+basic-clinic-a   | clinic-a  | 150         | $0.0396  | $0.00216    | $0.04176
+premium-hospital-a| hospital-a| 200         | $0.0528  | $0.00288    | $0.05568
+```
+
+**Step 3: Get Memory Costs from CloudWatch Logs**
+
+```sql
+-- CloudWatch Logs Insights Query
+-- Log Group: /aws/vendedlogs/bedrock-agentcore/memory/APPLICATION_LOGS/{memory-id}
+
+fields @timestamp,
+       tenant_id,
+       operation,
+       eventCount,
+       retrievalCount
+| filter ispresent(tenant_id)
+| stats 
+    sum(eventCount) as total_events,
+    sum(retrievalCount) as total_retrievals
+  by tenant_id
+| extend
+    events_cost = total_events * 0.000001,
+    retrievals_cost = total_retrievals * 0.000004,
+    memory_cost = events_cost + retrievals_cost
+```
+
+**Output:**
+```
+tenant_id        | total_events | total_retrievals | memory_cost
+-----------------|--------------|------------------|------------
+basic-clinic-a   | 10000        | 5000             | $0.03
+premium-hospital-a| 15000        | 8000             | $0.047
+```
+
+**Step 4: Combine All Costs**
+
+```python
+# Python script to generate final report
+import boto3
+from datetime import datetime, timedelta
+
+def generate_tenant_cost_report(start_date, end_date):
+    """Generate complete per-tenant cost report"""
+    
+    # 1. Get model costs from Cost Explorer
+    ce = boto3.client('ce')
+    model_costs = ce.get_cost_and_usage(
+        TimePeriod={'Start': start_date, 'End': end_date},
+        Granularity='MONTHLY',
+        Metrics=['UnblendedCost'],
+        GroupBy=[{'Type': 'TAG', 'Key': 'ClinicID'}],
+        Filter={'Dimensions': {'Key': 'SERVICE', 'Values': ['Amazon Bedrock']}}
+    )
+    
+    # 2. Get runtime costs from CloudWatch Logs Insights
+    logs = boto3.client('logs')
+    runtime_query = """
+        fields baggage.clinic_id as clinic_id, duration, memory
+        | stats sum(duration)/1000 * 0.000011 as cpu_cost,
+                sum(duration)/1000 * avg(memory)/1024 * 0.0000012 as memory_cost
+          by clinic_id
+    """
+    runtime_costs = logs.start_query(
+        logGroupName='/aws/bedrock-agentcore/runtimes/*/runtime-logs',
+        startTime=int(datetime.strptime(start_date, '%Y-%m-%d').timestamp()),
+        endTime=int(datetime.strptime(end_date, '%Y-%m-%d').timestamp()),
+        queryString=runtime_query
+    )
+    
+    # 3. Combine and format report
+    report = []
+    for clinic in ['clinic-a', 'clinic-b', 'hospital-a']:
+        report.append({
+            'clinic_id': clinic,
+            'model_cost': get_model_cost(model_costs, clinic),
+            'runtime_cost': get_runtime_cost(runtime_costs, clinic),
+            'memory_cost': get_memory_cost(logs, clinic, start_date, end_date),
+            'total_cost': calculate_total(clinic)
+        })
+    
+    return report
+
+# Generate report
+report = generate_tenant_cost_report('2025-02-01', '2025-03-01')
+print_cost_report(report)
+```
+
+**Final Output:**
+```
+Per-Tenant Cost Report (February 2025)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Clinic ID    | Tier    | Model  | Runtime | Memory | Total
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+clinic-a     | basic   | $0.24  | $0.04   | $0.03  | $0.31
+clinic-b     | basic   | $0.18  | $0.03   | $0.02  | $0.23
+hospital-a   | premium | $10.50 | $0.06   | $0.05  | $10.61
+clinic-e     | premium | $8.20  | $0.05   | $0.04  | $8.29
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total                                                | $19.44
+```
+
+### Key Takeaways
+
+1. **Model costs dominate** (95%+ of total) - tracked via inference profile tags
+2. **Runtime costs are minimal** (<5%) - tracked via OpenTelemetry baggage
+3. **Memory costs are minimal** (<5%) - tracked via OpenTelemetry baggage
+4. **Premium tier costs 30-40x more** due to Claude Sonnet 4.5 pricing
+5. **All costs automatically attributed** to tenants via tags and baggage
+
+**What's Automatically Provided by AgentCore**:
+
+| Resource | Service-Provided Data | Available in GenAI Observability | Available in CloudWatch |
+|----------|----------------------|----------------------------------|------------------------|
+| **Agent (Runtime)** | Metrics, Spans, Traces | ✅ Yes | ✅ Yes |
+| **Memory** | Metrics, Spans*, Logs* | ❌ No | ✅ Yes |
+| **Gateway** | Metrics | ❌ No | ✅ Yes |
+| **Tools** | Metrics | ❌ No | ✅ Yes |
+
+\* Memory spans and logs require enablement via console or API
 
 **Benefits**:
 - ✅ Automatic cost attribution per tenant via baggage
-- ✅ No code changes needed (observability already enabled)
+- ✅ Minimal code changes (3 lines to set baggage)
 - ✅ Real-time visibility in CloudWatch dashboards
 - ✅ Granular tracking: Runtime, Memory, Tools, Models
 - ✅ Query-able logs for custom cost reports
+- ✅ ADOT SDK automatically configured for hosted agents
 
 ### Cost Tracking Architecture
 
@@ -739,41 +1082,49 @@ total_cost = $5.07176
 ### Implementation Checklist (Practical Steps)
 
 **Phase 1: Enhance Existing Infrastructure (1 week)**
-- [ ] Extend `create_inference_profiles.py` to create clinic-specific profiles
-- [ ] Add OpenTelemetry baggage in `main.py` and `main_premium.py`
+- [ ] Update model IDs to Claude Sonnet 4.5 for premium tier
+- [ ] Extend `create_inference_profiles.py` to create clinic-specific profiles with tags
+- [ ] Add OpenTelemetry baggage in `main.py` and `main_premium.py` for tenant context (3 lines)
 - [ ] Update agent classes to use clinic-specific profiles from SSM
-- [ ] Test cost attribution in CloudWatch Logs
+- [ ] Add `custom:clinic_id` attribute to Cognito user pool
+- [ ] Enable Memory observability (if using Memory service) via console or API
+- [ ] Test cost attribution in CloudWatch Logs and GenAI Observability dashboard
 
 **Phase 2: Enable Cost Reporting (1 week)**
-- [ ] Enable cost allocation tags in AWS Billing Console (ClinicID, Tier)
-- [ ] Create CloudWatch Logs Insights queries for per-tenant costs
-- [ ] Set up simple Cost Explorer report grouped by ClinicID
-- [ ] Export sample cost report to CSV
+- [ ] Enable cost allocation tags in AWS Billing Console (ClinicID, Tier, Project)
+- [ ] Wait 24 hours for tags to appear in Cost Explorer
+- [ ] Create Cost Explorer report grouped by ClinicID tag
+- [ ] Set up CloudWatch Logs Insights saved queries for quick cost lookups
+- [ ] Export sample cost report to CSV for demo
+- [ ] Document cost per clinic for demo presentation
 
-**Phase 3: Demo Dashboard (Optional, 1 week)**
-- [ ] Create QuickSight dataset from CloudWatch Logs
-- [ ] Build simple per-tenant cost dashboard
-- [ ] Add cost breakdown visualizations
-- [ ] Set up automated monthly reports
+**Phase 3: Optional Enhancements (Nice-to-Have)**
+- [ ] ⚠️ **Not Required for Demo** - Cost Explorer is sufficient
+- [ ] QuickSight dashboard (if advanced visualizations needed)
+- [ ] Automated cost alerts per clinic using AWS Budgets
+- [ ] Monthly cost report automation with Lambda
 
 **Quick Win: Immediate Cost Visibility**
 
 Without any code changes, you can see costs today:
 
 1. **CloudWatch GenAI Observability**:
-   - Already enabled in your `.bedrock_agentcore.yaml`
+   - ✅ Already enabled in your `.bedrock_agentcore.yaml`
    - View Runtime/Memory metrics per agent
    - Filter by session to see per-request costs
+   - Access: CloudWatch Console → GenAI Observability → Bedrock AgentCore
 
-2. **AWS Cost Explorer**:
-   - View Bedrock costs by inference profile tags
+2. **AWS Cost Explorer** (Recommended for Demo):
+   - ✅ View Bedrock costs by inference profile tags
    - Current tags: Project=CustomerSupport, Tier=Basic/Premium
    - Add ClinicID tag for per-clinic breakdown
+   - Access: AWS Billing Console → Cost Explorer
 
-3. **CloudWatch Logs**:
+3. **CloudWatch Logs Insights**:
    - Query invocation logs for token usage
-   - Calculate model costs: (input_tokens * $0.0008) + (output_tokens * $0.0016)
+   - Calculate model costs from token counts
    - Group by tenant_id from request metadata
+   - Access: CloudWatch Console → Logs → Insights
 
 ### Per-Tenant Cost Reporting
 
@@ -786,7 +1137,7 @@ Without any code changes, you can see costs today:
 4. **Tool Costs**: Gateway, Browser, Code Interpreter (via observability baggage)
 5. **API Gateway**: Request costs (via usage plans)
 
-**Simple Per-Tenant Reporting Dashboard**:
+**Recommended Approach for Demo** (Built-in AWS Tools):
 
 ```sql
 -- CloudWatch Logs Insights Query: Monthly Cost Per Tenant
@@ -803,33 +1154,32 @@ fields @timestamp, tenant_id, clinic_id, tier,
 | sort total_cost desc
 ```
 
-**QuickSight Dashboard (Simplified)**:
+**Example Cost Explorer Output**:
 
-Single dashboard with per-tenant views:
+View in AWS Console showing per-tenant costs:
 
-1. **Cost Summary Table**:
 ```
-Clinic ID    | Tier    | Model $ | Runtime $ | Memory $ | Tools $ | Total $
--------------|---------|---------|-----------|----------|---------|--------
-clinic-a     | basic   | $5.20   | $0.08     | $0.03    | $0.00   | $5.31
-clinic-b     | basic   | $3.80   | $0.05     | $0.02    | $0.00   | $3.87
-hospital-a   | premium | $45.60  | $1.20     | $0.45    | $2.10   | $49.35
-clinic-e     | premium | $32.40  | $0.90     | $0.30    | $1.50   | $35.10
+Cost by ClinicID (Last 30 Days)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Clinic ID    | Tier    | Bedrock | Runtime | Memory | Total
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+clinic-a     | basic   | $5.20   | $0.08   | $0.03  | $5.31
+clinic-b     | basic   | $3.80   | $0.05   | $0.02  | $3.87
+hospital-a   | premium | $45.60  | $1.20   | $0.45  | $49.35
+clinic-e     | premium | $32.40  | $0.90   | $0.30  | $35.10
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total                                              | $93.63
 ```
 
-2. **Cost Breakdown Chart** (Per Tenant):
-   - Bar chart showing cost components per clinic
-   - Filter by date range
-   - Drill-down to daily/hourly costs
+**Key Insights for Demo**:
+- Clear cost difference: Basic ($4.50 avg) vs Premium ($42.00 avg)
+- Complete tenant isolation in billing
+- Easy to generate chargeback reports
 
-3. **Tier Comparison**:
-   - Average cost per clinic by tier
-   - Basic tier average: $4.50/month
-   - Premium tier average: $42.00/month
+**1. AWS Cost Explorer** (Recommended for Demo):
 
-**AWS Cost Explorer View**:
-
-1. Enable cost allocation tags:
+Steps:
+1. Enable cost allocation tags in AWS Billing Console:
    - `ClinicID`
    - `Tier`
    - `Project`
@@ -838,6 +1188,7 @@ clinic-e     | premium | $32.40  | $0.90     | $0.30    | $1.50   | $35.10
    - Group by: Tag → ClinicID
    - Filter: Service → Bedrock, AgentCore Runtime, AgentCore Memory
    - Time range: Last 30 days
+   - View: Daily or Monthly costs
 
 3. Export to CSV for billing:
 ```csv
@@ -847,9 +1198,43 @@ clinic-b,basic,$3.80,$0.05,$0.02,$3.87
 hospital-a,premium,$45.60,$1.20,$0.45,$49.35
 ```
 
+**Benefits**: 
+- ✅ No custom development needed
+- ✅ Built-in AWS tool
+- ✅ Perfect for demo purposes
+- ✅ Real-time cost data
+
+**2. CloudWatch Logs Insights** (Quick Queries):
+
+```sql
+# Simple per-tenant cost query
+fields @timestamp, tenant_id, clinic_id, 
+       sum(model_tokens * token_cost) as model_cost
+| filter tenant_id like /clinic-/
+| stats sum(model_cost) by clinic_id
+| sort sum(model_cost) desc
+```
+
+**Benefits**:
+- ✅ Quick ad-hoc queries
+- ✅ No infrastructure setup
+- ✅ Good for troubleshooting
+
+**3. QuickSight Dashboard** (Nice-to-Have, Optional):
+
+⚠️ **Not required for demo** - Cost Explorer is sufficient
+
+If you want advanced visualizations:
+- Create QuickSight dataset from CloudWatch Logs
+- Build interactive dashboards with drill-downs
+- Add cost trend charts and forecasting
+
+**Effort**: 1-2 weeks additional work  
+**Value for Demo**: Low - Cost Explorer already shows per-tenant costs
+
 ### Cost Optimization Strategies
 
-1. **Tier-Appropriate Models**: Basic uses Nova Micro, Premium uses Claude
+1. **Tier-Appropriate Models**: Basic uses Nova Micro, Premium uses Claude Sonnet 4.5
 2. **Memory Management**: Separate memory instances per clinic
 3. **Rate Limiting**: Prevent runaway costs via API throttling
 4. **Usage Monitoring**: Real-time alerts on cost anomalies
@@ -862,6 +1247,359 @@ hospital-a,premium,$45.60,$1.20,$0.45,$49.35
 - ✅ AgentCore observability enabled
 - ✅ JWT-based tenant identification
 - ✅ Separate agents per tier
+
+## AgentCore Memory Isolation Strategy
+
+**CRITICAL REQUIREMENT**: Proper memory isolation is essential for multi-tenant healthcare applications to ensure complete data separation between clinics and users.
+
+### Two-Level Memory Isolation Architecture
+
+AgentCore Memory provides isolation through **`actor_id`** and **namespace templates**, enabling a single Memory resource to serve multiple tenants with complete data separation.
+
+**Isolation Levels**:
+1. **Clinic-Level Isolation**: Each clinic's data is isolated via namespace prefixes
+2. **User-Level Isolation**: Each user within a clinic is isolated via unique `actor_id`
+
+### Implementation Approach: Single Memory Resource with Namespace Isolation (Recommended)
+
+Use one Memory resource per tier with namespace templates for automatic isolation:
+
+```python
+# Memory resource configuration (one per tier)
+from bedrock_agentcore.memory import MemoryClient
+
+client = MemoryClient(region_name="us-east-1")
+
+# Basic tier memory
+memory_basic = client.create_memory_and_wait(
+    name="healthcare-basic-memory",
+    strategies=[
+        {
+            "semanticMemoryStrategy": {
+                "name": "clinical-facts",
+                "description": "Clinical facts and patient information",
+                "namespaces": [
+                    "clinic/{actorId}/facts/{sessionId}",  # Clinic + user isolation
+                    "clinic/{actorId}/preferences"          # User preferences
+                ]
+            }
+        }
+    ],
+    event_expiry_days=90
+)
+
+# Premium tier memory
+memory_premium = client.create_memory_and_wait(
+    name="healthcare-premium-memory",
+    strategies=[
+        {
+            "semanticMemoryStrategy": {
+                "name": "clinical-insights",
+                "description": "Advanced clinical insights and analytics",
+                "namespaces": [
+                    "clinic/{actorId}/insights/{sessionId}",
+                    "clinic/{actorId}/preferences",
+                    "clinic/{actorId}/analytics"  # Premium-only namespace
+                ]
+            }
+        }
+    ],
+    event_expiry_days=180  # Longer retention for premium
+)
+```
+
+### How Isolation Works
+
+**Actor ID Format** (Critical for Isolation):
+
+```python
+# Each user gets a unique actor_id combining tier, clinic, and user
+# Format: "{tier}-{clinic_id}-{user_id}"
+
+# Examples:
+actor_id_user1_clinic_a = "basic-clinic-a-dr-smith"
+actor_id_user2_clinic_a = "basic-clinic-a-dr-jones"
+actor_id_user1_clinic_b = "basic-clinic-b-dr-wilson"
+actor_id_user1_hospital_a = "premium-hospital-a-dr-chen"
+```
+
+**Storing Isolated Events**:
+
+```python
+from bedrock_agentcore.memory import MemorySessionManager, ConversationalMessage, MessageRole
+
+# Initialize manager with tier-specific memory
+manager = MemorySessionManager(
+    memory_id=memory_basic["memoryId"],
+    region_name="us-east-1"
+)
+
+# Dr. Smith's conversation (Clinic A) - Isolated by actor_id
+manager.add_turns(
+    actor_id="basic-clinic-a-dr-smith",  # Unique per user
+    session_id="session-123",
+    messages=[
+        ConversationalMessage("Patient has diabetes", MessageRole.USER),
+        ConversationalMessage("Noted. Reviewing treatment options.", MessageRole.ASSISTANT)
+    ]
+)
+
+# Dr. Jones's conversation (Clinic A) - COMPLETELY ISOLATED from Dr. Smith
+manager.add_turns(
+    actor_id="basic-clinic-a-dr-jones",  # Different actor_id = different memory
+    session_id="session-456",
+    messages=[
+        ConversationalMessage("Patient has hypertension", MessageRole.USER),
+        ConversationalMessage("Understood. Checking guidelines.", MessageRole.ASSISTANT)
+    ]
+)
+
+# Dr. Wilson's conversation (Clinic B) - ISOLATED FROM CLINIC A
+manager.add_turns(
+    actor_id="basic-clinic-b-dr-wilson",
+    session_id="session-789",
+    messages=[
+        ConversationalMessage("Patient needs cardiology referral", MessageRole.USER),
+        ConversationalMessage("I'll prepare the referral documentation.", MessageRole.ASSISTANT)
+    ]
+)
+```
+
+**Namespace Resolution** (Automatic by AgentCore):
+
+```python
+# Template: "clinic/{actorId}/facts/{sessionId}"
+# For actor_id="basic-clinic-a-dr-smith", session_id="session-123"
+# Resolves to: "clinic/basic-clinic-a-dr-smith/facts/session-123"
+
+# This means:
+# - Dr. Smith can ONLY access memories in "clinic/basic-clinic-a-dr-smith/*"
+# - Dr. Jones can ONLY access memories in "clinic/basic-clinic-a-dr-jones/*"
+# - Dr. Wilson can ONLY access memories in "clinic/basic-clinic-b-dr-wilson/*"
+# - NO cross-user or cross-clinic access possible
+```
+
+**Retrieving Isolated Memories**:
+
+```python
+# Dr. Smith retrieves their own memories
+memories = manager.search_long_term_memories(
+    query="diabetes treatment",
+    namespace_prefix="clinic/basic-clinic-a-dr-smith/facts",  # Only their namespace
+    top_k=5
+)
+# Returns: Only Dr. Smith's diabetes-related memories
+
+# Dr. Smith CANNOT access Dr. Jones's memories
+# This would return empty results:
+memories = manager.search_long_term_memories(
+    query="hypertension",  # Dr. Jones's topic
+    namespace_prefix="clinic/basic-clinic-a-dr-jones/facts",  # Different actor's namespace
+    top_k=5
+)
+# Returns: [] (no access to other actor's data)
+
+# Cross-clinic access also fails
+memories = manager.search_long_term_memories(
+    query="cardiology",  # Dr. Wilson's topic (Clinic B)
+    namespace_prefix="clinic/basic-clinic-b-dr-wilson/facts",
+    top_k=5
+)
+# Returns: [] (no cross-clinic access)
+```
+
+### Enhanced Tenant Context Extraction
+
+Update JWT parsing to include user-level identification:
+
+```python
+# In agent_config/jwt_utils.py
+import base64
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+def extract_tenant_info_from_jwt(token: str) -> dict:
+    """Extract tier, clinic, and user info from JWT token for complete isolation"""
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            logger.warning("Invalid JWT format, using fallback")
+            return _get_fallback_tenant_info()
+            
+        payload = parts[1]
+        payload += '=' * (4 - len(payload) % 4)  # Add padding
+        decoded_bytes = base64.urlsafe_b64decode(payload)
+        claims = json.loads(decoded_bytes.decode('utf-8'))
+        
+        # Extract all levels of identification
+        tier = claims.get('custom:tenant_id', 'basic')
+        clinic_id = claims.get('custom:clinic_id', 'demo-clinic')
+        user_id = claims.get('cognito:username', 'demo-user')
+        
+        # Construct hierarchical actor_id for complete isolation
+        # Format: "{tier}-{clinic_id}-{user_id}"
+        actor_id = f"{tier}-{clinic_id}-{user_id}"
+        
+        logger.info(f"Extracted tenant info - Tier: {tier}, Clinic: {clinic_id}, User: {user_id}")
+        logger.info(f"Generated actor_id: {actor_id}")
+        
+        return {
+            'tier': tier,
+            'clinic_id': clinic_id,
+            'user_id': user_id,
+            'actor_id': actor_id,  # CRITICAL: Unique per user for memory isolation
+            'memory_id': f"healthcare-{tier}-memory",
+            's3_prefix': f"{tier}-tier/{clinic_id}/",
+            'inference_profile': f"healthcare-{tier}-{clinic_id}"
+        }
+    except Exception as e:
+        logger.error(f"JWT parsing failed: {e}")
+        return _get_fallback_tenant_info()
+
+def _get_fallback_tenant_info():
+    """Fallback tenant info when JWT parsing fails"""
+    return {
+        'tier': 'basic',
+        'clinic_id': 'demo-clinic',
+        'user_id': 'demo-user',
+        'actor_id': 'basic-demo-clinic-demo-user',
+        'memory_id': 'healthcare-basic-memory',
+        's3_prefix': 'basic-tier/demo-clinic/',
+        'inference_profile': 'healthcare-basic-demo-clinic'
+    }
+```
+
+### Agent Integration with Memory Isolation
+
+```python
+# In main.py and main_premium.py
+from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from bedrock_agentcore.memory import MemorySessionManager
+from agent_config.jwt_utils import extract_tenant_info_from_jwt
+
+app = BedrockAgentCoreApp()
+
+@app.entrypoint
+async def invoke(payload, context):
+    # Extract tenant info including user-specific actor_id
+    auth_header = context.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        jwt_token = auth_header[7:]
+        tenant_info = extract_tenant_info_from_jwt(jwt_token)
+    else:
+        tenant_info = {
+            'tier': payload.get('tenant_id', 'basic'),
+            'clinic_id': payload.get('clinic_id', 'demo-clinic'),
+            'user_id': payload.get('user_id', 'demo-user'),
+            'actor_id': f"{payload.get('tenant_id', 'basic')}-{payload.get('clinic_id', 'demo-clinic')}-{payload.get('user_id', 'demo-user')}",
+            'memory_id': f"healthcare-{payload.get('tenant_id', 'basic')}-memory"
+        }
+    
+    # Initialize memory manager with tier-specific memory
+    memory_manager = MemorySessionManager(
+        memory_id=tenant_info['memory_id'],  # "healthcare-basic-memory" or "healthcare-premium-memory"
+        region_name="us-east-1"
+    )
+    
+    # Create session with user-specific actor_id for complete isolation
+    session = memory_manager.create_memory_session(
+        actor_id=tenant_info['actor_id'],  # e.g., "basic-clinic-a-dr-smith"
+        session_id=context.session_id
+    )
+    
+    # All memory operations are now automatically isolated per user
+    # - Short-term memory (events) isolated by actor_id
+    # - Long-term memory (semantic) isolated by namespace templates
+    
+    # Process user request with isolated memory
+    user_input = payload.get('prompt', '')
+    
+    # Retrieve relevant memories (automatically isolated to this user)
+    from bedrock_agentcore.memory.constants import RetrievalConfig
+    
+    retrieval_config = {
+        f"clinic/{tenant_info['actor_id']}/facts/{{sessionId}}": RetrievalConfig(
+            top_k=5,
+            relevance_score=0.3
+        )
+    }
+    
+    # Process with LLM (memories are automatically filtered to this user)
+    memories, response, event = session.process_turn_with_llm(
+        user_input=user_input,
+        llm_callback=my_llm_function,
+        retrieval_config=retrieval_config
+    )
+    
+    return {"response": response}
+```
+
+
+### Security Guarantees
+
+AgentCore Memory provides these isolation guarantees at the **API level**:
+
+1. **Actor Isolation**: Events and memories with different `actor_id` values are completely isolated
+2. **Namespace Isolation**: Template variables `{actorId}` ensure automatic namespace separation
+3. **API-Level Enforcement**: AgentCore APIs enforce isolation at the service level (not application level)
+4. **No Cross-Actor Access**: There is no API to list or access another actor's data
+5. **Immutable actor_id**: Once an event is created with an `actor_id`, it cannot be accessed by other actors
+
+**From AgentCore Documentation**:
+> "The `actor_id` parameter provides complete isolation between different actors. Events, short-term memory, and long-term memory records are scoped to the specific `actor_id` and cannot be accessed by other actors."
+
+### Cost Implications
+
+**Single Memory Approach** (Recommended):
+- Memory resource cost: ~$0.10/GB-month for long-term storage
+- Event storage: $0.000001 per event
+- Retrieval: $0.000004 per call
+- **Total for 8 clinics**: Cost of 2 Memory resources (basic + premium)
+- **Example**: $0.20/GB-month total for both tiers
+
+
+### Implementation Checklist
+
+**Phase 1: Memory Resource Setup**
+- [ ] Create 2 Memory resources (basic-tier, premium-tier) with namespace templates
+- [ ] Configure namespace templates: `"clinic/{actorId}/facts/{sessionId}"`
+- [ ] Store Memory resource IDs in SSM:
+  - `/app/healthcare/memory/basic_id`
+  - `/app/healthcare/memory/premium_id`
+- [ ] Verify Memory resources are ACTIVE
+
+**Phase 2: JWT and Actor ID Configuration**
+- [ ] Update JWT parsing to extract `user_id` from `cognito:username`
+- [ ] Implement hierarchical `actor_id` construction: `"{tier}-{clinic_id}-{user_id}"`
+- [ ] Update agent code to use user-specific `actor_id` for all memory operations
+- [ ] Add logging for `actor_id` generation for debugging
+
+**Phase 3: Agent Integration**
+- [ ] Update `main.py` to initialize `MemorySessionManager` with tier-specific memory
+- [ ] Update `main_premium.py` similarly
+- [ ] Configure `retrieval_config` with namespace templates
+- [ ] Test memory operations with different `actor_id` values
+
+**Phase 4: Isolation Testing**
+- [ ] Test same-user access (should succeed)
+- [ ] Test cross-user access within same clinic (should fail - return empty)
+- [ ] Test cross-clinic access (should fail - return empty)
+- [ ] Test cross-tier access (should fail - different Memory resources)
+- [ ] Document test results
+
+**Phase 5: Monitoring and Observability**
+- [ ] Configure CloudWatch alarms for memory usage per tier
+- [ ] Set up cost tracking for Memory service
+- [ ] Add `actor_id` to observability baggage for cost attribution
+- [ ] Create dashboard showing memory usage by clinic
+
+**Phase 6: Documentation**
+- [ ] Document `actor_id` format: `"{tier}-{clinic_id}-{user_id}"`
+- [ ] Document namespace template patterns
+- [ ] Create runbook for adding new clinics (no infrastructure changes needed)
+- [ ] Document isolation verification procedures
 
 **What to Add for Clinic-Level Tracking**:
 1. **Clinic-specific inference profiles** (extend existing script)
@@ -1024,22 +1762,191 @@ aws cloudformation describe-stacks \
 ### Current State Assessment
 
 #### ✅ **Existing Capabilities (Leveraged)**
-- Multi-tenant agent architecture with tier separation
-- JWT-based authentication and tenant routing
-- AgentCore runtime with session management
-- Streamlit chat interface foundation
-- SSM parameter store configuration
-- Memory management and conversation persistence
+- ✅ Multi-tenant agent architecture with tier separation (basic/premium)
+- ✅ JWT-based authentication with Cognito (custom:tenant_id)
+- ✅ AgentCore runtime with session management
+- ✅ AgentCore observability enabled for cost tracking
+- ✅ Streamlit chat interface foundation
+- ✅ SSM parameter store configuration
+- ✅ Memory management and conversation persistence
+- ✅ Inference profiles with tier-level tags
+- ✅ API Gateway with usage plans and throttling
+- ✅ Lambda proxy for tenant routing
 
-#### ❌ **Implementation Gaps**
+#### 🔧 **Enhancements Needed (Building on Existing)**
+- 🔧 Add `custom:clinic_id` to JWT claims (extends existing auth)
+- 🔧 Create clinic-specific inference profiles (extends existing script)
+- 🔧 Add OpenTelemetry baggage for cost attribution (3 lines of code)
+- 🔧 Update to Claude Sonnet 4.5 for premium tier (model ID change)
+- 🔧 Enable cost allocation tags in AWS Billing Console (one-time setup)
 
-### 1. **Document Management System**
+#### ❌ **New Implementations Required**
+
+### 1. **AgentCore Memory Isolation (CRITICAL)**
+**Gap**: Current system lacks proper user-level memory isolation within clinics
+**Priority**: 🔴 **CRITICAL** - Required for multi-tenant security and data privacy
+**Current Status**: ❌ No memory isolation implementation
+**Requirements**:
+- Create 2 Memory resources (basic-tier, premium-tier) with namespace templates
+- Implement user-specific `actor_id` for complete isolation: `"{tier}-{clinic_id}-{user_id}"`
+- Configure namespace templates: `"clinic/{actorId}/facts/{sessionId}"`
+- Update JWT parsing to extract `user_id` from `cognito:username`
+- Integrate `MemorySessionManager` with user-specific `actor_id` in agent code
+- Test and verify cross-user and cross-clinic isolation
+
+**Implementation Needed**:
+```python
+# 1. Create Memory Resources (one-time setup)
+from bedrock_agentcore.memory import MemoryClient
+
+client = MemoryClient(region_name="us-east-1")
+
+# Basic tier memory with namespace templates
+memory_basic = client.create_memory_and_wait(
+    name="healthcare-basic-memory",
+    strategies=[
+        {
+            "semanticMemoryStrategy": {
+                "name": "clinical-facts",
+                "description": "Clinical facts and patient information",
+                "namespaces": [
+                    "clinic/{actorId}/facts/{sessionId}",  # Auto-isolates by actor_id
+                    "clinic/{actorId}/preferences"
+                ]
+            }
+        }
+    ],
+    event_expiry_days=90
+)
+
+# Premium tier memory with additional namespaces
+memory_premium = client.create_memory_and_wait(
+    name="healthcare-premium-memory",
+    strategies=[
+        {
+            "semanticMemoryStrategy": {
+                "name": "clinical-insights",
+                "description": "Advanced clinical insights",
+                "namespaces": [
+                    "clinic/{actorId}/insights/{sessionId}",
+                    "clinic/{actorId}/preferences",
+                    "clinic/{actorId}/analytics"  # Premium-only
+                ]
+            }
+        }
+    ],
+    event_expiry_days=180
+)
+
+# Store Memory IDs in SSM
+import boto3
+ssm = boto3.client('ssm')
+ssm.put_parameter(
+    Name='/app/healthcare/memory/basic_id',
+    Value=memory_basic['memoryId'],
+    Type='String',
+    Overwrite=True
+)
+ssm.put_parameter(
+    Name='/app/healthcare/memory/premium_id',
+    Value=memory_premium['memoryId'],
+    Type='String',
+    Overwrite=True
+)
+```
+
+```python
+# 2. Update JWT parsing to construct user-specific actor_id
+# In agent_config/jwt_utils.py
+def extract_tenant_info_from_jwt(token: str) -> dict:
+    """Extract tier, clinic, and user info for memory isolation"""
+    try:
+        # ... existing JWT parsing ...
+        
+        tier = claims.get('custom:tenant_id', 'basic')
+        clinic_id = claims.get('custom:clinic_id', 'demo-clinic')
+        user_id = claims.get('cognito:username', 'demo-user')
+        
+        # CRITICAL: Construct hierarchical actor_id for complete isolation
+        actor_id = f"{tier}-{clinic_id}-{user_id}"
+        
+        return {
+            'tier': tier,
+            'clinic_id': clinic_id,
+            'user_id': user_id,
+            'actor_id': actor_id,  # e.g., "basic-clinic-a-dr-smith"
+            'memory_id': f"healthcare-{tier}-memory",
+            's3_prefix': f"{tier}-tier/{clinic_id}/"
+        }
+    except Exception as e:
+        logger.error(f"JWT parsing failed: {e}")
+        return _get_fallback_tenant_info()
+```
+
+```python
+# 3. Integrate MemorySessionManager in agent code
+# In main.py and main_premium.py
+from bedrock_agentcore.memory import MemorySessionManager
+from agent_config.jwt_utils import extract_tenant_info_from_jwt
+
+@app.entrypoint
+async def invoke(payload, context):
+    # Extract tenant info with user-specific actor_id
+    tenant_info = extract_tenant_info_from_jwt(jwt_token)
+    
+    # Initialize memory manager with tier-specific memory
+    memory_manager = MemorySessionManager(
+        memory_id=tenant_info['memory_id'],  # "healthcare-basic-memory"
+        region_name="us-east-1"
+    )
+    
+    # Create session with user-specific actor_id for isolation
+    session = memory_manager.create_memory_session(
+        actor_id=tenant_info['actor_id'],  # "basic-clinic-a-dr-smith"
+        session_id=context.session_id
+    )
+    
+    # All memory operations now automatically isolated per user
+    response = await agent_task(session, payload)
+    return response
+```
+
+**Why This is Critical**:
+- ✅ **User-Level Isolation**: Each user's memories are completely isolated
+- ✅ **Clinic-Level Isolation**: Users from different clinics cannot access each other's data
+- ✅ **API-Level Enforcement**: AgentCore enforces isolation at the service level
+- ✅ **No Cross-Access**: No API exists to access another actor's data
+- ✅ **Scalable**: Single Memory resource per tier serves all clinics/users
+- ✅ **Cost-Effective**: 2 Memory resources vs 8+ separate resources
+
+**Security Verification Required**:
+```python
+# Test that User A cannot access User B's memories
+user_a_memories = manager.search_long_term_memories(
+    query="patient",
+    namespace_prefix="clinic/basic-clinic-a-dr-smith/facts",
+    top_k=10
+)
+# Should return only Dr. Smith's data
+
+user_a_trying_user_b = manager.search_long_term_memories(
+    query="patient",
+    namespace_prefix="clinic/basic-clinic-a-dr-jones/facts",  # Different user
+    top_k=10
+)
+# Should return [] (empty - no cross-user access)
+```
+
+**Detailed Documentation**: See "AgentCore Memory Isolation Strategy" section above for complete implementation guide.
+
+### 2. **Document Management System**
 **Gap**: No S3 integration for clinical document storage and retrieval
 **Requirements**:
 - S3 bucket setup with clinic-specific prefixes
 - Document indexing and metadata management
 - Search functionality across clinic documents
 - Document access logging for audit trails
+- Pre-upload sample clinical documents per clinic
 
 **Implementation Needed**:
 ```python
@@ -1049,13 +1956,21 @@ class ClinicalDocumentManager:
         self.bucket = "healthcare-documents"
     
     def search_documents(self, query, doc_types=None):
-        # Implement clinic-scoped document search
+        # Implement clinic-scoped document search using S3 prefix
         pass
     
     def get_document_content(self, document_id):
         # Retrieve and return document content
         pass
+    
+    def list_documents(self, clinic_id):
+        # List all documents for a specific clinic
+        pass
 ```
+
+**Sample Data Needed**:
+- Basic tier: 20-30 documents per clinic (intake forms, notes, basic labs)
+- Premium tier: 50-100 documents per clinic (diagnostic reports, imaging studies)
 
 ### 2. **Clinical NLP and Processing Tools**
 **Gap**: No medical text processing capabilities
@@ -1083,11 +1998,14 @@ class ClinicalNLPProcessor:
 
 ### 3. **Enhanced Tenant Context Management**
 **Gap**: Current system handles basic/premium tiers but needs clinic-level isolation within tiers
+**Current Status**: ✅ Tier-level context exists, needs clinic extension
 **Requirements**:
 - Extend existing `CustomerSupportContext` class to include clinic information
+- Add `custom:clinic_id` to Cognito JWT claims
 - Document access control per clinic using S3 prefixes
 - Clinic-specific tool configurations and routing
 - Usage tracking per clinic (extends existing tenant tracking)
+- OpenTelemetry baggage for cost attribution
 
 **Implementation Needed**:
 ```python
@@ -1261,7 +2179,33 @@ def main():
             render_clinical_results(response, tenant_context)
 ```
 
-### 5. **Sample Data and Document Preparation**
+### 5. **Web Search Capability (Premium Feature)**
+**Gap**: No web search tool integration for premium tier
+**Requirements**:
+- Integrate web search tool (e.g., Tavily, Brave Search, or custom)
+- Configure as premium-only feature
+- Add to premium agent tool list
+- Enable access to external medical research and guidelines
+
+**Implementation Needed**:
+```python
+# In agent_config_premium/agent.py
+from strands_tools import web_search  # or custom web search tool
+
+class CustomerSupport:
+    def __init__(self, ...):
+        # Premium tier gets web search
+        if tier == 'premium':
+            tools = [
+                document_search,
+                web_search,  # Premium-only feature
+                advanced_analytics
+            ]
+```
+
+**Demo Value**: Shows clear premium differentiation with external data access
+
+### 6. **Sample Data and Document Preparation**
 **Gap**: No clinical documents for demonstration
 **Requirements**:
 - Synthetic clinical documents for each tier
@@ -1270,17 +2214,21 @@ def main():
 - Anonymized but clinically relevant content
 
 **Data Needed**:
-- Basic Tier: 50-100 documents per clinic (intake forms, notes, basic labs)
-- Premium Tier: 100-200 documents per clinic (diagnostic reports, imaging, pathology)
+- Basic Tier: 20-30 documents per clinic (intake forms, notes, basic labs)
+- Premium Tier: 50-100 documents per clinic (diagnostic reports, imaging, pathology)
 
-### 6. **Configuration and Deployment Updates**
+### 7. **Configuration and Deployment Updates**
 **Gap**: Current deployment needs clinic-level configuration enhancements
+**Current Status**: ✅ Tier-level profiles exist, need clinic-specific profiles
 **Requirements**:
+- Extend `create_inference_profiles.py` for clinic-specific profiles
+- Update model IDs to Claude Sonnet 4.5 for premium tier
 - SSM parameters for clinic configurations
 - AgentCore deployment config for multiple clinics
 - Environment variables for clinic routing
-- Update existing API Gateway usage plans for production limits
-- Monitoring and logging per clinic
+- API Gateway usage plans already configured (keep demo limits)
+- Monitoring and logging per clinic via observability baggage
+- Cost allocation tags in AWS Billing Console
 
 **Configuration Updates Needed**:
 ```yaml
@@ -1332,7 +2280,14 @@ cd scripts
 ## Development Roadmap
 
 ### Phase 1: Foundation - Extend Existing Multi-Tenancy (2-3 weeks)
-- [ ] **Enhance JWT Processing**: Extend existing `jwt_utils.py` to extract `custom:clinic_id`
+- [ ] 🔴 **CRITICAL: AgentCore Memory Isolation** (Week 1 Priority)
+  - [ ] Create 2 Memory resources (basic-tier, premium-tier) with namespace templates
+  - [ ] Update JWT parsing to extract `user_id` and construct `actor_id`
+  - [ ] Integrate `MemorySessionManager` in `main.py` and `main_premium.py`
+  - [ ] Test cross-user and cross-clinic isolation
+  - [ ] Store Memory IDs in SSM parameters
+  - [ ] Document `actor_id` format and isolation verification
+- [ ] **Enhance JWT Processing**: Extend existing `jwt_utils.py` to extract `custom:clinic_id` and `user_id`
 - [ ] **Update Context Management**: Add clinic context to existing `CustomerSupportContext` classes
 - [ ] **S3 Bucket Setup**: Create clinic-specific document structure
 - [ ] **Enhanced Tenant Routing**: Update `main.py` and `main_premium.py` for clinic-level routing
@@ -1348,7 +2303,7 @@ cd scripts
 - [ ] **Tool Integration**: Extend existing MCP gateway tools for clinical document access
 
 ### Phase 3: Advanced Features - Tier Differentiation (2-3 weeks)
-- [ ] **Premium Analytics**: Advanced clinical reasoning for premium tier (extends existing Claude usage)
+- [ ] **Premium Analytics**: Advanced clinical reasoning for premium tier (extends existing Claude Sonnet 4.5 us
 - [ ] **Multi-Document Correlation**: Cross-document analysis and trending
 - [ ] **Clinical Decision Support**: Diagnostic pattern recognition and recommendations
 - [ ] **Structured Data Extraction**: Convert unstructured notes to structured clinical data
@@ -1372,10 +2327,12 @@ cd scripts
 ## Success Metrics
 
 ### Technical Metrics
+- **Memory Isolation**: 100% user-level memory isolation verified (cross-user access returns empty)
 - **Tenant Isolation**: 100% document access isolation between clinics
+- **Memory Security**: Zero cross-actor memory access (enforced by AgentCore API)
 - **Response Time**: Basic tier <5s, Premium tier <2s
 - **Accuracy**: >90% accuracy in clinical entity extraction
-- **Scalability**: Support 10+ clinics per tier simultaneously
+- **Scalability**: Support 10+ clinics per tier simultaneously with single Memory resource per tier
 - **Rate Limiting (Demo)**: 0.5 req/sec (Basic), 2 req/sec (Premium) enforced via API Gateway
 - **Throttling Demonstration**: Easy to trigger rate limits during demos to show tier differentiation
 
