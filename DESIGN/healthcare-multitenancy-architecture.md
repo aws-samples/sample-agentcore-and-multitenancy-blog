@@ -517,15 +517,15 @@ This comprehensive roadmap transforms the existing gaming console/financial serv
 - [x] Document current MCP gateway tools and Lambda functions
 
 #### 0.2 Healthcare Requirements Definition
-- [ ] Define 8 clinic profiles (4 basic, 4 premium) with specialties
-- [ ] Specify document types per clinic tier (intake forms, lab results, etc.)
+- [x] Define 8 clinic profiles (4 basic, 4 premium) with specialties
+- [x] Specify document types per clinic tier (intake forms, lab results, etc.)
 - [x] Document tier differentiation requirements (Nova Micro vs Claude Sonnet 4.5)
 - [x] Plan demo scenarios showcasing multi-tenancy capabilities
 
 #### 0.3 Infrastructure Planning
 - [x] Design S3 bucket structure for healthcare documents. This is under ./technical-architecture.md
 - [x] Plan Memory resource architecture (2 resources with namespace templates) This is under ./memory-architecture.md
-- [ ] Design clinic-specific inference profile strategy
+- [x] Design clinic-specific inference profile strategy
 - [x] Plan cost tracking implementation (tags, baggage, observability) This is under ./cost-tracking-capability.md
 - [x] Create migration checklist from gaming/finance to healthcare. This documentation is a migration checklist
 
