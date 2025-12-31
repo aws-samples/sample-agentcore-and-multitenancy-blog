@@ -12,9 +12,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         print(f"Received event: {json.dumps(event)}")
         
-        # Extract tenant ID from JWT token or headers
-        tenant_id = extract_tenant_id(event)
-        print(f"Tenant ID: {tenant_id}")
+        # Extract tenant info (tenant_id and clinic_id) from JWT token or headers
+        tenant_info = extract_tenant_info(event)
+        tenant_id = tenant_info['tenant_id']
+        clinic_id = tenant_info['clinic_id']
+        print(f"Tenant ID: {tenant_id}, Clinic ID: {clinic_id}")
         
         # Get AgentCore endpoint details
         proxy_path = event['pathParameters']['proxy']
@@ -43,16 +45,16 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         print(f"Session ID: {session_id}")
         print(f"Bearer token present: {bool(bearer_token)}")
         
-        # Parse the request body and add tenant_id
+        # Parse the request body and add tenant info
         try:
             body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
         except json.JSONDecodeError:
             body = {}
 
-        # Add tenant_id from headers to the payload
-        tenant_id = event.get('headers', {}).get('X-Tenant-ID', 'basic')
-        body['tenant_id'] = tenant_id  # Add tenant_id to payload
-        print(f"Adding tenant_id to payload: {tenant_id}")
+        # Add tenant_id and clinic_id to the payload forwarded to AgentCore
+        body['tenant_id'] = tenant_id
+        body['clinic_id'] = clinic_id
+        print(f"Adding to payload - tenant_id: {tenant_id}, clinic_id: {clinic_id}")
         
         # Forward request to AgentCore
         response = forward_to_agentcore(
@@ -68,7 +70,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Content-Type': 'text/plain',
                 'Access-Control-Allow-Origin': '*',
-                'X-Tenant-ID': tenant_id
+                'X-Tenant-ID': tenant_id,
+                'X-Clinic-ID': clinic_id  # Add clinic_id to response headers
             },
             'body': response,
             'isBase64Encoded': False
@@ -83,18 +86,31 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'body': json.dumps({'error': str(e)})
         }
 
-def extract_tenant_id(event: Dict[str, Any]) -> str:
-    """Extract tenant ID from request"""
+def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
+    """Extract tenant information from request including clinic_id"""
     # Option 1: From JWT claims
     request_context = event.get('requestContext', {})
     authorizer = request_context.get('authorizer', {})
     claims = authorizer.get('claims', {})
     
-    if 'custom:tenant_id' in claims:
-        return claims['custom:tenant_id']
+    tenant_info = {
+        'tenant_id': 'basic',  # default tier
+        'clinic_id': 'demo-clinic'  # default clinic
+    }
     
-    # Option 2: From headers
-    return event['headers'].get('X-Tenant-ID', 'default')
+    # Extract tenant_id (tier: basic/premium)
+    if 'custom:tenant_id' in claims:
+        tenant_info['tenant_id'] = claims['custom:tenant_id']
+    elif 'X-Tenant-ID' in event.get('headers', {}):
+        tenant_info['tenant_id'] = event['headers']['X-Tenant-ID']
+    
+    # Extract clinic_id from JWT custom attribute
+    if 'custom:clinic_id' in claims:
+        tenant_info['clinic_id'] = claims['custom:clinic_id']
+    elif 'X-Clinic-ID' in event.get('headers', {}):
+        tenant_info['clinic_id'] = event['headers']['X-Clinic-ID']
+    
+    return tenant_info
 
 def forward_to_agentcore(agent_arn: str, payload: str, session_id: str, 
                         bearer_token: str, qualifier: str) -> str:

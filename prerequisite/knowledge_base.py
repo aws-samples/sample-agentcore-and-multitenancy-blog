@@ -855,7 +855,7 @@ if __name__ == "__main__":
         kb.synchronize_data(kb_id, ds_id)
 
         smm_client.put_parameter(
-            Name="/app/customersupport/knowledge_base/knowledge_base_id",
+            Name="/app/healthcare/knowledge_base/knowledge_base_id",
             Description=f"{data['knowledge_base_name']} kb id",
             Value=kb_id,
             Type="String",
@@ -865,5 +865,5 @@ if __name__ == "__main__":
     if args.mode == "delete":
         kb.delete_kb(data["knowledge_base_name"])
         smm_client.delete_parameter(
-            Name="/app/customersupport/knowledge_base/knowledge_base_id"
+            Name="/app/healthcare/knowledge_base/knowledge_base_id"
         )

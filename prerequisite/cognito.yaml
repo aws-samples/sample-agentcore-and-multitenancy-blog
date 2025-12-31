@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation template for Customer Support System with DynamoDB tables, SSM parameters, and synthetic data'
+Description: 'CloudFormation template for Healthcare system with Cognito'
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -14,17 +14,17 @@ Parameters:
 
   UserPoolName:
     Type: String
-    Default: 'CustomerSupportGatewayPool'
+    Default: 'HealthcareGatewayPool'
     Description: 'Name of the Cognito User Pool'
   
   MachineAppClientName:
     Type: String
-    Default: 'CustomerSupportMachineClient'
+    Default: 'HealthcareMachineClient'
     Description: 'Name of the Cognito User Pool Application Client'
   
   WebAppClientName:
     Type: String
-    Default: 'CustomerSupportWebClient'
+    Default: 'HealthcareWebClient'
     Description: 'Name of the Cognito User Pool Web Application Client'
 
 Resources:
@@ -40,6 +40,16 @@ Resources:
         - email  # <--- Use email as username
       AutoVerifiedAttributes:
         - email  # <--- Auto-verify email if you want to skip confirmation step
+      Schema:
+        - Name: tenant_id
+          AttributeDataType: String
+          Mutable: true
+        - Name: clinic_id
+          AttributeDataType: String
+          Mutable: true
+        - Name: role
+          AttributeDataType: String
+          Mutable: true
       # LambdaConfig:
       #   PostConfirmation: !GetAtt PostSignupFunction.Arn
   
@@ -211,17 +221,17 @@ Resources:
   CognitoMachineClientIdParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/machine_client_id
+      Name: /app/healthcare/agentcore/machine_client_id
       Type: String
       Value: !Ref MachineUserPoolClient
       Description: Machine Cognito client ID
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
   
   CognitoWebClientIdParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/web_client_id
+      Name: /app/healthcare/agentcore/web_client_id
       Type: String
       Value: !Ref WebUserPoolClient
       Description: Cognito client ID for web app
@@ -231,18 +241,18 @@ Resources:
   UserPoolIdParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/userpool_id
+      Name: /app/healthcare/agentcore/userpool_id
       Type: String
       Value: !Ref UserPool
       Description: Cognito client ID
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
   
 
   CognitoAuthScopeParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/cognito_auth_scope
+      Name: /app/healthcare/agentcore/cognito_auth_scope
       Type: String
       Value: !Join
         - ''
@@ -251,22 +261,22 @@ Resources:
           - '/read'
       Description: OAuth2 scope for Cognito auth
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   CognitoDiscoveryURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/cognito_discovery_url
+      Name: /app/healthcare/agentcore/cognito_discovery_url
       Type: String
       Value: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}/.well-known/openid-configuration'
       Description: OAuth2 Discovery URL
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   CognitoTokenURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/cognito_token_url
+      Name: /app/healthcare/agentcore/cognito_token_url
       Type: String
       Value: !Join
         - ''
@@ -275,12 +285,12 @@ Resources:
           - !Sub '.auth.${AWS::Region}.amazoncognito.com/oauth2/token'
       Description: OAuth2 Token URL
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   CognitoAuthorizeURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/cognito_auth_url
+      Name: /app/healthcare/agentcore/cognito_auth_url
       Type: String
       Value: !Join
         - ''
@@ -289,12 +299,12 @@ Resources:
           - !Sub '.auth.${AWS::Region}.amazoncognito.com/oauth2/authorize'
       Description: OAuth2 Token URL
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   CognitoDomainParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/cognito_domain
+      Name: /app/healthcare/agentcore/cognito_domain
       Type: String
       Value: !Join
         - ''
@@ -303,4 +313,4 @@ Resources:
           - !Sub '.auth.${AWS::Region}.amazoncognito.com'
       Description: Cognito hosted domain for OAuth2
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare

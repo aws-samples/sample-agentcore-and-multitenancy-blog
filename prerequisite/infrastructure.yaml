@@ -44,7 +44,7 @@ Resources:
                   - ecr:BatchGetImage
                   - ecr:GetDownloadUrlForLayer
                 Resource:
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/bedrock-agentcore-customersupport*
+                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/bedrock-agentcore-healthcare*
               - Effect: Allow
                 Action:
                   - logs:DescribeLogStreams
@@ -89,7 +89,7 @@ Resources:
                   - bedrock-agentcore:GetWorkloadAccessTokenForUserId
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default
-                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/customersupport*
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/healthcare*
               - Sid: ProvisionedThroughputModelInvocation
                 Effect: Allow
                 Action:
@@ -103,14 +103,14 @@ Resources:
                 Action:
                   - ssm:GetParameter
                 Resource:
-                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/app/customersupport/*
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/app/healthcare/*
               - Sid: Identity
                 Effect: Allow
                 Action:
                   - bedrock-agentcore:GetResourceOauth2Token
                 Resource:
-                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:token-vault/default/oauth2credentialprovider/customersupport*
-                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/customersupport*
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:token-vault/default/oauth2credentialprovider/healthcare*
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default/workload-identity/healthcare*
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:workload-identity-directory/default
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:token-vault/default
               - Sid: SecretManager
@@ -118,7 +118,7 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource:
-                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:bedrock-agentcore-identity!default/oauth2/customersupport*
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:bedrock-agentcore-identity!default/oauth2/healthcare*
               - Sid: AgentCoreMemory
                 Effect: Allow
                 Action:
@@ -131,7 +131,7 @@ Resources:
                   - bedrock-agentcore:GetEvent
                   - bedrock-agentcore:ListEvents
                 Resource:
-                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:memory/customersupport*
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:memory/healthcare*
               - Sid: BedrockKnowledgeBaseAccess
                 Effect: Allow
                 Action:
@@ -188,9 +188,9 @@ Resources:
         PointInTimeRecoveryEnabled: true
       Tags:
         - Key: Application
-          Value: CustomerSupport
+          Value: Healthcare
         - Key: CostCenter
-          Value: CustomerSupport
+          Value: Healthcare
 
   # DynamoDB Table for Customer Profiles
   CustomerProfileTable:
@@ -224,9 +224,9 @@ Resources:
         PointInTimeRecoveryEnabled: true
       Tags:
         - Key: Application
-          Value: CustomerSupport
+          Value: Healthcare
         - Key: CostCenter
-          Value: CustomerSupport
+          Value: Healthcare
 
   # Premium Financial Tables
   ClientProfileTable:
@@ -244,7 +244,7 @@ Resources:
         - Key: Tenant
           Value: premium
         - Key: Application
-          Value: CustomerSupport
+          Value: Healthcare
 
   PortfolioTable:
     Type: AWS::DynamoDB::Table
@@ -265,7 +265,7 @@ Resources:
         - Key: Tenant
           Value: premium
         - Key: Application
-          Value: CustomerSupport
+          Value: Healthcare
 
   # Lambda function to populate synthetic data
   PopulateDataFunction:
@@ -754,71 +754,71 @@ Resources:
   WarrantyTableNameParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/dynamodb/warranty_table_name
+      Name: /app/healthcare/dynamodb/warranty_table_name
       Type: String
       Value: !Ref WarrantyTable
       Description: DynamoDB table name for warranty information
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   # SSM Parameter to store customer profile table name
   CustomerProfileTableNameParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/dynamodb/customer_profile_table_name
+      Name: /app/healthcare/dynamodb/customer_profile_table_name
       Type: String
       Value: !Ref CustomerProfileTable
       Description: DynamoDB table name for customer profiles
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   # SSM Parameters for Premium Financial Tables
   ClientProfileTableNameParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/dynamodb/client_profile_table_name
+      Name: /app/healthcare/dynamodb/client_profile_table_name
       Type: String
       Value: !Ref ClientProfileTable
       Description: DynamoDB table name for financial client profiles
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   PortfolioTableNameParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/dynamodb/portfolio_table_name
+      Name: /app/healthcare/dynamodb/portfolio_table_name
       Type: String
       Value: !Ref PortfolioTable
       Description: DynamoDB table name for client portfolios
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   GatewayAgentcoreIAMRoleParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/gateway_iam_role
+      Name: /app/healthcare/agentcore/gateway_iam_role
       Type: String
       Value: !GetAtt GatewayAgentCoreRole.Arn
       Description: agentcore IAM role to assume
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   RuntimeAgentcoreIAMRoleParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/runtime_iam_role
+      Name: /app/healthcare/agentcore/runtime_iam_role
       Type: String
       Value: !GetAtt RuntimeAgentCoreRole.Arn
       Description: agentcore IAM role to assume
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare
 
   LambdaArnParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /app/customersupport/agentcore/lambda_arn
+      Name: /app/healthcare/agentcore/lambda_arn
       Type: String
       Value: !GetAtt CustomerSupportLambda.Arn
       Description: ARN of the lambda that integrates with agentcore
       Tags:
-        Application: CustomerSupport
+        Application: Healthcare

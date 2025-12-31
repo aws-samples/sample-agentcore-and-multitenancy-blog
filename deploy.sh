@@ -50,22 +50,19 @@ print_step "Listing SSM parameters..."
 chmod +x scripts/list_ssm_parameters.sh
 ./scripts/list_ssm_parameters.sh
 
-print_warning "Please ensure all resource names are prefixed with 'customersupport'"
+print_warning "Please ensure all resource names are prefixed with 'healthcare'"
 
-print_step "Creating AgentCore Gateway..."
-python scripts/agentcore_gateway.py create --name customersupport-gw
+print_step "Creating AgentCore Gateways (Basic and Premium)..."
+python scripts/agentcore_gateway.py create-all
 
 print_step "Setting up Cognito Credential Provider..."
-python scripts/cognito_credentials_provider.py create --name customersupport-gateways
+python scripts/cognito_credentials_provider.py create --name healthcare-cognito-provider
+
+print_step "Creating Memory Resources (Basic and Premium)..."
+python scripts/agentcore_memory.py create-all
 
 print_step "Testing gateway with basic tenant..."
 python test/test_gateway.py --prompt "Check warranty with serial number MNO33333333"
-
-print_step "Creating memory for basic tier..."
-python scripts/agentcore_memory.py create --name customersupport-basic
-
-print_step "Creating memory for premium tier..."
-python scripts/agentcore_memory.py create --name customersupport-premium
 
 print_step "Testing memory functionality..."
 python test/test_memory.py load-conversation
@@ -83,12 +80,12 @@ fi
 print_step "Configuring basic tier agent..."
 agentcore configure --entrypoint main.py \
   -er "$RUNTIME_ROLE" \
-  --name customersupport-basic
+  --name healthcare-basic
 
 print_step "Configuring premium tier agent..."
 agentcore configure --entrypoint main_premium.py \
   -er "$RUNTIME_ROLE" \
-  --name customersupport-premium
+  --name healthcare-premium
 
 print_step "Removing old agentcore config..."
 rm -f .agentcore.yaml
@@ -99,10 +96,10 @@ echo "🎉 Multi-tenant AgentCore deployment is ready!"
 echo ""
 echo "To launch the agents:"
 echo "1. Launch AgentCore: agentcore launch"
-echo "2. In another terminal, start Streamlit: streamlit run app.py --server.port 8501 -- --agent=customersupport-basic"
+echo "2. In another terminal, start Streamlit: streamlit run app.py --server.port 8501 -- --agent=healthcare-basic"
 echo ""
 echo "Available agents:"
-echo "- customersupport-basic (Gaming console support)"
-echo "- customersupport-premium (Financial services)"
+echo "- healthcare-basic"
+echo "- healthcare-premium"
 echo ""
 echo "Use ./scripts/list_ssm_parameters.sh to view configuration parameters"

@@ -9,29 +9,34 @@ import json
 import sys
 from botocore.exceptions import ClientError
 
-def create_inference_profile(bedrock_client, profile_name: str, model_id: str = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"):
+def create_inference_profile(bedrock_client, profile_name: str, model_id: str, tier: str):
     """Create a Bedrock inference profile"""
     try:
         response = bedrock_client.create_application_inference_profile(
             inferenceProfileName=profile_name,
-            description=f"Inference profile for {profile_name} tier customer support",
+            description=f"Inference profile for {tier} tier healthcare system",
             modelSource={
                 'copyFrom': model_id
             },
             tags=[
                 {
                     'key': 'Project',
-                    'value': 'CustomerSupport'
+                    'value': 'HealthcareDemo'
                 },
                 {
                     'key': 'Tier',
-                    'value': profile_name.title()
+                    'value': tier
+                },
+                {
+                    'key': 'Environment',
+                    'value': 'demo'
                 }
             ]
         )
         
         profile_arn = response['inferenceProfileArn']
         print(f"✅ Created inference profile: {profile_name}")
+        print(f"   Model: {model_id}")
         print(f"   ARN: {profile_arn}")
         return profile_arn
         
@@ -67,43 +72,51 @@ def store_profile_arn_in_ssm(ssm_client, param_name: str, profile_arn: str):
 
 def main():
     """Main function to create inference profiles"""
-    print("🧠 Creating Bedrock inference profiles for multi-tenant deployment...")
+    print("🧠 Creating Bedrock inference profiles for healthcare multi-tenant deployment...")
     
     try:
         # Initialize AWS clients
         bedrock_client = boto3.client('bedrock')
         ssm_client = boto3.client('ssm')
         
-        # Create basic tier inference profile
+        # Create basic tier inference profile (Nova Micro)
+        print("\n📊 Creating Basic Tier profile...")
         basic_profile_arn = create_inference_profile(
             bedrock_client, 
-            "customersupport-basic-profile"
+            profile_name="healthcare-basic-profile",
+            model_id="us.amazon.nova-micro-v1:0",
+            tier="Basic"
         )
         
         if basic_profile_arn:
             store_profile_arn_in_ssm(
                 ssm_client,
-                "/app/customersupport/inference_profiles/basic_arn",
+                "/app/healthcare/inference_profiles/basic_arn",
                 basic_profile_arn
             )
         
-        # Create premium tier inference profile
+        # Create premium tier inference profile (Claude Sonnet 4.5)
+        print("\n📊 Creating Premium Tier profile...")
         premium_profile_arn = create_inference_profile(
             bedrock_client,
-            "customersupport-premium-profile"
+            profile_name="healthcare-premium-profile",
+            model_id="us.anthropic.claude-sonnet-4-v2:0",
+            tier="Premium"
         )
         
         if premium_profile_arn:
             store_profile_arn_in_ssm(
                 ssm_client,
-                "/app/customersupport/inference_profiles/premium_arn", 
+                "/app/healthcare/inference_profiles/premium_arn", 
                 premium_profile_arn
             )
         
-        print("✅ Inference profile creation completed!")
+        print("\n✅ Inference profile creation completed!")
+        print(f"   Basic: Nova Micro (cost-effective)")
+        print(f"   Premium: Claude Sonnet 4.5 (advanced capabilities)")
         
         # Update configuration
-        print("🔧 Updating deployment configuration...")
+        print("\n🔧 Updating deployment configuration...")
         import subprocess
         subprocess.run([sys.executable, "scripts/configure_deployment.py"], check=True)
         

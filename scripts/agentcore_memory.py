@@ -37,64 +37,117 @@ def delete_ssm_param(param_name: str):
 @click.group()
 @click.pass_context
 def cli(ctx):
-    """AgentCore Memory Management CLI.
+    """AgentCore Memory Management CLI for Healthcare Multi-Tenancy.
 
-    Create and delete AgentCore memory resources for the customer support application.
+    Create and manage AgentCore memory resources for the healthcare clinical
+    document processing platform with tier-based isolation.
     """
     ctx.ensure_object(dict)
 
 
 @cli.command()
 @click.option(
-    "--name", default="CustomerSupportMemory", help="Name of the memory resource"
+    "--name", default="healthcare-basic-memory", help="Name of the memory resource (e.g., healthcare-basic-memory)"
+)
+@click.option(
+    "--tier",
+    type=click.Choice(["basic", "premium"], case_sensitive=False),
+    default="basic",
+    help="Tier level for the memory resource (basic or premium)",
 )
 @click.option(
     "--ssm-param",
-    default="/app/customersupport/agentcore/memory_id",
-    help="SSM parameter to store memory_id",
+    help="SSM parameter to store memory_id (auto-generated if not provided)",
 )
 @click.option(
     "--event-expiry-days",
-    default=30,
     type=int,
-    help="Number of days before events expire (default: 30)",
+    help="Number of days before events expire (default: 90 for basic, 180 for premium)",
 )
-def create(name, ssm_param, event_expiry_days):
-    """Create a new AgentCore memory resource."""
-    click.echo(f"🚀 Creating AgentCore memory: {name}")
+def create(name, tier, ssm_param, event_expiry_days):
+    """Create a new AgentCore memory resource for healthcare multi-tenancy.
+    
+    Creates tier-specific memory with namespace templates for clinic and user isolation.
+    
+    Examples:
+        # Create basic tier memory
+        python agentcore_memory.py create --name healthcare-basic-memory --tier basic
+        
+        # Create premium tier memory with custom expiry
+        python agentcore_memory.py create --name healthcare-premium-memory --tier premium --event-expiry-days 365
+    """
+    click.echo(f"🚀 Creating Healthcare AgentCore memory: {name}")
     click.echo(f"📍 Region: {REGION}")
+    click.echo(f"🏥 Tier: {tier}")
+    
+    # Auto-generate SSM parameter if not provided
+    if not ssm_param:
+        ssm_param = f"/app/healthcare/memory/{tier}_id"
+    
+    # Set default expiry based on tier
+    if not event_expiry_days:
+        event_expiry_days = 180 if tier == "premium" else 90
+    
     click.echo(f"⏱️  Event expiry: {event_expiry_days} days")
 
-    strategies = [
-        {
-            StrategyType.SEMANTIC.value: {
-                "name": "fact_extractor",
-                "description": "Extracts and stores factual information",
-                "namespaces": ["support/user/{actorId}/facts"],
+    # Tier-specific namespace templates for clinic and user isolation
+    if tier == "basic":
+        strategies = [
+            {
+                StrategyType.SEMANTIC.value: {
+                    "name": "clinical-facts",
+                    "description": "Clinical facts and patient information",
+                    "namespaces": [
+                        "clinic/{actorId}/facts/{sessionId}",
+                        "clinic/{actorId}/preferences"
+                    ],
+                },
             },
-        },
-        {
-            StrategyType.SUMMARY.value: {
-                "name": "conversation_summary",
-                "description": "Captures summaries of conversations",
-                "namespaces": ["support/user/{actorId}/{sessionId}"],
+            {
+                StrategyType.SUMMARY.value: {
+                    "name": "conversation-summary",
+                    "description": "Conversation summaries for clinical interactions",
+                    "namespaces": ["clinic/{actorId}/summaries/{sessionId}"],
+                },
             },
-        },
-        {
-            StrategyType.USER_PREFERENCE.value: {
-                "name": "user_preferences",
-                "description": "Captures user preferences and settings",
-                "namespaces": ["support/user/{actorId}/preferences"],
+        ]
+        description = "Memory for healthcare basic tier - clinical document processing"
+    else:  # premium
+        strategies = [
+            {
+                StrategyType.SEMANTIC.value: {
+                    "name": "clinical-insights",
+                    "description": "Advanced clinical insights and analytics",
+                    "namespaces": [
+                        "clinic/{actorId}/insights/{sessionId}",
+                        "clinic/{actorId}/preferences",
+                        "clinic/{actorId}/analytics"
+                    ],
+                },
             },
-        },
-    ]
+            {
+                StrategyType.SUMMARY.value: {
+                    "name": "advanced-summary",
+                    "description": "Advanced conversation summaries with clinical context",
+                    "namespaces": ["clinic/{actorId}/summaries/{sessionId}"],
+                },
+            },
+            {
+                StrategyType.USER_PREFERENCE.value: {
+                    "name": "user-preferences",
+                    "description": "User preferences and clinical workflow settings",
+                    "namespaces": ["clinic/{actorId}/preferences"],
+                },
+            },
+        ]
+        description = "Memory for healthcare premium tier - advanced clinical analytics"
 
     try:
         click.echo("🔄 Creating memory resource...")
         memory = memory_client.create_memory_and_wait(
             name=name,
             strategies=strategies,
-            description="Memory for customer support agent",
+            description=description,
             event_expiry_days=event_expiry_days,
         )
         memory_id = memory["id"]
@@ -121,9 +174,88 @@ def create(name, ssm_param, event_expiry_days):
         click.echo("🎉 Memory setup completed successfully!")
         click.echo(f"   Memory ID: {memory_id}")
         click.echo(f"   SSM Parameter: {ssm_param}")
+        click.echo(f"   Tier: {tier}")
+        click.echo(f"\n💡 Namespace template uses {{actorId}} for user-level isolation:")
+        click.echo(f"   Format: {tier}-{{clinic_id}}-{{user_id}}")
 
     except Exception as e:
         click.echo(f"⚠️  Memory created but failed to store in SSM: {str(e)}", err=True)
+
+
+@cli.command()
+def create_all():
+    """Create both basic and premium tier memory resources.
+    
+    This is a convenience command that creates:
+    - healthcare-basic-memory (90 day expiry)
+    - healthcare-premium-memory (180 day expiry)
+    
+    Example:
+        python agentcore_memory.py create-all
+    """
+    click.echo("🚀 Creating both Healthcare AgentCore memory resources")
+    click.echo(f"📍 Region: {REGION}")
+    
+    # Create basic tier memory
+    click.echo("\n" + "="*60)
+    click.echo("Creating Basic Tier Memory")
+    click.echo("="*60)
+    ctx = click.get_current_context()
+    ctx.invoke(create, name="healthcare-basic-memory", tier="basic")
+    
+    # Create premium tier memory
+    click.echo("\n" + "="*60)
+    click.echo("Creating Premium Tier Memory")
+    click.echo("="*60)
+    ctx.invoke(create, name="healthcare-premium-memory", tier="premium")
+    
+    click.echo("\n" + "="*60)
+    click.echo("🎉 Both memory resources created successfully!")
+    click.echo("="*60)
+
+
+@cli.command()
+@click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
+def delete_all(confirm):
+    """Delete both basic and premium tier memory resources.
+    
+    Example:
+        python agentcore_memory.py delete-all --confirm
+    """
+    click.echo("🗑️  Deleting both Healthcare AgentCore memory resources")
+    
+    # Confirmation prompt
+    if not confirm:
+        if not click.confirm(
+            "⚠️  Are you sure you want to delete BOTH memory resources? This action cannot be undone."
+        ):
+            click.echo("❌ Operation cancelled")
+            sys.exit(0)
+    
+    success_count = 0
+    ctx = click.get_current_context()
+    
+    # Delete basic tier memory
+    try:
+        click.echo("\n🗑️  Deleting basic tier memory...")
+        ctx.invoke(delete, tier="basic", confirm=True)
+        success_count += 1
+    except Exception as e:
+        click.echo(f"⚠️  Failed to delete basic tier memory: {e}")
+    
+    # Delete premium tier memory
+    try:
+        click.echo("\n🗑️  Deleting premium tier memory...")
+        ctx.invoke(delete, tier="premium", confirm=True)
+        success_count += 1
+    except Exception as e:
+        click.echo(f"⚠️  Failed to delete premium tier memory: {e}")
+    
+    if success_count > 0:
+        click.echo(f"\n🎉 Deleted {success_count} memory resource(s) successfully")
+    else:
+        click.echo("\n❌ No memory resources were deleted", err=True)
+        sys.exit(1)
 
 
 @cli.command()
@@ -132,22 +264,45 @@ def create(name, ssm_param, event_expiry_days):
     help="Memory ID to delete (if not provided, will read from SSM parameter)",
 )
 @click.option(
+    "--tier",
+    type=click.Choice(["basic", "premium"], case_sensitive=False),
+    help="Tier level (required if memory-id not provided)",
+)
+@click.option(
     "--ssm-param",
-    default="/app/customersupport/agentcore/memory_id",
-    help="SSM parameter to retrieve memory_id from",
+    help="SSM parameter to retrieve memory_id from (auto-generated if tier provided)",
 )
 @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
-def delete(memory_id, ssm_param, confirm):
-    """Delete an AgentCore memory resource."""
+def delete(memory_id, tier, ssm_param, confirm):
+    """Delete an AgentCore memory resource.
+    
+    Examples:
+        # Delete basic tier memory
+        python agentcore_memory.py delete --tier basic --confirm
+        
+        # Delete specific memory by ID
+        python agentcore_memory.py delete --memory-id mem-abc123 --confirm
+    """
 
     # If no memory ID provided, try to read from SSM
     if not memory_id:
+        if not tier and not ssm_param:
+            click.echo(
+                "❌ Either --memory-id, --tier, or --ssm-param must be provided",
+                err=True,
+            )
+            sys.exit(1)
+        
+        # Auto-generate SSM parameter if tier provided
+        if tier and not ssm_param:
+            ssm_param = f"/app/healthcare/memory/{tier}_id"
+        
         try:
             memory_id = get_memory_id_from_ssm(ssm_param)
-            click.echo(f"📖 Using memory ID from SSM: {memory_id}")
+            click.echo(f"📖 Using memory ID from SSM ({ssm_param}): {memory_id}")
         except Exception:
             click.echo(
-                "❌ No memory ID provided and couldn't read from SSM parameter",
+                f"❌ No memory ID found in SSM parameter: {ssm_param}",
                 err=True,
             )
             sys.exit(1)
@@ -169,8 +324,12 @@ def delete(memory_id, ssm_param, confirm):
         click.echo(f"❌ Error deleting memory: {str(e)}", err=True)
         sys.exit(1)
 
-    # Always delete SSM parameter
-    delete_ssm_param(ssm_param)
+    # Delete SSM parameter if provided
+    if ssm_param:
+        delete_ssm_param(ssm_param)
+    elif tier:
+        delete_ssm_param(f"/app/healthcare/memory/{tier}_id")
+    
     click.echo("🎉 Memory and SSM parameter deleted successfully")
 
 

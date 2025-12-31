@@ -12,12 +12,12 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 ### 1.1 Environment Setup & Configuration Updates (Day 1)
 
-- [ ] **Update All Configuration Files** (BEFORE deployment)
+- [x] **Update All Configuration Files** (BEFORE deployment)
   
-  - [ ] Update `scripts/prereq.sh`:
+  - [x] Update `scripts/prereq.sh`:
     - Change default bucket name to `healthcare`
     - Change stack names: `HealthcareStackInfra`, `HealthcareStackCognito`
-  - [ ] Update CloudFormation templates in `prerequisite/`:
+  - [x] Update CloudFormation templates in `prerequisite/`:
     - **`cognito.yaml`**:
       - Add custom attributes to UserPool:
         ```yaml
@@ -43,36 +43,39 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
     - Change KB names: `healthcare-basic-kb`, `healthcare-premium-kb`
     - Update S3 data source paths for healthcare documents
     - Update SSM parameter paths: `/app/healthcare/knowledge_base/*`
-  - [ ] Update `prerequisite/lambda/python/api_gateway_lambda.py`:
+  - [x] Update `prerequisite/lambda/python/api_gateway_lambda.py`:
     - Update `extract_tenant_info()` to extract `clinic_id` from JWT:
       ```python
       clinic_id = claims.get('custom:clinic_id', 'demo-clinic')
       ```
     - Add `clinic_id` to payload forwarded to AgentCore
     - Add `X-Clinic-ID` response header
-  - [ ] Update `scripts/create_inference_profiles.py`:
+  - [x] Update `scripts/create_inference_profiles.py`:
     - Profile names: `healthcare-basic-profile`, `healthcare-premium-profile` (2 tier-level profiles)
     - Model IDs:
       - Basic: `us.amazon.nova-micro-v1:0`
       - Premium: `us.anthropic.claude-sonnet-4-v2:0`
     - Tags: `Project=HealthcareDemo`, `Tier=Basic/Premium`, `Environment=demo`
     - SSM paths: `/app/healthcare/inference_profiles/basic_arn`, `premium_arn`
-  - [ ] Update `scripts/configure_deployment.py`:
+  - [x] Update `scripts/configure_deployment.py`:
     - Change SSM parameter paths to `/app/healthcare/*`
     - Update regex patterns for healthcare naming
-  - [ ] Update `scripts/agentcore_gateway.py`:
+  - [x] Update `scripts/agentcore_gateway.py`:
     - Support creating 2 gateways: `healthcare-basic-gw`, `healthcare-premium-gw`
     - Each gateway will have tier-specific tools
-  - [ ] Update `scripts/cognito_credentials_provider.py`:
-    - Support 2 credential providers: `healthcare-basic-gateways`, `healthcare-premium-gateways`
-  - [ ] Update `scripts/agentcore_memory.py`:
+    - Added `create-all` and `delete-all` convenience commands
+  - [x] Update `scripts/cognito_credentials_provider.py`:
+    - Change SSM parameter paths to `/app/healthcare/*`
+    - Single shared credential provider for both gateways
+    - Updated naming: `healthcare-cognito-provider`
+  - [x] Update `scripts/agentcore_memory.py`:
     - Add namespace template support
     - Default names: `healthcare-basic-memory`, `healthcare-premium-memory`
-- [ ] Update `deploy.sh`:
+- [x] Update `deploy.sh`:
     - Change `BUCKET_NAME=customersupport` → `BUCKET_NAME=healthcare`
     - Change agent names: `healthcare-basic`, `healthcare-premium`
     - Update all references to `customersupport` → `healthcare`
-    - **Add new steps per DEPLOY_SH_UPDATES.md**:
+    - Use `create-all` command for gateways
     - Add memory observability setup (after memory creation)
     - Add Cognito user creation (after agent configuration)
     - Add S3 document bucket setup (optional)
@@ -321,17 +324,14 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
     - `/app/healthcare/agentcore/basic_gateway_url`
     - `/app/healthcare/agentcore/premium_gateway_url`
 
-- [ ] **Setup Cognito Credential Providers** (2 providers, one per gateway)
-  - [ ] Create basic tier credential provider:
+- [ ] **Setup Cognito Credential Provider** (1 shared provider for both gateways)
+  - [ ] Create single credential provider shared by both tiers:
     ```bash
-    python scripts/cognito_credentials_provider.py create --name healthcare-basic-gateways
+    python scripts/cognito_credentials_provider.py create --name healthcare-cognito-provider
     ```
-  - [ ] Create premium tier credential provider:
-    ```bash
-    python scripts/cognito_credentials_provider.py create --name healthcare-premium-gateways
-    ```
-  - [ ] Links Cognito to respective AgentCore gateways
-  - [ ] Verify both credential providers active
+  - [ ] Links Cognito to both basic and premium AgentCore gateways
+  - [ ] Verify credential provider is active
+  - [ ] Note: Single Cognito User Pool with custom JWT claims (`custom:tenant_id`, `custom:clinic_id`) handles tenant differentiation
 
 - [ ] **Register Tools with Gateways**
   - [ ] Register basic tools with basic gateway:

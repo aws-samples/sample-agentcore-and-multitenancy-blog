@@ -36,9 +36,9 @@ def load_ssm_parameters() -> Dict[str, str]:
     parameters = {}
     
     try:
-        # Get all parameters with the customersupport prefix
+        # Get all parameters with the healthcare prefix
         paginator = ssm.get_paginator('get_parameters_by_path')
-        for page in paginator.paginate(Path='/app/customersupport', Recursive=True):
+        for page in paginator.paginate(Path='/app/healthcare', Recursive=True):
             for param in page['Parameters']:
                 key = param['Name'].split('/')[-1]  # Get the last part of the path
                 parameters[key] = param['Value']
@@ -105,10 +105,10 @@ def generate_agentcore_yaml(config: Dict[str, Any]):
     """Generate .bedrock_agentcore.yaml with dynamic values"""
     
     template = {
-        "default_agent": "customersupport",
+        "default_agent": "healthcare-basic",
         "agents": {
-            "customersupport": {
-                "name": "customersupport",
+            "healthcare-basic": {
+                "name": "healthcare-basic",
                 "entrypoint": "main.py",
                 "platform": "linux/arm64",
                 "container_runtime": "finch",
@@ -135,7 +135,7 @@ def generate_agentcore_yaml(config: Dict[str, Any]):
                     "agent_session_id": None
                 },
                 "codebuild": {
-                    "project_name": f"bedrock-agentcore-customersupport-builder",
+                    "project_name": f"bedrock-agentcore-healthcare-basic-builder",
                     "execution_role": config['iam']['codebuild_role'],
                     "source_bucket": f"bedrock-agentcore-codebuild-sources-{config['aws']['account_id']}-{config['aws']['region']}"
                 },
@@ -147,8 +147,8 @@ def generate_agentcore_yaml(config: Dict[str, Any]):
                 },
                 "oauth_configuration": None
             },
-            "customersupport_premium": {
-                "name": "customersupport_premium",
+            "healthcare-premium": {
+                "name": "healthcare-premium",
                 "entrypoint": "main_premium.py",
                 "platform": "linux/arm64",
                 "container_runtime": "finch",
@@ -175,7 +175,7 @@ def generate_agentcore_yaml(config: Dict[str, Any]):
                     "agent_session_id": None
                 },
                 "codebuild": {
-                    "project_name": f"bedrock-agentcore-customersupport_premium-builder",
+                    "project_name": f"bedrock-agentcore-healthcare-premium-builder",
                     "execution_role": config['iam']['codebuild_role'],
                     "source_bucket": f"bedrock-agentcore-codebuild-sources-{config['aws']['account_id']}-{config['aws']['region']}"
                 },
@@ -233,25 +233,25 @@ def main():
         },
         "agents": {
             "basic": {
-                "agent_id": ssm_params.get('basic_agent_id', 'customersupport-AGENT_ID'),
+                "agent_id": ssm_params.get('basic_agent_id', 'healthcare-basic-AGENT_ID'),
                 "agent_arn": ssm_params.get('basic_agent_arn', 
-                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/customersupport-AGENT_ID")
+                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/healthcare-basic-AGENT_ID")
             },
             "premium": {
-                "agent_id": ssm_params.get('premium_agent_id', 'customersupport_premium-AGENT_ID'),
+                "agent_id": ssm_params.get('premium_agent_id', 'healthcare-premium-AGENT_ID'),
                 "agent_arn": ssm_params.get('premium_agent_arn',
-                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/customersupport_premium-AGENT_ID")
+                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/healthcare-premium-AGENT_ID")
             }
         },
         "iam": {
             "execution_role": ssm_params.get('runtime_iam_role', 
-                            f"arn:aws:iam::{account_id}:role/CustomerSupportStackInfra-RuntimeAgentCoreRole"),
+                            f"arn:aws:iam::{account_id}:role/HealthcareStackInfra-RuntimeAgentCoreRole"),
             "codebuild_role": ssm_params.get('codebuild_iam_role',
                             f"arn:aws:iam::{account_id}:role/AmazonBedrockAgentCoreSDKCodeBuild-{region}")
         },
         "ecr": {
-            "basic_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-customersupport",
-            "premium_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-customersupport_premium"
+            "basic_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-healthcare-basic",
+            "premium_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-healthcare-premium"
         },
         "knowledge_bases": {
             "basic": {

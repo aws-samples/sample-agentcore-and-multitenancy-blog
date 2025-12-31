@@ -16,7 +16,7 @@ ssm = boto3.client("ssm", region_name=REGION)
 
 def store_provider_name_in_ssm(provider_name: str):
     """Store credential provider name in SSM parameter."""
-    param_name = "/app/customersupport/agentcore/cognito_provider"
+    param_name = "/app/healthcare/agentcore/cognito_provider"
     try:
         ssm.put_parameter(
             Name=param_name, Value=provider_name, Type="String", Overwrite=True
@@ -28,7 +28,7 @@ def store_provider_name_in_ssm(provider_name: str):
 
 def get_provider_name_from_ssm() -> str:
     """Get credential provider name from SSM parameter."""
-    param_name = "/app/customersupport/agentcore/cognito_provider"
+    param_name = "/app/healthcare/agentcore/cognito_provider"
     try:
         response = ssm.get_parameter(Name=param_name)
         return response["Parameter"]["Value"]
@@ -38,7 +38,7 @@ def get_provider_name_from_ssm() -> str:
 
 def delete_ssm_param():
     """Delete SSM parameter for provider."""
-    param_name = "/app/customersupport/agentcore/cognito_provider"
+    param_name = "/app/healthcare/agentcore/cognito_provider"
     try:
         ssm.delete_parameter(Name=param_name)
         click.echo(f"🧹 Deleted SSM parameter: {param_name}")
@@ -47,25 +47,25 @@ def delete_ssm_param():
 
 
 def create_cognito_provider(provider_name: str) -> dict:
-    """Create a Cognito OAuth2 credential provider."""
+    """Create a Cognito OAuth2 credential provider for healthcare multi-tenancy."""
     try:
         click.echo("📥 Fetching Cognito configuration from SSM...")
         client_id = get_ssm_parameter(
-            "/app/customersupport/agentcore/machine_client_id"
+            "/app/healthcare/agentcore/machine_client_id"
         )
         click.echo(f"✅ Retrieved client ID: {client_id}")
 
         client_secret = get_ssm_parameter(
-            "/app/customersupport/agentcore/cognito_secret"
+            "/app/healthcare/agentcore/cognito_secret"
         )
         click.echo(f"✅ Retrieved client secret: {client_secret[:4]}***")
 
         issuer = get_ssm_parameter(
-            "/app/customersupport/agentcore/cognito_discovery_url"
+            "/app/healthcare/agentcore/cognito_discovery_url"
         )
-        auth_url = get_ssm_parameter("/app/customersupport/agentcore/cognito_auth_url")
+        auth_url = get_ssm_parameter("/app/healthcare/agentcore/cognito_auth_url")
         token_url = get_ssm_parameter(
-            "/app/customersupport/agentcore/cognito_token_url"
+            "/app/healthcare/agentcore/cognito_token_url"
         )
 
         click.echo(f"✅ Issuer: {issuer}")
@@ -146,20 +146,27 @@ def find_provider_by_name(provider_name: str) -> bool:
 @click.group()
 @click.pass_context
 def cli(ctx):
-    """AgentCore Cognito Credential Provider Management CLI.
+    """AgentCore Cognito Credential Provider Management CLI for Healthcare Multi-Tenancy.
 
-    Create and delete OAuth2 credential providers for Cognito authentication.
+    Create and manage OAuth2 credential providers for Cognito authentication.
+    This provider is shared by both basic and premium tier gateways.
     """
     ctx.ensure_object(dict)
 
 
 @cli.command()
 @click.option(
-    "--name", required=True, help="Name for the credential provider (required)"
+    "--name", required=True, help="Name for the credential provider (e.g., healthcare-cognito-provider)"
 )
 def create(name):
-    """Create a new Cognito OAuth2 credential provider."""
-    click.echo(f"🚀 Creating Cognito credential provider: {name}")
+    """Create a new Cognito OAuth2 credential provider.
+    
+    This provider is shared by both basic and premium tier gateways.
+    
+    Example:
+        python cognito_credentials_provider.py create --name healthcare-cognito-provider
+    """
+    click.echo(f"🚀 Creating Healthcare Cognito credential provider: {name}")
     click.echo(f"📍 Region: {REGION}")
 
     # Check if provider already exists in SSM
@@ -175,6 +182,7 @@ def create(name):
         click.echo("🎉 Cognito credential provider created successfully!")
         click.echo(f"   Provider ARN: {provider['credentialProviderArn']}")
         click.echo(f"   Provider Name: {provider['name']}")
+        click.echo("\n💡 This provider can be used by both basic and premium gateways")
 
     except Exception as e:
         click.echo(f"❌ Failed to create credential provider: {str(e)}", err=True)
