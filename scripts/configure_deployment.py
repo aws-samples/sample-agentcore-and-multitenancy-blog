@@ -9,6 +9,7 @@ import sys
 import boto3
 import yaml
 import json
+import re
 from pathlib import Path
 from typing import Dict, Any
 
@@ -47,27 +48,31 @@ def load_ssm_parameters() -> Dict[str, str]:
     return parameters
 
 def update_agent_config_files(config: Dict[str, Any]):
-    """Update agent configuration files with dynamic values"""
+    """Update agent configuration files with dynamic values using regex patterns"""
     
     # Update basic agent configuration
     basic_agent_file = Path("agent_config/agent.py")
     if basic_agent_file.exists():
         content = basic_agent_file.read_text()
         
-        # Replace hardcoded inference profile mapping
-        old_mapping = '''inference_profile_mapping = {
-            "basic": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5",
-            "premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/pxttfsxmxl5o",
-            "default": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5"
-        }'''
+        # Use regex to replace any inference profile ARNs (works regardless of account ID)
+        # Pattern matches: "basic": "arn:aws:bedrock:REGION:ACCOUNT:application-inference-profile/ID"
+        content = re.sub(
+            r'"basic":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
+            f'"basic": "{config["inference_profiles"]["basic"]["arn"]}',
+            content
+        )
+        content = re.sub(
+            r'"premium":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
+            f'"premium": "{config["inference_profiles"]["premium"]["arn"]}',
+            content
+        )
+        content = re.sub(
+            r'"default":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
+            f'"default": "{config["inference_profiles"]["basic"]["arn"]}',
+            content
+        )
         
-        new_mapping = f'''inference_profile_mapping = {{
-            "basic": "{config['inference_profiles']['basic']['arn']}",
-            "premium": "{config['inference_profiles']['premium']['arn']}",
-            "default": "{config['inference_profiles']['basic']['arn']}"
-        }}'''
-        
-        content = content.replace(old_mapping, new_mapping)
         basic_agent_file.write_text(content)
         print("✅ Updated basic agent configuration")
     
@@ -76,21 +81,23 @@ def update_agent_config_files(config: Dict[str, Any]):
     if premium_agent_file.exists():
         content = premium_agent_file.read_text()
         
-        # Replace hardcoded inference profile mapping
-        old_mapping = '''inference_profile_mapping = {
-            "basic": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5",
-            #"premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/vimfv9mxuuey",
-            "premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/pxttfsxmxl5o",
-            "default": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5"
-        }'''
+        # Use regex to replace any inference profile ARNs
+        content = re.sub(
+            r'"basic":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
+            f'"basic": "{config["inference_profiles"]["basic"]["arn"]}',
+            content
+        )
+        content = re.sub(
+            r'"premium":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
+            f'"premium": "{config["inference_profiles"]["premium"]["arn"]}',
+            content
+        )
+        content = re.sub(
+            r'"default":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
+            f'"default": "{config["inference_profiles"]["basic"]["arn"]}',
+            content
+        )
         
-        new_mapping = f'''inference_profile_mapping = {{
-            "basic": "{config['inference_profiles']['basic']['arn']}",
-            "premium": "{config['inference_profiles']['premium']['arn']}",
-            "default": "{config['inference_profiles']['basic']['arn']}"
-        }}'''
-        
-        content = content.replace(old_mapping, new_mapping)
         premium_agent_file.write_text(content)
         print("✅ Updated premium agent configuration")
 

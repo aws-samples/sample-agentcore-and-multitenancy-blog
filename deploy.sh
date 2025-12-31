@@ -36,9 +36,6 @@ print_step "Activating virtual environment and installing dependencies..."
 source .venv/bin/activate
 pip install -r dev-requirements.txt
 
-print_step "Configuring deployment for your AWS account..."
-python scripts/configure_deployment.py
-
 print_step "Creating AWS infrastructure..."
 chmod +x scripts/prereq.sh
 ./scripts/prereq.sh
