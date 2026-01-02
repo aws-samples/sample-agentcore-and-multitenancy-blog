@@ -240,9 +240,121 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 - Knowledge base script updated for healthcare
 - Code ready for deployment
 
+--
+
+## Phase 2: Clinical Document Tools & S3 Setup (Week 3: 5-7 days)
+
+**Objective**: Implement healthcare-specific tools and document storage
+
+### 2.1 S3 Document Structure Setup (Days 1-2)
+
+- [x] **Create Document Generation Script** (`scripts/generate_healthcare_documents.py`)
+  - [x] Use Claude Sonnet 4.5 to generate synthetic clinical documents
+  - [x] Basic tier (24-28 docs per clinic, ~100 total):
+    - Patient intake forms
+    - Appointment notes
+    - Basic lab results
+    - Prescription records
+  - [x] Premium tier (25-30 docs per clinic, ~113 total):
+    - Diagnostic reports
+    - Imaging study reports
+    - Specialist consultation notes
+    - Complex lab results
+  - [x] Ensure HIPAA-compliant synthetic data (no real PHI)
+  - [x] Save to local `prerequisite/basic-documents/` and `prerequisite/premium-documents/`
+  - [x] Idempotent: checks if documents exist before generating
+
+- [x] **S3 Upload Handled by Knowledge Base Script**
+  - [x] Existing `knowledge_base.py` already uploads documents to S3
+  - [x] Uses `upload_directory()` method to upload from local paths
+  - [x] Creates S3 bucket with proper structure during KB creation
+  - [x] No separate upload script needed
+
+**Deliverables**:
+- ✅ Document generation script created (~213 synthetic documents)
+- ✅ Local folder structure matches S3 structure
+- ✅ S3 upload integrated into existing Knowledge Base workflow
+
 ---
 
-## Phase 2: Infrastructure Deployment (Week 2: 3-5 days)
+### 3.2 Document Search Tool (Days 3-4)
+
+- [ ] **Create document_search.py** (`prerequisite/lambda/python/document_search.py`)
+  - [ ] Implement S3-based document search
+  - [ ] Filter by document type, date range, keywords
+  - [ ] **Application-level isolation**: Respect S3 prefix from tenant context
+    ```python
+    # Get tenant context from request
+    tenant_info = extract_tenant_info(event)
+    s3_prefix = tenant_info['s3_prefix']  # e.g., "basic-tier/clinic-a/"
+    
+    # List objects with clinic-specific prefix
+    response = s3.list_objects_v2(
+        Bucket=bucket_name,
+        Prefix=s3_prefix,
+        MaxKeys=100
+    )
+    ```
+  - [ ] Return document metadata and presigned URLs
+  - [ ] Add pagination for large result sets
+
+- [ ] **Test Clinic Isolation**
+  - [ ] Test Clinic A user can access Clinic A documents
+  - [ ] Test Clinic A user CANNOT access Clinic B documents (empty results)
+  - [ ] Verify S3 prefix filtering works correctly
+
+**Deliverables**:
+- Document search tool with application-level clinic isolation
+- Clinic isolation verified through testing
+
+---
+
+### 3.3 Document Retrieval & Summarization Tools (Days 5-7)
+
+- [ ] **Create document_retrieval.py** (`prerequisite/lambda/python/document_retrieval.py`)
+  - [ ] Fetch document content from S3
+  - [ ] Parse common formats (TXT, PDF, JSON)
+  - [ ] Extract text content for LLM processing
+  - [ ] Implement caching for frequently accessed documents
+  - [ ] Respect S3 prefix from tenant context (clinic isolation)
+
+- [ ] **Create document_summarization.py** (`prerequisite/lambda/python/document_summarization.py`)
+  - [ ] Implement tier-specific summarization:
+    - Basic: Nova Micro (fast, cost-effective)
+    - Premium: Claude Sonnet 4.5 (high-quality, detailed)
+  - [ ] Support single-document and multi-document summarization
+  - [ ] Extract key clinical findings
+  - [ ] Generate structured summaries
+
+- [ ] **Create web_search.py** (`prerequisite/lambda/python/web_search.py`) - Premium Only
+  - [ ] Integrate web search tool (Tavily, Brave Search, or custom)
+  - [ ] Configure for medical research and clinical guidelines
+  - [ ] Filter results for credibility
+  - [ ] This tool will ONLY be registered with premium gateway
+
+- [ ] **Update or Repurpose Existing Tools**
+  - [ ] Review existing tools in `prerequisite/lambda/python/`
+  - [ ] Repurpose for healthcare context if applicable
+  - [ ] Remove gaming/finance-specific tools
+
+- [ ] **Tool Testing**
+  - [ ] Test each tool independently
+  - [ ] Test tool chain (search → retrieve → summarize)
+  - [ ] Verify tier-specific behavior
+  - [ ] Verify basic tier cannot access web search (enforced by gateway)
+  - [ ] Test clinic isolation (Clinic A can't access Clinic B docs)
+
+**Deliverables**:
+- Document retrieval tool
+- Document summarization tool with tier differentiation
+- Web search tool (premium-only, registered only with premium gateway)
+- Tool testing suite
+- Clinic isolation verified
+
+
+---
+
+## Phase 3: Infrastructure Deployment (Week 2: 3-5 days)
 
 **Objective**: Deploy healthcare infrastructure using refactored code
 
@@ -485,126 +597,6 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 ---
 
-## Phase 3: Clinical Document Tools & S3 Setup (Week 3: 5-7 days)
-
-**Objective**: Implement healthcare-specific tools and document storage
-
-### 3.1 S3 Document Structure Setup (Days 1-2)
-
-### 3.1 S3 Document Structure Setup (Days 1-2)
-
-- [ ] **Create S3 Bucket for Documents** (`scripts/setup_s3_buckets.py`)
-  - [ ] Create bucket: `healthcare-documents-{account-id}`
-  - [ ] Create folder structure:
-    ```
-    basic-tier/
-      clinic-a/, clinic-b/, clinic-c/, clinic-d/
-    premium-tier/
-      hospital-a/, clinic-e/, clinic-f/, hospital-b/
-    ```
-  - [ ] Configure bucket policies for clinic isolation
-  - [ ] Enable versioning and encryption (AES-256)
-  - [ ] Store bucket name in SSM: `/app/healthcare/s3/bucket_name`
-
-- [ ] **Generate Sample Clinical Documents** (`scripts/generate_sample_documents.py`)
-  - [ ] Use LLM to generate synthetic clinical documents
-  - [ ] Basic tier (20-30 docs per clinic):
-    - Patient intake forms
-    - Appointment notes
-    - Basic lab results
-    - Prescription records
-  - [ ] Premium tier (50-100 docs per clinic):
-    - Diagnostic reports
-    - Imaging study reports
-    - Specialist consultation notes
-    - Complex lab results
-  - [ ] Ensure HIPAA-compliant synthetic data (no real PHI)
-
-- [ ] **Upload Documents to S3** (`scripts/upload_documents_to_s3.py`)
-  - [ ] Upload to clinic-specific prefixes
-  - [ ] Add metadata tags (document_type, date, clinic_id)
-  - [ ] Create document inventory manifest per clinic
-
-**Deliverables**:
-- S3 bucket with clinic folder structure
-- 200-400 synthetic clinical documents
-- Document inventory manifests
-
----
-
-### 3.2 Document Search Tool (Days 3-4)
-
-- [ ] **Create document_search.py** (`prerequisite/lambda/python/document_search.py`)
-  - [ ] Implement S3-based document search
-  - [ ] Filter by document type, date range, keywords
-  - [ ] **Application-level isolation**: Respect S3 prefix from tenant context
-    ```python
-    # Get tenant context from request
-    tenant_info = extract_tenant_info(event)
-    s3_prefix = tenant_info['s3_prefix']  # e.g., "basic-tier/clinic-a/"
-    
-    # List objects with clinic-specific prefix
-    response = s3.list_objects_v2(
-        Bucket=bucket_name,
-        Prefix=s3_prefix,
-        MaxKeys=100
-    )
-    ```
-  - [ ] Return document metadata and presigned URLs
-  - [ ] Add pagination for large result sets
-
-- [ ] **Test Clinic Isolation**
-  - [ ] Test Clinic A user can access Clinic A documents
-  - [ ] Test Clinic A user CANNOT access Clinic B documents (empty results)
-  - [ ] Verify S3 prefix filtering works correctly
-
-**Deliverables**:
-- Document search tool with application-level clinic isolation
-- Clinic isolation verified through testing
-
----
-
-### 3.3 Document Retrieval & Summarization Tools (Days 5-7)
-
-- [ ] **Create document_retrieval.py** (`prerequisite/lambda/python/document_retrieval.py`)
-  - [ ] Fetch document content from S3
-  - [ ] Parse common formats (TXT, PDF, JSON)
-  - [ ] Extract text content for LLM processing
-  - [ ] Implement caching for frequently accessed documents
-  - [ ] Respect S3 prefix from tenant context (clinic isolation)
-
-- [ ] **Create document_summarization.py** (`prerequisite/lambda/python/document_summarization.py`)
-  - [ ] Implement tier-specific summarization:
-    - Basic: Nova Micro (fast, cost-effective)
-    - Premium: Claude Sonnet 4.5 (high-quality, detailed)
-  - [ ] Support single-document and multi-document summarization
-  - [ ] Extract key clinical findings
-  - [ ] Generate structured summaries
-
-- [ ] **Create web_search.py** (`prerequisite/lambda/python/web_search.py`) - Premium Only
-  - [ ] Integrate web search tool (Tavily, Brave Search, or custom)
-  - [ ] Configure for medical research and clinical guidelines
-  - [ ] Filter results for credibility
-  - [ ] This tool will ONLY be registered with premium gateway
-
-- [ ] **Update or Repurpose Existing Tools**
-  - [ ] Review existing tools in `prerequisite/lambda/python/`
-  - [ ] Repurpose for healthcare context if applicable
-  - [ ] Remove gaming/finance-specific tools
-
-- [ ] **Tool Testing**
-  - [ ] Test each tool independently
-  - [ ] Test tool chain (search → retrieve → summarize)
-  - [ ] Verify tier-specific behavior
-  - [ ] Verify basic tier cannot access web search (enforced by gateway)
-  - [ ] Test clinic isolation (Clinic A can't access Clinic B docs)
-
-**Deliverables**:
-- Document retrieval tool
-- Document summarization tool with tier differentiation
-- Web search tool (premium-only, registered only with premium gateway)
-- Tool testing suite
-- Clinic isolation verified
 
 ---
 
