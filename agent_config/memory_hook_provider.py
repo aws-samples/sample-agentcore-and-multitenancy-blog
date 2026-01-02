@@ -77,15 +77,16 @@ class MemoryHook(HookProvider):
                     return
 
                 if messages[-1]["role"] == "user":
+                    # Retrieve from clinic-specific namespaces (matches agentcore_memory.py templates)
                     self._add_context_user_query(
-                        namespace=f"support/user/{self.actor_id}/preferences",
+                        namespace=f"clinic/{self.actor_id}/preferences",
                         query=messages[-1]["content"][0]["text"],
                         init_content="These are user preferences:",
                         event=event,
                     )
 
                     self._add_context_user_query(
-                        namespace=f"support/user/{self.actor_id}/facts",
+                        namespace=f"clinic/{self.actor_id}/facts/{self.session_id}",
                         query=messages[-1]["content"][0]["text"],
                         init_content="These are user facts:",
                         event=event,

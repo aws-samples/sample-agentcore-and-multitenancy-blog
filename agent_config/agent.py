@@ -17,13 +17,17 @@ class CustomerSupport:
         system_prompt: str = None,
         tools: List[callable] = None,
         tenant_id: str = "basic",
+        clinic_id: str = "demo-clinic",
+        user_id: str = "demo-user",
+        role: str = "user",
+        s3_prefix: str = "basic-tier/demo-clinic/",
         guardrail_id: str = None,
     ):
-        # Map tenant to inference profile
+        # Map tenant to inference profile (placeholders - will be updated by configure_deployment.py)
         inference_profile_mapping = {
-            "basic": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5",
-            "premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/pxttfsxmxl5o",
-            "default": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5"
+            "basic": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/BASIC_PROFILE_ID",
+            "premium": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/PREMIUM_PROFILE_ID",
+            "default": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/BASIC_PROFILE_ID"
         }
         
         # Use inference profile based on tenant, fallback to original model
@@ -42,30 +46,37 @@ class CustomerSupport:
         self.system_prompt = (
             system_prompt
             if system_prompt
-            else """
-    You are a helpful customer support agent ready to assist customers with their inquiries and service needs for a gaming console company.
-    
-    AVAILABLE TOOLS:
-    - LambdaUsingSDK___get_customer_profile: Retrieve customer profile including communication preferences, date of birth, name, email, notes, etc
-    - LambdaUsingSDK___check_warranty: Get comprehensive warranty information based on the produce serial number
-    - retrieve: Search general gaming console company knowledge base
-    - current_time: Get current date and time
-    
-    IMPORTANT: 
-    - Only use the tools listed above
-    - Always use the exact tool names with the LambdaUsingSDK___ prefix
+            else f"""
+You are a helpful clinical document assistant for a healthcare clinic.
 
-    If requested by the user, you can help customer with:
-    - Check product warranty
-    - Provide warranty support guidelines
-    - Debug product issue using the knowledge base
-    
-    Output Format:
-    - You MUST provide concise output, fewers words the better
-    - You MUST hide your internal thinking 
-    - If you do not have the necessary information to process a request, politely ask the customer for the required details
-    - Always maintain a professional and helpful tone when assisting customers
-    """
+YOUR ASSIGNED CONTEXT:
+- Clinic: {clinic_id}
+- Tier: {tenant_id}
+- User: {user_id} (Role: {role})
+- Document Scope: {s3_prefix}
+
+AVAILABLE TOOLS:
+- document_search_retrieval: Search clinic documents by type, date, keywords and retrieve full content
+- document_summarization: Summarize clinical documents
+- retrieve: Search knowledge base for medical information
+- current_time: Get current date and time
+
+CRITICAL SECURITY RULES:
+1. You can ONLY access documents under the prefix: {s3_prefix}
+2. When calling document_search_retrieval, the tool will automatically filter to your clinic
+3. Never attempt to access documents from other clinics
+4. All document operations are scoped to: {clinic_id}
+
+RESPONSE GUIDELINES:
+- Provide concise, clinically relevant information
+- Always cite document sources with dates
+- Maintain patient confidentiality
+- If you don't have necessary information, ask the user for clarification
+- Hide your internal thinking process
+- Focus on actionable clinical insights
+
+Remember: You are serving {clinic_id} only. All document access is automatically restricted to this clinic.
+"""
         )
 
         gateway_url = get_ssm_parameter("/app/customersupport/agentcore/gateway_url")
@@ -77,7 +88,9 @@ class CustomerSupport:
                     gateway_url,
                     headers={
                         "Authorization": f"Bearer {bearer_token}",
-                        "X-Tenant-ID": tenant_id  # Add tenant_id to headers
+                        "X-Tenant-ID": tenant_id,
+                        "X-Clinic-ID": clinic_id,
+                        "X-S3-Prefix": s3_prefix
                     },
                 )
             )

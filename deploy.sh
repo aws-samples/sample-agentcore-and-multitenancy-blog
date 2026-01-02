@@ -61,6 +61,12 @@ python scripts/cognito_credentials_provider.py create --name healthcare-cognito-
 print_step "Creating Memory Resources (Basic and Premium)..."
 python scripts/agentcore_memory.py create-all
 
+print_step "Enabling Memory Observability for cost tracking..."
+python scripts/setup_memory_observability.py enable-all
+
+print_step "Verifying Memory Observability configuration..."
+python scripts/setup_memory_observability.py verify-all
+
 print_step "Testing gateway with basic tenant..."
 python test/test_gateway.py --prompt "Check warranty with serial number MNO33333333"
 

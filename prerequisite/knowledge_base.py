@@ -854,16 +854,41 @@ if __name__ == "__main__":
         )
         kb.synchronize_data(kb_id, ds_id)
 
+        # Determine tier from KB name (basic or premium)
+        tier = "basic" if "basic" in data["knowledge_base_name"].lower() else "premium"
+        
         smm_client.put_parameter(
-            Name="/app/healthcare/knowledge_base/knowledge_base_id",
+            Name=f"/app/healthcare/knowledge_base/{tier}_kb_id",
             Description=f"{data['knowledge_base_name']} kb id",
             Value=kb_id,
+            Type="String",
+            Overwrite=True,
+        )
+        
+        smm_client.put_parameter(
+            Name=f"/app/healthcare/knowledge_base/{tier}_ds_id",
+            Description=f"{data['knowledge_base_name']} data source id",
+            Value=ds_id,
             Type="String",
             Overwrite=True,
         )
 
     if args.mode == "delete":
         kb.delete_kb(data["knowledge_base_name"])
-        smm_client.delete_parameter(
-            Name="/app/healthcare/knowledge_base/knowledge_base_id"
-        )
+        
+        # Determine tier from KB name (basic or premium)
+        tier = "basic" if "basic" in data["knowledge_base_name"].lower() else "premium"
+        
+        try:
+            smm_client.delete_parameter(
+                Name=f"/app/healthcare/knowledge_base/{tier}_kb_id"
+            )
+        except smm_client.exceptions.ParameterNotFound:
+            print(f"Parameter /app/healthcare/knowledge_base/{tier}_kb_id not found")
+        
+        try:
+            smm_client.delete_parameter(
+                Name=f"/app/healthcare/knowledge_base/{tier}_ds_id"
+            )
+        except smm_client.exceptions.ParameterNotFound:
+            print(f"Parameter /app/healthcare/knowledge_base/{tier}_ds_id not found")

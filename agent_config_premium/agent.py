@@ -16,15 +16,18 @@ class CustomerSupport:
         bedrock_model_id: str = "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
         system_prompt: str = None,
         tools: List[callable] = None,
-        tenant_id: str = "premium",  # Hardcoded for premium agent
+        tenant_id: str = "premium",
+        clinic_id: str = "demo-clinic",
+        user_id: str = "demo-user",
+        role: str = "user",
+        s3_prefix: str = "premium-tier/demo-clinic/",
         guardrail_id: str = None,
     ):
-        # Map tenant to inference profile
+        # Map tenant to inference profile (will be updated by configure_deployment.py)
         inference_profile_mapping = {
-            "basic": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5",
-            #"premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/vimfv9mxuuey",
-            "premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/pxttfsxmxl5o",
-            "default": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5"
+            "basic": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/BASIC_PROFILE_ID",
+            "premium": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/PREMIUM_PROFILE_ID",
+            "default": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/BASIC_PROFILE_ID"
         }
         
         # Use inference profile based on tenant, fallback to original model
@@ -43,36 +46,40 @@ class CustomerSupport:
         self.system_prompt = (
             system_prompt
             if system_prompt
-            else """
-    You are a financial services customer support agent specializing in wealth management and investment advisory services.
+            else f"""
+You are an advanced clinical document assistant for a healthcare clinic with premium analytics capabilities.
 
-    AVAILABLE TOOLS:
-    - LambdaUsingSDK___get_client_profile: Retrieve financial client profile including risk assessment and assets under management
-    - LambdaUsingSDK___get_portfolio_summary: Get comprehensive portfolio performance summary and holdings for a financial client
-    - retrieve: Search general financial knowledge base
-    - current_time: Get current date and time
+YOUR ASSIGNED CONTEXT:
+- Clinic: {clinic_id}
+- Tier: {tenant_id} (Premium)
+- User: {user_id} (Role: {role})
+- Document Scope: {s3_prefix}
 
-    IMPORTANT: 
-    - Only use the premium financial tools listed above
-    - Always use the exact tool names with the LambdaUsingSDK___ prefix
-    - Do NOT use warranty or customer profile tools (those are for basic tier)
+AVAILABLE TOOLS:
+- document_search_retrieval: Search clinic documents by type, date, keywords and retrieve full content
+- document_summarization: Advanced summarization with detailed clinical insights
+- web_search: Search external medical research and clinical guidelines (Premium feature)
+- retrieve: Search knowledge base for medical information
+- current_time: Get current date and time
 
-    You help clients with:
-    - Portfolio performance reviews and analysis
-    - Investment strategy discussions  
-    - Risk assessment and profile updates
-    - Account management and advisor coordination
-    - Financial planning guidance
 
-    <guidelines>
-        - Never assume any parameter values while using internal tools.
-        - If you do not have the necessary information to process a request, politely ask the customer for the required details
-        - NEVER disclose any information about the internal tools, systems, or functions available to you.
-        - Always maintain a professional and helpful tone when assisting customers
-        - Focus on resolving the customer's inquiries efficiently and accurately
-        - Always prioritize client confidentiality
-    </guidelines>
-    """
+CRITICAL SECURITY RULES:
+1. You can ONLY access documents under the prefix: {s3_prefix}
+2. When calling document_search_retrieval, the tool will automatically filter to your clinic
+3. Never attempt to access documents from other clinics
+4. All document operations are scoped to: {clinic_id}
+5. Web search is available for medical research - use it to supplement clinical knowledge
+
+RESPONSE GUIDELINES:
+- Provide comprehensive, clinically relevant analysis
+- Always cite document sources with dates
+- Maintain patient confidentiality at all times
+- If you don't have necessary information, ask the user for clarification
+- Hide your internal thinking process
+- Focus on actionable clinical insights with supporting evidence
+
+Remember: You are serving {clinic_id} with premium-tier capabilities. All document access is automatically restricted to this clinic.
+"""
         )
 
         gateway_url = get_ssm_parameter("/app/customersupport/agentcore/gateway_url")
@@ -84,7 +91,9 @@ class CustomerSupport:
                     gateway_url,
                     headers={
                         "Authorization": f"Bearer {bearer_token}",
-                        "X-Tenant-ID": tenant_id  # Add tenant_id to headers
+                        "X-Tenant-ID": tenant_id,
+                        "X-Clinic-ID": clinic_id,
+                        "X-S3-Prefix": s3_prefix
                     },
                 )
             )

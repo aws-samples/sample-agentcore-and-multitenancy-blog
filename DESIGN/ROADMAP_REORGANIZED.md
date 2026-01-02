@@ -94,12 +94,12 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Critical**: Update JWT parsing BEFORE deployment so agents understand clinic context
 
-- [ ] **Update JWT Utilities** (`agent_config/jwt_utils.py`, `agent_config_premium/jwt_utils.py`)
-  - [ ] Extract `custom:tenant_id` (tier: basic/premium)
-  - [ ] Extract `custom:clinic_id` (clinic identifier)
-  - [ ] Extract `cognito:username` (user identifier)
-  - [ ] Construct hierarchical `actor_id`: `"{tier}-{clinic_id}-{user_id}"`
-  - [ ] Return complete tenant info dict:
+- [x] **Update JWT Utilities** (`agent_config/jwt_utils.py`, `agent_config_premium/jwt_utils.py`)
+  - [x] Extract `custom:tenant_id` (tier: basic/premium)
+  - [x] Extract `custom:clinic_id` (clinic identifier)
+  - [x] Extract `cognito:username` (user identifier)
+  - [x] Construct hierarchical `actor_id`: `"{tier}-{clinic_id}-{user_id}"`
+  - [x] Return complete tenant info dict:
     ```python
     {
         'tier': 'basic',
@@ -111,21 +111,21 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
         's3_prefix': 'basic-tier/clinic-a/'
     }
     ```
-  - [ ] Add comprehensive logging
-  - [ ] Implement fallback for missing claims
+  - [x] Add comprehensive logging
+  - [x] Implement fallback for missing claims
 
-- [ ] **Enhanced Context Management** (`agent_config/context.py`, `agent_config_premium/context.py`)
-  - [ ] Add `_clinic_id` class variable and context var
-  - [ ] Add `_tenant_key` (combined tier-clinic identifier)
-  - [ ] Add `_s3_prefix` (document scope prefix)
-  - [ ] Add `_actor_id` (memory isolation identifier)
-  - [ ] Implement getter/setter methods for all new context vars
-  - [ ] Add fallback logic for missing context values
+- [x] **Enhanced Context Management** (`agent_config/context.py`, `agent_config_premium/context.py`)
+  - [x] Add `_clinic_id` class variable and context var
+  - [x] Add `_tenant_key` (combined tier-clinic identifier)
+  - [x] Add `_s3_prefix` (document scope prefix)
+  - [x] Add `_actor_id` (memory isolation identifier)
+  - [x] Implement getter/setter methods for all new context vars
+  - [x] Add fallback logic for missing context values
 
 **Deliverables**:
-- Enhanced JWT parsing with clinic extraction
-- Extended context management for clinic isolation
-- Code ready for deployment (NOT deployed yet)
+- Enhanced JWT parsing with clinic extraction ✅
+- Extended context management for clinic isolation ✅
+- Code ready for deployment (NOT deployed yet) ✅
 
 ---
 
@@ -133,30 +133,37 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Critical**: Add OpenTelemetry baggage and memory integration BEFORE deployment
 
-- [ ] **Update main.py (Basic Tier)**
-  - [ ] Import OpenTelemetry baggage: `from opentelemetry import baggage, context`
-  - [ ] Update `@app.entrypoint` function:
-    - [ ] Extract tenant info from JWT using updated `jwt_utils`
-    - [ ] Set OpenTelemetry baggage (3 lines):
+- [x] **Update main.py (Basic Tier)**
+  - [x] Import OpenTelemetry baggage: `from opentelemetry import baggage, context`
+  - [x] Update `@app.entrypoint` function:
+    - [x] Extract tenant info from payload (forwarded by API Gateway Lambda)
+    - [x] Set OpenTelemetry baggage (4 lines):
       ```python
       ctx = baggage.set_baggage("tenant_id", tenant_info['tenant_key'])
-      ctx = baggage.set_baggage("tier", tenant_info['tier'])
-      ctx = baggage.set_baggage("clinic_id", tenant_info['clinic_id'])
-      ctx = baggage.set_baggage("actor_id", tenant_info['actor_id'])
+      ctx = baggage.set_baggage("tier", tenant_info['tier'], context=ctx)
+      ctx = baggage.set_baggage("clinic_id", tenant_info['clinic_id'], context=ctx)
+      ctx = baggage.set_baggage("actor_id", tenant_info['actor_id'], context=ctx)
       context.attach(ctx)
       ```
-    - [ ] Initialize MemorySessionManager with tier-specific memory
-    - [ ] Create memory session with user-specific actor_id
-    - [ ] Pass tenant context to agent
+    - [x] Initialize MemorySessionManager with tier-specific memory
+    - [x] Create memory session with user-specific actor_id
+    - [x] Pass memory session to agent task
 
-- [ ] **Update main_premium.py (Premium Tier)**
-  - [ ] Same changes as main.py
-  - [ ] Ensure premium memory ID used
-  - [ ] Verify premium-specific features enabled
+- [x] **Update main_premium.py (Premium Tier)**
+  - [x] Same changes as main.py
+  - [x] Ensure premium memory ID used (`healthcare-premium-memory`)
+  - [x] Verify premium-specific features enabled
+
+- [x] **Update API Gateway Lambda**
+  - [x] Extract `user_id` from `cognito:username` JWT claim
+  - [x] Forward `tenant_id`, `clinic_id`, `user_id` in payload to AgentCore
+  - [x] Add `X-User-ID` to response headers
 
 **Deliverables**:
-- Updated agent entrypoints with baggage and memory integration
-- Code ready for deployment (NOT deployed yet)
+- Updated agent entrypoints with baggage and memory integration ✅
+- Payload-based tenant extraction (consistent with existing pattern) ✅
+- API Gateway Lambda enhanced to forward user_id ✅
+- Code ready for deployment (NOT deployed yet) ✅
 
 ---
 
@@ -164,42 +171,30 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Critical**: Replace gaming/finance logic with healthcare BEFORE deployment
 
-- [ ] **Update agent_config/agent.py (Basic Tier)**
-  - [ ] Replace gaming console system prompt with healthcare prompt:
-    ```python
-    system_prompt = """
-    You are a helpful clinical document assistant for a healthcare clinic.
-    You help physicians and nurses search, retrieve, and summarize clinical documents.
-    
-    AVAILABLE TOOLS:
-    - document_search: Search clinic documents by type, date, keywords
-    - document_retrieval: Retrieve full document content
-    - document_summarization: Summarize clinical documents
-    - retrieve: Search knowledge base for medical information
-    - current_time: Get current date and time
-    
-    IMPORTANT:
-    - You can only access documents for your assigned clinic
-    - Maintain patient confidentiality at all times
-    - Provide concise, clinically relevant summaries
-    - Always cite document sources
-    """
-    ```
-  - [ ] Update tool list for healthcare (placeholder tools for now)
-  - [ ] Remove gaming console-specific tools
-  - [ ] Keep inference profile mapping logic (already correct)
-  - [ ] Update MCP gateway headers to include clinic_id
+- [x] **Update agent_config/agent.py (Basic Tier)**
+  - [x] Replace gaming console system prompt with healthcare prompt with tenant context
+  - [x] Update tool list for healthcare (placeholder tools for now)
+  - [x] Remove gaming console-specific tools
+  - [x] Keep inference profile mapping logic (already correct)
+  - [x] Update MCP gateway headers to include clinic_id, s3_prefix
 
-- [ ] **Update agent_config_premium/agent.py (Premium Tier)**
-  - [ ] Update system prompt for premium healthcare capabilities
-  - [ ] Add premium-only tools (placeholder for now)
-  - [ ] Keep Claude Sonnet 4.5 model configuration
-  - [ ] Update tool descriptions for clinical context
+- [x] **Update agent_config_premium/agent.py (Premium Tier)**
+  - [x] Update system prompt for premium healthcare capabilities
+  - [x] Add premium-only tools (placeholder for now)
+  - [x] Keep Claude Sonnet 4.5 model configuration
+  - [x] Update tool descriptions for clinical context
+  - [x] Update MCP gateway headers to include clinic_id, s3_prefix
+
+- [x] **Update agent_task.py files (Both Tiers)**
+  - [x] Pass all tenant context parameters to agent initialization
+  - [x] Include clinic_id, user_id, role, s3_prefix in agent creation
+  - [x] Add logging for tenant context
 
 **Deliverables**:
-- Refactored agent classes with healthcare prompts
-- Updated tool configurations
-- Code ready for deployment (NOT deployed yet)
+- Refactored agent classes with healthcare prompts ✅
+- Updated tool configurations ✅
+- Tenant context properly passed to agents ✅
+- Code ready for deployment (NOT deployed yet) ✅
 
 ---
 
@@ -207,25 +202,27 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Critical**: Create script BEFORE deployment so it's ready to run after memory resources are created
 
-- [ ] **Create scripts/setup_memory_observability.py**
-  - [ ] Implement function to enable observability for Memory resources
-  - [ ] Create CloudWatch log groups
-  - [ ] Configure delivery sources (APPLICATION_LOGS, TRACES)
-  - [ ] Configure delivery destinations (CloudWatch Logs, X-Ray)
-  - [ ] Create deliveries to connect sources to destinations
-  - [ ] Accept memory IDs as parameters
-  - [ ] Add error handling and verification
+- [x] **Create scripts/setup_memory_observability.py**
+  - [x] Implement function to enable observability for Memory resources
+  - [x] Create CloudWatch log groups
+  - [x] Configure delivery sources (APPLICATION_LOGS, TRACES)
+  - [x] Configure delivery destinations (CloudWatch Logs, X-Ray)
+  - [x] Create deliveries to connect sources to destinations
+  - [x] Accept memory IDs as parameters
+  - [x] Add error handling and verification
+  - [x] Add `enable-all` convenience command for both tiers
+  - [x] Add `verify` and `verify-all` commands to check configuration
 
-- [ ] **Create scripts/create_test_users.py**
-  - [ ] Script to create Cognito users with custom attributes
-  - [ ] Support for 8 clinic users (4 basic, 4 premium)
-  - [ ] Set custom:clinic_id and custom:tenant_id attributes
-  - [ ] Generate credentials document
+- [x] **Update deploy.sh**
+  - [x] Add memory observability setup after memory creation
+  - [x] Add verification step to ensure proper configuration
 
 **Deliverables**:
-- Memory observability script ready
-- User creation script ready
-- Scripts NOT executed yet (will run after deployment)
+- Memory observability script ready ✅
+- Script integrated into deploy.sh ✅
+- Scripts NOT executed yet (will run during deployment) ✅
+
+**Note**: Test user creation moved to Phase 2.5 (after agent configuration)
 
 ---
 
@@ -233,11 +230,11 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Critical**: Update KB script to use healthcare naming BEFORE deployment
 
-- [ ] **Update prerequisite/knowledge_base.py**
-  - [ ] Change KB names: `healthcare-basic-kb`, `healthcare-premium-kb`
-  - [ ] Update S3 data source paths for healthcare documents
-  - [ ] Update SSM parameter paths: `/app/healthcare/knowledge_base/*`
-  - [ ] Update descriptions for healthcare context
+- [x] **Update prerequisite/knowledge_base.py**
+  - [x] Change KB names: `healthcare-basic-kb`, `healthcare-premium-kb`
+  - [x] Update S3 data source paths for healthcare documents
+  - [x] Update SSM parameter paths: `/app/healthcare/knowledge_base/*`
+  - [x] Update descriptions for healthcare context
 
 **Deliverables**:
 - Knowledge base script updated for healthcare
@@ -423,12 +420,19 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
     ```
   - [ ] Clean up: `rm -f .agentcore.yaml`
 
+- [ ] **Create Test Users Script**
+  - [ ] Create `scripts/create_test_users.py`
+  - [ ] Script to create Cognito users with custom attributes
+  - [ ] Support for 8 clinic users (4 basic, 4 premium)
+  - [ ] Set custom:clinic_id and custom:tenant_id attributes
+  - [ ] Generate credentials document
+
 - [ ] **Add Custom Attributes to Cognito**
   - [ ] Add `custom:clinic_id` attribute to user pool
   - [ ] Add `custom:role` attribute
   - [ ] Update user pool schema
 
-- [ ] **Create Test Users** (NOW we run the script we created)
+- [ ] **Create Test Users** (Run the script we created)
   - [ ] Run: `python scripts/create_test_users.py`
   - [ ] Creates 8 users (4 basic, 4 premium)
   - [ ] Sets custom:clinic_id and custom:tenant_id
@@ -441,6 +445,7 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Deliverables**:
 - 2 AgentCore agents configured
+- Test user creation script created
 - Cognito user pool with custom attributes
 - 8 test users created
 - JWT tokens verified

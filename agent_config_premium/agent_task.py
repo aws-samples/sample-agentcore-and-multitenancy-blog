@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 memory_client = MemoryClient()
 
 
-async def agent_task(user_message: str, session_id: str, actor_id: str):
+async def agent_task(user_message: str, session_id: str, actor_id: str, memory_session=None):
     agent = CustomerSupportContext.get_agent_ctx()
 
     response_queue = CustomerSupportContext.get_response_queue_ctx()
@@ -22,20 +22,41 @@ async def agent_task(user_message: str, session_id: str, actor_id: str):
         raise RuntimeError("Gateway Access token is none")
     try:
         if agent is None:
-            memory_hook = MemoryHook(
-                memory_client=memory_client,
-                memory_id=get_ssm_parameter("/app/customersupport/agentcore/premium_memory_id"),
-                actor_id=actor_id,
-                session_id=session_id,
-            )
+            # Use provided memory_session or create new MemoryHook
+            if memory_session:
+                logger.info(f"✅ Using provided memory session for actor_id={actor_id}")
+                memory_hook = MemoryHook(
+                    memory_client=memory_client,
+                    memory_id=CustomerSupportContext.get_memory_id_ctx() or get_ssm_parameter("/app/healthcare/memory/premium_id"),
+                    actor_id=actor_id,
+                    session_id=session_id,
+                )
+            else:
+                logger.warning(f"⚠️  No memory session provided, creating fallback MemoryHook")
+                memory_hook = MemoryHook(
+                    memory_client=memory_client,
+                    memory_id=get_ssm_parameter("/app/customersupport/agentcore/premium_memory_id"),
+                    actor_id=actor_id,
+                    session_id=session_id,
+                )
 
-            # Get tenant_id from context
-            tenant_id = CustomerSupportContext.get_tenant_id_ctx() or "basic"
+            # Get tenant context for healthcare multi-tenancy
+            tenant_id = CustomerSupportContext.get_tenant_id_ctx() or "premium"
+            clinic_id = CustomerSupportContext.get_clinic_id_ctx() or "demo-clinic"
+            user_id = CustomerSupportContext.get_user_id_ctx() or "demo-user"
+            role = CustomerSupportContext.get_role_ctx() or "user"
+            s3_prefix = CustomerSupportContext.get_s3_prefix_ctx() or "premium-tier/demo-clinic/"
+            
+            logger.info(f"🏥 Creating premium agent for tenant: tier={tenant_id}, clinic={clinic_id}, user={user_id}, role={role}")
 
             agent = CustomerSupport(
                 bearer_token=gateway_access_token,
                 memory_hook=memory_hook,
-                tenant_id=tenant_id,  # Pass tenant_id to agent
+                tenant_id=tenant_id,
+                clinic_id=clinic_id,
+                user_id=user_id,
+                role=role,
+                s3_prefix=s3_prefix,
                 tools=[],  # Removed Google tools temporarily
                 guardrail_id=get_ssm_parameter("/app/customersupport/agentcore/basic_guardrail_id"),
             )

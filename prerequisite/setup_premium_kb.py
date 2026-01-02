@@ -38,16 +38,18 @@ def main():
         print(f"✅ Premium Knowledge Base ID: {kb_id}")
         print(f"✅ Premium Data Source ID: {ds_id}")
         
-        # Update SSM parameters
+        # Update SSM parameters for healthcare
         ssm_client.put_parameter(
-            Name="/app/customersupport/premium_knowledge_base/knowledge_base_id",
+            Name="/app/healthcare/knowledge_base/premium_kb_id",
+            Description=f"{data['knowledge_base_name']} kb id",
             Value=kb_id,
             Type="String",
             Overwrite=True
         )
         
         ssm_client.put_parameter(
-            Name="/app/customersupport/premium_knowledge_base/data_source_id", 
+            Name="/app/healthcare/knowledge_base/premium_ds_id",
+            Description=f"{data['knowledge_base_name']} data source id",
             Value=ds_id,
             Type="String",
             Overwrite=True
