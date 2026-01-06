@@ -48,20 +48,20 @@ The Premium tier provides a **superset** of Basic tier capabilities with enhance
 | Feature Category | Basic Tier | Premium Tier | Multi-Tenancy Capability Demonstrated |
 |-----------------|------------|--------------|--------------------------------------|
 | **Document Search & Retrieval** | ✅  | ✅  | **Tenant Isolation** - Each clinic sees only their documents |
-| **Document Summarization** | ✅  | ✅  | **Model Differentiation** - Nova Micro vs Claude Sonnet 4.5 quality |
+| **Document Summarization** | ✅  | ✅  | **Model Differentiation** - Nova Micro vs Nova 2 Lite quality |
 | **Data Extraction** | ✅  | ✅  | **Processing Capability** - Tier-based feature access |
-| **Web Search Capability** | ❌ | ✅ | **Premium Feature** - Access to external medical research and guidelines | 
+| **Web Grounding (Native)** | ❌ | ✅ | **Premium Feature** - Built-in web search with citations via Nova 2 | 
 | **API Rate Limit (Demo)** | 0.5 req/sec | 2 req/sec | **Resource Allocation** - Tier-based throttling |
 | **Burst Limit (Demo)** | 2 requests | 5 requests | **Quota Management** - Fair resource distribution |
 | **Daily Quota (Demo)** | 5 requests | 20 requests | **Usage Tracking** - Per-tenant limits |
-| **Model** | Nova Micro | Claude Sonnet 4.5 | **Cost Optimization** - Tier-appropriate models |
+| **Model** | Nova Micro | Nova 2 Lite | **Cost Optimization** - Tier-appropriate models |
 
 **Key Multi-Tenancy Demonstrations:**
 1. **Isolation**: Clinic A cannot access Clinic B's documents
-2. **Differentiation**: Premium gets better models and higher limits
+2. **Differentiation**: Premium gets Nova 2 Lite with web grounding, higher limits
 3. **Throttling**: Rate limits enforced per tenant and tier
 4. **Cost Tracking**: Usage and costs monitored per clinic for billing/analytics
-5. **Premium Features**: Web search capability exclusive to premium tier
+5. **Premium Features**: Native web grounding capability exclusive to premium tier (Nova 2)
 
 ## Implementation Gaps and Requirements
 
@@ -83,12 +83,179 @@ The Premium tier provides a **superset** of Basic tier capabilities with enhance
 - 🔧 Add `custom:clinic_id` to JWT claims (extends existing auth)
 - 🔧 Create clinic-specific inference profiles (extends existing script)
 - 🔧 Add OpenTelemetry baggage for cost attribution (3 lines of code)
-- 🔧 Update to Claude Sonnet 4.5 for premium tier (model ID change)
+- 🔧 Update to Nova 2 Lite for premium tier (model ID change)
 - 🔧 Enable cost allocation tags in AWS Billing Console (one-time setup)
 
 #### ❌ **New Implementations Required**
 
-### 1. **AgentCore Memory Isolation (CRITICAL)** SEE ./memory-architecutre.md for more information
+### 1. **Healthcare-Specific Context Tools**
+**Gap**: Need structured data tools to complement Knowledge Base capabilities
+**Priority**: 🟡 **MEDIUM** - Enhances agent responses with structured context
+**Current Status**: ❌ No healthcare context tools
+**Requirements**:
+- Create `patient_context.py` Lambda tool for structured patient metadata lookup
+- Create `clinic_config.py` Lambda tool for clinic settings and capabilities
+- **Web grounding via Nova 2 native capability** - No Lambda needed!
+- Populate DynamoDB tables with synthetic data from clinic profiles
+- Register tools with appropriate AgentCore gateways (basic vs premium)
+
+**Why Custom Retrieval Tool (Not Built-in Strands retrieve)**:
+- 🔒 **Vector-level isolation**: Metadata filtering ensures clinic isolation at the Knowledge Base query level
+- 🔒 **Defense in depth**: Combines S3 prefix isolation with query-time filtering
+- 🔒 **Audit trail**: Custom tool allows logging of which clinic accessed which documents
+- ✅ **Patient context**: Provides quick structured lookup (age, conditions, allergies) that complements document search
+- ✅ **Clinic config**: Helps agent understand clinic capabilities and operating context
+- ✅ **Web grounding**: Built into Nova 2 model - no external API or Lambda needed!
+
+**Implementation Needed**:
+```python
+# 1. Custom Retrieval Tool with Metadata Filtering (prerequisite/lambda/python/retrieve_clinic_documents.py)
+import boto3
+import os
+from typing import List, Dict, Any
+
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """
+    Retrieve clinic-specific documents from Knowledge Base with metadata filtering.
+    
+    Args:
+        event: Contains query, clinic_id, max_results
+        context: Lambda context
+    
+    Returns:
+        Formatted document results with metadata
+    """
+    # Extract parameters
+    query = event.get('query', '')
+    clinic_id = event.get('clinic_id', 'demo-clinic')
+    max_results = event.get('max_results', 5)
+    kb_id = os.environ.get('KNOWLEDGE_BASE_ID')
+    
+    if not query:
+        return {'error': 'Query parameter is required'}
+    
+    # Initialize Bedrock Agent Runtime client
+    bedrock_agent_runtime = boto3.client('bedrock-agent-runtime')
+    
+    try:
+        # Query Knowledge Base with metadata filtering
+        response = bedrock_agent_runtime.retrieve(
+            knowledgeBaseId=kb_id,
+            retrievalQuery={'text': query},
+            retrievalConfiguration={
+                'vectorSearchConfiguration': {
+                    'numberOfResults': max_results,
+                    'filter': {
+                        'equals': {
+                            'key': 'clinic_id',
+                            'value': clinic_id
+                        }
+                    }
+                }
+            }
+        )
+        
+        # Format results
+        results = []
+        for result in response.get('retrievalResults', []):
+            content = result.get('content', {}).get('text', '')
+            metadata = result.get('metadata', {})
+            score = result.get('score', 0)
+            location = result.get('location', {})
+            
+            results.append({
+                'content': content,
+                'score': score,
+                'metadata': metadata,
+                'source': location.get('s3Location', {}).get('uri', 'Unknown')
+            })
+        
+        # Format as readable text for agent
+        formatted_results = []
+        for idx, result in enumerate(results, 1):
+            formatted_results.append(
+                f"[Document {idx}] (Relevance: {result['score']:.2f})\n"
+                f"{result['content']}\n"
+                f"Source: {result['source']}\n"
+                f"Metadata: {result['metadata']}"
+            )
+        
+        return {
+            'results': '\n\n---\n\n'.join(formatted_results) if formatted_results else 'No relevant documents found.',
+            'count': len(results),
+            'clinic_id': clinic_id
+        }
+        
+    except Exception as e:
+        return {'error': f'Error retrieving documents: {str(e)}'}
+
+# 2. Patient Context Tool (prerequisite/lambda/python/patient_context.py)
+def lambda_handler(event, context):
+    """Retrieve structured patient metadata from DynamoDB"""
+    tenant_info = extract_tenant_info(event)
+    patient_id = event.get('patient_id')
+    
+    # Application-level isolation: filter by clinic_id
+    response = dynamodb.get_item(
+        TableName='healthcare-patient-metadata',
+        Key={'patient_id': patient_id}
+    )
+    
+    patient = response.get('Item', {})
+    
+    # Verify patient belongs to requesting clinic
+    if patient.get('clinic_id') != tenant_info['clinic_id']:
+        return {'error': 'Patient not found'}  # Isolation enforcement
+    
+    return {
+        'patient_id': patient['patient_id'],
+        'age': patient['age'],
+        'conditions': patient['conditions'],
+        'allergies': patient['allergies'],
+        'last_visit': patient['last_visit'],
+        'assigned_provider': patient['assigned_provider']
+    }
+
+# 2. Clinic Config Tool (prerequisite/lambda/python/clinic_config.py)
+def lambda_handler(event, context):
+    """Retrieve clinic configuration and capabilities"""
+    tenant_info = extract_tenant_info(event)
+    clinic_id = tenant_info['clinic_id']
+    
+    response = dynamodb.get_item(
+        TableName='healthcare-clinic-config',
+        Key={'clinic_id': clinic_id}
+    )
+    
+    return response.get('Item', {})
+
+# 3. Web Grounding via Nova 2 (Premium Only) - NO LAMBDA NEEDED!
+# Configured in agent_config_premium/agent.py via BedrockModel tool_config:
+# tool_config = {
+#     "tools": [{
+#         "systemTool": {
+#             "name": "nova_grounding"
+#         }
+#     }]
+# }
+# Nova 2 automatically searches web and returns results with citations
+# Built-in filtering for trustworthy sources (.gov, .edu, medical journals)
+# No API keys, no external services, no Lambda deployment needed!
+```
+
+**Tool Registration Strategy**:
+- **Basic Gateway**: retrieve_clinic_documents, patient_context, clinic_config
+- **Premium Gateway**: retrieve_clinic_documents, patient_context, clinic_config
+- **Premium Model Config**: Nova 2 with `systemTool: nova_grounding` enabled
+
+**Knowledge Base Metadata Requirements**:
+- All documents must have `clinic_id` metadata field
+- Metadata added during S3 upload or via Knowledge Base data source configuration
+- Example metadata: `{"clinic_id": "clinic-a", "document_type": "intake-form", "date": "2024-01-15"}`
+
+---
+
+### 2. **AgentCore Memory Isolation (CRITICAL)** SEE ./memory-architecutre.md for more information
 **Gap**: Current system lacks proper user-level memory isolation within clinics
 **Priority**: 🔴 **CRITICAL** - Required for multi-tenant security and data privacy
 **Current Status**: ❌ No memory isolation implementation
@@ -218,7 +385,7 @@ async def invoke(payload, context):
 ```
 
 
-### 2. **Enhanced Tenant Context Management** SEE ./technical-architecture.md for more information
+### 2. **AgentCore Memory Isolation (CRITICAL)** SEE ./memory-architecutre.md for more information
 **Gap**: Current system handles basic/premium tiers but needs clinic-level isolation within tiers
 **Current Status**: ✅ Tier-level context exists, needs clinic extension
 **Requirements**:
@@ -296,7 +463,7 @@ class CustomerSupportContext:
         cls._s3_prefix_ctx.set(s3_prefix)
 ```
 
-### 3. **Frontend Enhancements** SEE ./technical-architecture.md for more information
+### 3. **Enhanced Tenant Context Management** SEE ./technical-architecture.md for more information
 **Gap**: Current Streamlit app needs clinic-aware UI and document-focused chat capabilities
 **Requirements**:
 - Extend existing Cognito authentication to display clinic information
@@ -401,32 +568,7 @@ def main():
             render_clinical_results(response, tenant_context)
 ```
 
-### 4. **Web Search Capability (Premium Feature)**
-**Gap**: No web search tool integration for premium tier
-**Requirements**:
-- Integrate web search tool (e.g., Tavily, Brave Search, or custom)
-- Configure as premium-only feature
-- Add to premium agent tool list
-- Enable access to external medical research and guidelines
-
-**Implementation Needed**:
-```python
-# In agent_config_premium/agent.py
-from strands_tools import web_search  # or custom web search tool
-
-class CustomerSupport:
-    def __init__(self, ...):
-        # Premium tier gets web search
-        if tier == 'premium':
-            tools = [
-                document_search,
-                web_search,  # Premium-only feature
-                advanced_analytics
-            ]
-```
-
-**Demo Value**: Shows clear premium differentiation with external data access
-
+### 4. **Frontend Enhancements** SEE ./technical-architecture.md for more information
 ### 5. **Sample Data and Document Preparation**
 **Gap**: No clinical documents for demonstration
 **Requirements**:
@@ -444,7 +586,7 @@ class CustomerSupport:
 **Current Status**: ✅ Tier-level profiles exist, need clinic-specific profiles
 **Requirements**:
 - Extend `create_inference_profiles.py` for clinic-specific profiles
-- Update model IDs to Claude Sonnet 4.5 for premium tier
+- Update model IDs to Nova 2 Lite for premium tier
 - SSM parameters for clinic configurations
 - AgentCore deployment config for multiple clinics
 - Environment variables for clinic routing
@@ -552,11 +694,12 @@ Please see ROADMAP_REORGANIZED.md for following steps
 
 This implementation demonstrates:
 1. 🔒 **Complete Tenant Isolation**: Clinic A cannot access Clinic B's documents
-2. 🎯 **Tier Differentiation**: Premium gets Claude Sonnet 4.5, web search, advanced analytics
+2. 🎯 **Tier Differentiation**: Premium gets Nova 2 Lite with native web grounding, higher limits
 3. 🚦 **Resource Allocation**: Rate limits enforced per tier (0.5 vs 2 req/sec)
-4. 📊 **Cost Tracking**: Accurate per-clinic cost attribution (32x difference shown)
+4. 📊 **Cost Tracking**: Accurate per-clinic cost attribution
 5. 🌐 **Scalability**: 8 clinics on 2 agent runtimes with complete isolation
 6. 💾 **Memory Isolation**: User-level memory separation via `actor_id`
 7. 🔐 **Security**: JWT-based authentication with role-based access
+8. 🌍 **Native Web Search**: Premium tier gets built-in web grounding without external APIs
 
 The scoped approach of pre-uploaded documents with chat-based processing provides a focused, achievable implementation that highlights core multi-tenancy architecture without complex upload workflows or compliance requirements.

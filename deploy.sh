@@ -40,6 +40,9 @@ print_step "Creating AWS infrastructure..."
 chmod +x scripts/prereq.sh
 ./scripts/prereq.sh
 
+print_step "Populating healthcare data (patient metadata and clinic configurations)..."
+python scripts/populate_healthcare_data.py
+
 print_step "Creating Bedrock inference profiles..."
 python scripts/create_inference_profiles.py
 

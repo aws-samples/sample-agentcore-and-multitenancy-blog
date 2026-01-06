@@ -95,12 +95,12 @@ def main():
                 basic_profile_arn
             )
         
-        # Create premium tier inference profile (Claude Sonnet 4.5)
+        # Create premium tier inference profile (Nova 2 Lite with Web Grounding)
         print("\n📊 Creating Premium Tier profile...")
         premium_profile_arn = create_inference_profile(
             bedrock_client,
             profile_name="healthcare-premium-profile",
-            model_id="us.anthropic.claude-sonnet-4-v2:0",
+            model_id="us.amazon.nova-2-lite-v1:0",
             tier="Premium"
         )
         
@@ -113,7 +113,7 @@ def main():
         
         print("\n✅ Inference profile creation completed!")
         print(f"   Basic: Nova Micro (cost-effective)")
-        print(f"   Premium: Claude Sonnet 4.5 (advanced capabilities)")
+        print(f"   Premium: Nova 2 Lite (web grounding enabled)")
         
         # Update configuration
         print("\n🔧 Updating deployment configuration...")

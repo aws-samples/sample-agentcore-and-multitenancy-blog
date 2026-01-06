@@ -139,6 +139,12 @@ Resources:
                   - bedrock:RetrieveAndGenerate
                 Resource:
                   - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*
+              - Sid: NovaWebGroundingAccess
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeTool
+                Resource:
+                  - arn:aws:bedrock:*:*:system-tool/amazon.nova_grounding
 
   GatewayAgentCoreRole:
     Type: AWS::IAM::Role
@@ -228,6 +234,54 @@ Resources:
         - Key: CostCenter
           Value: Healthcare
 
+  # Healthcare Tables
+  PatientMetadataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-PatientMetadata"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: patient_id
+          AttributeType: S
+        - AttributeName: clinic_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: patient_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: clinic-index
+          KeySchema:
+            - AttributeName: clinic_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Application
+          Value: Healthcare
+        - Key: CostCenter
+          Value: Healthcare
+
+  ClinicConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-ClinicConfig"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: clinic_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: clinic_id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Application
+          Value: Healthcare
+        - Key: CostCenter
+          Value: Healthcare
+
   # Premium Financial Tables
   ClientProfileTable:
     Type: AWS::DynamoDB::Table
@@ -267,7 +321,7 @@ Resources:
         - Key: Application
           Value: Healthcare
 
-  # Lambda function to populate synthetic data
+  # Lambda function to populate synthetic data (legacy gaming/finance data)
   PopulateDataFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -730,6 +784,40 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${WarrantyTable}
 
+        - PolicyName: HealthcareTablesAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowReadHealthcareTableNamesFromSSM
+                Effect: Allow
+                Action: ssm:GetParameter
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PatientMetadataTableNameParameter}
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ClinicConfigTableNameParameter}
+
+              - Sid: AllowReadPatientMetadataTable
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:DescribeTable
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${PatientMetadataTable}
+
+              - Sid: AllowReadPatientMetadataIndexes
+                Effect: Allow
+                Action:
+                  - dynamodb:Query
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${PatientMetadataTable}/index/*
+
+              - Sid: AllowReadClinicConfigTable
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:DescribeTable
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ClinicConfigTable}
+
   CustomerSupportLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -749,6 +837,8 @@ Resources:
           WARRANTY_TABLE: !Ref WarrantyTable
           CLIENT_PROFILE_TABLE: !Ref ClientProfileTable
           PORTFOLIO_TABLE: !Ref PortfolioTable
+          PATIENT_METADATA_TABLE: !Ref PatientMetadataTable
+          CLINIC_CONFIG_TABLE: !Ref ClinicConfigTable
 
   # SSM Parameter to store warranty table name
   WarrantyTableNameParameter:
@@ -769,6 +859,27 @@ Resources:
       Type: String
       Value: !Ref CustomerProfileTable
       Description: DynamoDB table name for customer profiles
+      Tags:
+        Application: Healthcare
+
+  # SSM Parameters for Healthcare Tables
+  PatientMetadataTableNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/dynamodb/patient_metadata_table_name
+      Type: String
+      Value: !Ref PatientMetadataTable
+      Description: DynamoDB table name for patient metadata
+      Tags:
+        Application: Healthcare
+
+  ClinicConfigTableNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/dynamodb/clinic_config_table_name
+      Type: String
+      Value: !Ref ClinicConfigTable
+      Description: DynamoDB table name for clinic configurations
       Tags:
         Application: Healthcare
 

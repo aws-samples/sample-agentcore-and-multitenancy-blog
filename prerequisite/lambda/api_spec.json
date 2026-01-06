@@ -1,93 +1,46 @@
 [
     {
-        "name": "get_customer_profile",
-        "description": "Retrieve customer profile using customer ID, email, or phone number",
+        "name": "patient_context",
+        "description": "Retrieve structured patient metadata including demographics, medical conditions, allergies, medications, and visit history. Automatically filtered to the requesting clinic for security. Use this to get patient background before reviewing clinical documents.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "customer_id": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "tenant_id": {
+                "patient_id": {
                     "type": "string",
-                    "description": "Tenant identifier for multi-tenant routing",
-                    "default": "basic"
+                    "description": "Unique patient identifier (e.g., P12345)"
+                },
+                "list_patients": {
+                    "type": "boolean",
+                    "description": "If true, returns paginated list of all patients for the clinic instead of single patient lookup",
+                    "default": false
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Number of patients to return in list (default: 20, max: 100). Only used when list_patients=true",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20
+                },
+                "last_evaluated_key": {
+                    "type": "object",
+                    "description": "Pagination token from previous response to get next page. Only used when list_patients=true"
                 }
             },
-            "required": [
-                "customer_id"
-            ]
+            "required": []
         }
     },
     {
-        "name": "check_warranty_status",
-        "description": "Check the warranty status of a product using its serial number and optionally verify via email",
+        "name": "clinic_config",
+        "description": "Retrieve clinic-specific configuration including specialty, available services, operating hours, and provider list. Use this to understand clinic capabilities and context when answering questions about services or scheduling.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "serial_number": {
-                    "type": "string"
-                },
-                "customer_email": {
-                    "type": "string"
-                },
-                "tenant_id": {
+                "clinic_id": {
                     "type": "string",
-                    "description": "Tenant identifier for multi-tenant routing",
-                    "default": "basic"
+                    "description": "Specific clinic identifier (optional - defaults to requesting user's clinic)"
                 }
             },
-            "required": [
-                "serial_number"
-            ]
-        }
-    },
-    {
-        "name": "get_client_profile",
-        "description": "Retrieve financial client profile including risk assessment and assets under management",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "client_id": {
-                    "type": "string",
-                    "description": "Unique client identifier"
-                },
-                "tenant_id": {
-                    "type": "string",
-                    "description": "Tenant identifier for multi-tenant routing",
-                    "default": "premium"
-                }
-            },
-            "required": [
-                "client_id"
-            ]
-        }
-    },
-    {
-        "name": "get_portfolio_summary",
-        "description": "Get comprehensive portfolio performance summary and holdings for a financial client",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "client_id": {
-                    "type": "string",
-                    "description": "Client ID for portfolio lookup"
-                },
-                "tenant_id": {
-                    "type": "string",
-                    "description": "Tenant identifier for multi-tenant routing",
-                    "default": "premium"
-                }
-            },
-            "required": [
-                "client_id"
-            ]
+            "required": []
         }
     }
 ]

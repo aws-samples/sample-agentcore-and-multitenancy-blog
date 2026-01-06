@@ -54,7 +54,7 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
     - Profile names: `healthcare-basic-profile`, `healthcare-premium-profile` (2 tier-level profiles)
     - Model IDs:
       - Basic: `us.amazon.nova-micro-v1:0`
-      - Premium: `us.anthropic.claude-sonnet-4-v2:0`
+      - Premium: `us.amazon.nova-2-lite-v1:0` (with built-in web grounding)
     - Tags: `Project=HealthcareDemo`, `Tier=Basic/Premium`, `Environment=demo`
     - SSM paths: `/app/healthcare/inference_profiles/basic_arn`, `premium_arn`
   - [x] Update `scripts/configure_deployment.py`:
@@ -179,9 +179,9 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
   - [x] Update MCP gateway headers to include clinic_id, s3_prefix
 
 - [x] **Update agent_config_premium/agent.py (Premium Tier)**
-  - [x] Update system prompt for premium healthcare capabilities
-  - [x] Add premium-only tools (placeholder for now)
-  - [x] Keep Claude Sonnet 4.5 model configuration
+  - [x] Update system prompt for premium healthcare capabilities with web search
+  - [x] Add Nova 2 web grounding configuration via `tool_config`
+  - [x] Configure BedrockModel with `systemTool: nova_grounding`
   - [x] Update tool descriptions for clinical context
   - [x] Update MCP gateway headers to include clinic_id, s3_prefix
 
@@ -190,9 +190,27 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
   - [x] Include clinic_id, user_id, role, s3_prefix in agent creation
   - [x] Add logging for tenant context
 
+- [x] **Verify Strands Framework Configuration**
+  - [ ] Custom retrieval tool with metadata filtering configured:
+    - Lambda function: `retrieve_clinic_documents` with clinic_id filtering
+    - Registered with both basic and premium AgentCore gateways
+    - Replaces built-in `strands_tools.retrieve` for proper tenant isolation
+  - [ ] Knowledge Base integration via custom tool:
+    - KB IDs set via environment variable in Lambda
+    - Retrieved from SSM: `/app/healthcare/knowledge_base/knowledge_base_id`
+    - Premium uses: `/app/healthcare/premium_knowledge_base/knowledge_base_id`
+  - [ ] Tenant isolation enforced via:
+    - **Vector-level filtering**: Metadata filter on clinic_id in KB query
+    - S3 prefix in KB data sources (basic-tier/clinic-a/, premium-tier/hospital-a/)
+    - MCP gateway headers include clinic_id for Lambda invocation
+    - System prompts explicitly state document scope restrictions
+  
+  **Note**: Custom `retrieve_clinic_documents` tool provides vector-level isolation via metadata filtering, ensuring each clinic can only access their documents at the Knowledge Base query level.
+
 **Deliverables**:
 - Refactored agent classes with healthcare prompts ✅
 - Updated tool configurations ✅
+- Strands framework configured for KB integration 
 - Tenant context properly passed to agents ✅
 - Code ready for deployment (NOT deployed yet) ✅
 
@@ -277,79 +295,92 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 ---
 
-### 3.2 Document Search Tool (Days 3-4)
+### 2.2 Healthcare Context Tools (Days 3-4)
 
-- [ ] **Create document_search.py** (`prerequisite/lambda/python/document_search.py`)
-  - [ ] Implement S3-based document search
-  - [ ] Filter by document type, date range, keywords
-  - [ ] **Application-level isolation**: Respect S3 prefix from tenant context
+**Note**: Custom retrieval tool with metadata filtering provides vector-level tenant isolation for Knowledge Base queries.
+
+- [ ] **Create retrieve_clinic_documents.py** (`prerequisite/lambda/python/retrieve_clinic_documents.py`)
+  - [ ] Implement Lambda function for Knowledge Base retrieval with metadata filtering
+  - [ ] Accept parameters: query, clinic_id, max_results
+  - [ ] Use Bedrock Agent Runtime `retrieve()` API with vectorSearchConfiguration filter
+  - [ ] Filter by clinic_id metadata: `{'equals': {'key': 'clinic_id', 'value': clinic_id}}`
+  - [ ] Format results with relevance scores and source attribution
+  - [ ] Add error handling and logging
+  - [ ] **Security**: Vector-level isolation ensures clinic cannot access other clinics' documents
+
+- [ ] **Create patient_context.py** (`prerequisite/lambda/python/patient_context.py`)
+  - [x] Create DynamoDB table: `healthcare-patient-metadata` via infrastructure.yaml
+  - [x] Generate synthetic patient metadata based on clinic profiles (see `DESIGN/clinic-profiles.md`) and integrate this step into the deploy.sh so the end user deployment flow isn't interrupted. You can refer to /design/deployment-integration-plan.md to see a related example
+  - [x] Implement Lambda function for structured patient lookup
+  - [x] Return patient metadata:
     ```python
-    # Get tenant context from request
-    tenant_info = extract_tenant_info(event)
-    s3_prefix = tenant_info['s3_prefix']  # e.g., "basic-tier/clinic-a/"
-    
-    # List objects with clinic-specific prefix
-    response = s3.list_objects_v2(
-        Bucket=bucket_name,
-        Prefix=s3_prefix,
-        MaxKeys=100
-    )
+    {
+        "patient_id": "P12345",
+        "age": 45,
+        "conditions": ["hypertension", "diabetes"],
+        "allergies": ["penicillin"],
+        "last_visit": "2024-12-15",
+        "assigned_provider": "Dr. Smith",
+        "clinic_id": "clinic-a"  # For isolation
+    }
     ```
-  - [ ] Return document metadata and presigned URLs
-  - [ ] Add pagination for large result sets
+  - [x] **Application-level isolation**: Filter by clinic_id from tenant context
+  - [x] Add pagination for patient lists
 
-- [ ] **Test Clinic Isolation**
-  - [ ] Test Clinic A user can access Clinic A documents
-  - [ ] Test Clinic A user CANNOT access Clinic B documents (empty results)
-  - [ ] Verify S3 prefix filtering works correctly
+- [x] **Create clinic_config.py** (`prerequisite/lambda/python/clinic_config.py`)
+  - [x] Create DynamoDB table: `healthcare-clinic-config` via infrastructure.yaml
+  - [x] Populate clinic configurations from `DESIGN/clinic-profiles.md` and integrate this step into the deploy.sh so the end user deployment flow isn't interrupted
+  - [x] Implement Lambda function for clinic settings lookup
+  - [x] Return clinic configuration:
+    ```python
+    {
+        "clinic_id": "clinic-a",
+        "specialty": "family-practice",
+        "available_services": ["primary-care", "urgent-care"],
+        "operating_hours": "8am-6pm",
+        "providers": ["Dr. Smith", "Nurse Lee"],
+        "tier": "basic"
+    }
+    ```
+  - [x] Used by agent to understand clinic context and capabilities
 
 **Deliverables**:
-- Document search tool with application-level clinic isolation
-- Clinic isolation verified through testing
+- Patient context tool with clinic isolation ✅
+- Clinic configuration tool ✅
+- DynamoDB tables with synthetic data from clinic profiles ✅
+- Context tools integrated into deployment flow ✅
+- Data population script (`scripts/populate_healthcare_data.py`) ✅
 
 ---
 
-### 3.3 Document Retrieval & Summarization Tools (Days 5-7)
+### 2.3 Gateway Tool Registration (Day 5)
 
-- [ ] **Create document_retrieval.py** (`prerequisite/lambda/python/document_retrieval.py`)
-  - [ ] Fetch document content from S3
-  - [ ] Parse common formats (TXT, PDF, JSON)
-  - [ ] Extract text content for LLM processing
-  - [ ] Implement caching for frequently accessed documents
-  - [ ] Respect S3 prefix from tenant context (clinic isolation)
+**Note**: Web search capability is now built into Nova 2 via native web grounding - no separate Lambda tool needed!
 
-- [ ] **Create document_summarization.py** (`prerequisite/lambda/python/document_summarization.py`)
-  - [ ] Implement tier-specific summarization:
-    - Basic: Nova Micro (fast, cost-effective)
-    - Premium: Claude Sonnet 4.5 (high-quality, detailed)
-  - [ ] Support single-document and multi-document summarization
-  - [ ] Extract key clinical findings
-  - [ ] Generate structured summaries
-
-- [ ] **Create web_search.py** (`prerequisite/lambda/python/web_search.py`) - Premium Only
-  - [ ] Integrate web search tool (Tavily, Brave Search, or custom)
-  - [ ] Configure for medical research and clinical guidelines
-  - [ ] Filter results for credibility
-  - [ ] This tool will ONLY be registered with premium gateway
-
-- [ ] **Update or Repurpose Existing Tools**
-  - [ ] Review existing tools in `prerequisite/lambda/python/`
-  - [ ] Repurpose for healthcare context if applicable
-  - [ ] Remove gaming/finance-specific tools
-
-- [ ] **Tool Testing**
-  - [ ] Test each tool independently
-  - [ ] Test tool chain (search → retrieve → summarize)
-  - [ ] Verify tier-specific behavior
-  - [ ] Verify basic tier cannot access web search (enforced by gateway)
-  - [ ] Test clinic isolation (Clinic A can't access Clinic B docs)
+- [ ] **Register Tools with AgentCore Gateways**
+  - [ ] Update api_spec.json with tool schemas
+  - [ ] Register with **Basic Gateway** (`healthcare-basic-gw`):
+    - retrieve_clinic_documents (Lambda target) - **Custom KB retrieval with metadata filtering**
+    - patient_context (Lambda target)
+    - clinic_config (Lambda target)
+  - [ ] Register with **Premium Gateway** (`healthcare-premium-gw`):
+    - retrieve_clinic_documents (Lambda target) - **Custom KB retrieval with metadata filtering**
+    - patient_context (Lambda target)
+    - clinic_config (Lambda target)
+    - **Web grounding enabled via Nova 2 model** - No Lambda needed!
+  - [ ] Use `scripts/agentcore_gateway.py` for tool registration
+  - [ ] Verify tool registration for both gateways
+  - [ ] Update agent system prompt to reflect the latest tools
 
 **Deliverables**:
-- Document retrieval tool
-- Document summarization tool with tier differentiation
-- Web search tool (premium-only, registered only with premium gateway)
-- Tool testing suite
-- Clinic isolation verified
+- Custom retrieval tool with vector-level isolation registered
+- Context tools registered with appropriate gateways
+- Premium web search enabled via Nova 2 native capability
+- Tool testing suite completed
+
+**Key Advantage**: 
+- Custom retrieval tool provides **defense in depth** - combines S3 prefix isolation with query-time metadata filtering
+- Nova 2's built-in web grounding eliminates need for external API integration
 
 
 ---
@@ -395,7 +426,7 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
   - [ ] Run: `python scripts/create_inference_profiles.py`
   - [ ] Creates:
     - `healthcare-basic-profile` with Nova Micro
-    - `healthcare-premium-profile` with Claude Sonnet 4.5
+    - `healthcare-premium-profile` with Nova 2 Lite (with web grounding)
   - [ ] Stores ARNs in SSM: `/app/healthcare/inference_profiles/*`
 
 - [ ] **Update Deployment Configuration**
@@ -444,12 +475,12 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 - [ ] **Register Tools with Gateways**
   - [ ] Register basic tools with basic gateway:
-    - Document search (Lambda target)
-    - Document retrieval (Lambda target)
-    - Document summarization (Lambda target)
+    - patient_context (Lambda target)
+    - clinic_config (Lambda target)
   - [ ] Register premium tools with premium gateway:
-    - All basic tools (Lambda targets)
-    - Web search (Lambda target) - Premium only
+    - patient_context (Lambda target)
+    - clinic_config (Lambda target)
+    - **Web grounding enabled via Nova 2 model configuration** - No Lambda needed!
   - [ ] Use `scripts/agentcore_gateway.py` target registration functionality
   - [ ] Verify tool registration for both gateways
 
