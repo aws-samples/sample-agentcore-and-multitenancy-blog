@@ -9,14 +9,14 @@ import json
 import sys
 from botocore.exceptions import ClientError
 
-def create_inference_profile(bedrock_client, profile_name: str, model_id: str, tier: str):
+def create_inference_profile(bedrock_client, profile_name: str, model_arn: str, tier: str, region: str):
     """Create a Bedrock inference profile"""
     try:
-        response = bedrock_client.create_application_inference_profile(
+        response = bedrock_client.create_inference_profile(
             inferenceProfileName=profile_name,
             description=f"Inference profile for {tier} tier healthcare system",
             modelSource={
-                'copyFrom': model_id
+                'copyFrom': model_arn
             },
             tags=[
                 {
@@ -36,8 +36,9 @@ def create_inference_profile(bedrock_client, profile_name: str, model_id: str, t
         
         profile_arn = response['inferenceProfileArn']
         print(f"✅ Created inference profile: {profile_name}")
-        print(f"   Model: {model_id}")
+        print(f"   Model: {model_arn}")
         print(f"   ARN: {profile_arn}")
+        print(f"   Status: {response.get('status', 'ACTIVE')}")
         return profile_arn
         
     except ClientError as e:
@@ -45,7 +46,7 @@ def create_inference_profile(bedrock_client, profile_name: str, model_id: str, t
             print(f"⚠️ Inference profile {profile_name} already exists")
             # Get existing profile ARN
             try:
-                response = bedrock_client.get_application_inference_profile(
+                response = bedrock_client.get_inference_profile(
                     inferenceProfileIdentifier=profile_name
                 )
                 return response['inferenceProfileArn']
@@ -79,13 +80,24 @@ def main():
         bedrock_client = boto3.client('bedrock')
         ssm_client = boto3.client('ssm')
         
+        # Get current region and account
+        session = boto3.session.Session()
+        region = session.region_name or 'us-west-2'
+        sts_client = boto3.client('sts')
+        account_id = sts_client.get_caller_identity()['Account']
+        print(f"📍 Using region: {region}")
+        print(f"📍 Account ID: {account_id}")
+        
         # Create basic tier inference profile (Nova Micro)
+        # Use cross-region inference profile ARN as copyFrom source
         print("\n📊 Creating Basic Tier profile...")
+        basic_inference_profile_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/us.amazon.nova-micro-v1:0"
         basic_profile_arn = create_inference_profile(
             bedrock_client, 
             profile_name="healthcare-basic-profile",
-            model_id="us.amazon.nova-micro-v1:0",
-            tier="Basic"
+            model_arn=basic_inference_profile_arn,
+            tier="Basic",
+            region=region
         )
         
         if basic_profile_arn:
@@ -96,12 +108,15 @@ def main():
             )
         
         # Create premium tier inference profile (Nova 2 Lite with Web Grounding)
+        # Use cross-region inference profile ARN as copyFrom source
         print("\n📊 Creating Premium Tier profile...")
+        premium_inference_profile_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/us.amazon.nova-2-lite-v1:0"
         premium_profile_arn = create_inference_profile(
             bedrock_client,
             profile_name="healthcare-premium-profile",
-            model_id="us.amazon.nova-2-lite-v1:0",
-            tier="Premium"
+            model_arn=premium_inference_profile_arn,
+            tier="Premium",
+            region=region
         )
         
         if premium_profile_arn:

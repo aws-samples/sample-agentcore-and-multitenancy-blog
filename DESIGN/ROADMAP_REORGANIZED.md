@@ -474,17 +474,17 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Follows**: `deploy.sh` lines 38-43
 
-- [ ] **Create Inference Profiles**
-  - [ ] Run: `python scripts/create_inference_profiles.py`
-  - [ ] Creates:
+- [x] **Create Inference Profiles**
+  - [x] Run: `python scripts/create_inference_profiles.py`
+  - [x] Creates:
     - `healthcare-basic-profile` with Nova Micro
     - `healthcare-premium-profile` with Nova 2 Lite (with web grounding)
-  - [ ] Stores ARNs in SSM: `/app/healthcare/inference_profiles/*`
+  - [x] Stores ARNs in SSM: `/app/healthcare/inference_profiles/*`
 
-- [ ] **Update Deployment Configuration**
-  - [ ] Run: `python scripts/configure_deployment.py`
-  - [ ] Updates agent files with profile ARNs
-  - [ ] Generates `.bedrock_agentcore.yaml`
+- [x] **Update Deployment Configuration**
+  - [x] Run: `python scripts/configure_deployment.py`
+  - [x] Updates agent files with profile ARNs
+  - [x] Generates `.bedrock_agentcore.yaml`
 
 - [ ] **Verify Configuration**
   - [ ] Run: `./scripts/list_ssm_parameters.sh`
