@@ -1,0 +1,63 @@
+# CLINIC E CARDIOLOGY SPECIALISTS
+
+**EXERCISE STRESS TEST REPORT**
+
+---
+
+**Patient Name:** Bradley Morrison  
+**Date of Birth:** 04/15/1967  
+**MRN:** CE-892041  
+**Date of Test:** January 15, 2025  
+**Referring Physician:** Dr. Angela Chen, MD
+
+---
+
+## INDICATION
+Atypical chest pain, evaluation for coronary artery disease
+
+## PROCEDURE
+Standard Bruce Protocol treadmill exercise stress test with continuous 12-lead ECG monitoring and blood pressure assessment.
+
+## BASELINE
+- **Heart Rate:** 72 bpm
+- **Blood Pressure:** 128/82 mmHg
+- **Resting ECG:** Normal sinus rhythm, no ST-T wave abnormalities
+
+## EXERCISE DATA
+- **Protocol:** Bruce Protocol
+- **Duration:** 9 minutes 30 seconds (Stage 3)
+- **Peak Heart Rate:** 142 bpm (93% of age-predicted maximum)
+- **Peak Blood Pressure:** 168/88 mmHg
+- **Reason for Termination:** Fatigue and mild dyspnea
+- **METS Achieved:** 10.2 (Good functional capacity)
+
+## SYMPTOMS
+Mild nonspecific chest tightness at peak exercise, resolved within 2 minutes of recovery. No diaphoresis, nausea, or dizziness reported.
+
+## ECG FINDINGS
+- No significant ST-segment depression or elevation during exercise or recovery
+- Occasional isolated premature ventricular contractions (PVCs) during exercise
+- No arrhythmias noted
+- Appropriate heart rate response and recovery
+
+## HEMODYNAMIC RESPONSE
+Normal blood pressure response to exercise. Heart rate recovery: 28 bpm decrease at 1 minute post-exercise (adequate).
+
+## IMPRESSION
+**NEGATIVE for exercise-induced myocardial ischemia**
+
+1. Good functional capacity (>10 METS)
+2. No electrocardiographic evidence of ischemia
+3. Normal hemodynamic response to exercise
+4. Benign ventricular ectopy during exercise
+
+## RECOMMENDATIONS
+Continue current medical management. Atypical chest pain likely non-cardiac in origin. Encourage regular aerobic exercise and cardiovascular risk factor modification.
+
+---
+
+**Interpreting Physician:** Dr. Robert Yamamoto, MD, FACC  
+**Electronically signed:** 01/15/2025 14:35
+
+---
+*Clinic E Cardiology Specialists | 2847 Medical Plaza Drive | Phone: (555) 234-9876*

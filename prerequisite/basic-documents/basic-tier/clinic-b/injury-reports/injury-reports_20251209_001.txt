@@ -1,0 +1,44 @@
+**CLINIC B URGENT CARE CENTER**
+**INJURY REPORT**
+
+---
+
+**Patient Name:** Marcus Chen  
+**DOB:** 08/14/1989  
+**MRN:** CB-847293  
+**Date of Service:** January 15, 2025  
+**Time:** 14:23  
+
+---
+
+**CHIEF COMPLAINT:** Left ankle injury
+
+**MECHANISM OF INJURY:**  
+Patient reports twisting left ankle while descending stairs at home approximately 2 hours prior to presentation. Denies loss of consciousness, head strike, or other associated injuries. Patient heard a "pop" at time of injury followed by immediate pain and swelling. Unable to bear weight without significant discomfort.
+
+**PHYSICAL EXAMINATION:**  
+**Vital Signs:** BP 128/82, HR 76, RR 16, Temp 98.4°F, SpO2 99% RA  
+**General:** Alert and oriented x3, in mild distress secondary to pain  
+**Left Ankle:** Moderate edema noted over lateral malleolus and anterior talofibular region. Ecchymosis present lateral aspect. Tenderness to palpation over lateral malleolus and ATFL. Point tenderness noted at distal fibula. Negative medial malleolar tenderness. ROM limited by pain. Neurovascular examination intact distally with palpable dorsalis pedis pulse, intact sensation, and normal capillary refill (<2 seconds).
+
+**IMAGING:**  
+Left ankle X-ray (3 views): No acute fracture or dislocation identified. Mild soft tissue swelling present. Normal joint space maintained.
+
+**DIAGNOSIS:**  
+Left lateral ankle sprain, Grade II
+
+**TREATMENT PROVIDED:**  
+- Ice applied for 20 minutes  
+- Compression wrap applied  
+- Air cast splint fitted  
+- Ibuprofen 600mg PO administered  
+- Patient education on RICE protocol provided
+
+**DISPOSITION:**  
+Discharged home in stable condition with crutches for ambulation assistance. Prescriptions provided for ibuprofen 600mg PO TID PRN pain. Instructed to follow up with orthopedics if no improvement in 7-10 days or if symptoms worsen. Return precautions reviewed and understood.
+
+---
+
+**Provider:** Dr. Sarah Patel, MD  
+**Signature:** [Electronic signature on file]  
+**Date/Time:** 01/15/2025 15:02

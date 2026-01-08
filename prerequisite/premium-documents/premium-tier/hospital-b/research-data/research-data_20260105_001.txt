@@ -1,0 +1,69 @@
+# HOSPITAL B ACADEMIC MEDICAL CENTER
+## Department of Clinical Research
+**Research Data Summary Report**
+
+---
+
+**Study Title:** Efficacy of Early Mobilization Protocol in Post-Operative Cardiac Surgery Patients
+
+**Protocol Number:** HBAMC-2024-CR-0847  
+**Principal Investigator:** Dr. Patricia Chen, MD, FACC  
+**Study Period:** January 2024 - March 2024  
+**IRB Approval:** #2023-11-284
+
+---
+
+### STUDY COHORT DEMOGRAPHICS
+
+**Total Enrolled Subjects:** n=64  
+- Male: 38 (59.4%)
+- Female: 26 (40.6%)
+- Mean Age: 62.3 years (SD ±8.7)
+
+**Surgical Procedures:**
+- CABG (Coronary Artery Bypass Graft): 41 patients
+- Aortic Valve Replacement: 15 patients
+- Mitral Valve Repair: 8 patients
+
+---
+
+### PRIMARY OUTCOMES
+
+**Length of ICU Stay (hours):**
+- Intervention Group (n=32): 54.2 ± 12.6
+- Control Group (n=32): 71.8 ± 15.3
+- p-value: 0.003*
+
+**Postoperative Complications:**
+- Atrial Fibrillation: 18 patients (28.1%)
+- Pleural Effusion: 9 patients (14.1%)
+- Wound Infection: 3 patients (4.7%)
+- Pulmonary Embolism: 1 patient (1.6%)
+
+**Functional Capacity (6-Minute Walk Test) at Day 5:**
+- Intervention Group: 187.4 ± 34.2 meters
+- Control Group: 142.6 ± 29.8 meters
+- p-value: 0.001*
+
+---
+
+### LABORATORY FINDINGS (Mean Values at 48h Post-Op)
+
+- Troponin I: 2.34 ng/mL (elevated, expected post-surgical)
+- BNP: 428 pg/mL
+- Hemoglobin: 10.2 g/dL
+- Creatinine: 1.1 mg/dL
+- WBC Count: 11,800/µL
+
+---
+
+### CONCLUSIONS
+
+Early mobilization protocol demonstrated statistically significant reduction in ICU length of stay and improved early functional recovery without increased adverse events. Study supports implementation of standardized early mobilization in post-cardiac surgery population.
+
+**Data Validation:** Complete  
+**Report Generated:** April 15, 2024  
+**Approved by:** Clinical Research Operations Committee
+
+---
+*Confidential Research Document - For Internal Use Only*

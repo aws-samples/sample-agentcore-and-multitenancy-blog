@@ -1,0 +1,43 @@
+# HOSPITAL A MULTI-SPECIALTY MEDICAL CENTER
+
+## OPERATIVE REPORT
+
+**Patient Name:** Marcus Thompson  
+**MRN:** 8845209  
+**Date of Surgery:** March 15, 2024  
+**Time:** 09:45 - 11:20  
+**Surgeon:** Dr. Patricia Chen, MD, FACS  
+**Assistant:** Dr. Robert Nguyen, MD  
+**Anesthesiologist:** Dr. Samuel Martinez, MD  
+
+**Preoperative Diagnosis:** Symptomatic cholelithiasis with acute cholecystitis
+
+**Postoperative Diagnosis:** Same, with mild gallbladder wall thickening
+
+**Procedure Performed:** Laparoscopic cholecystectomy
+
+**Anesthesia:** General endotracheal anesthesia
+
+---
+
+**INDICATIONS:**  
+This 52-year-old male presented with recurrent right upper quadrant pain, positive Murphy's sign, and ultrasound findings demonstrating multiple gallstones and gallbladder wall thickening measuring 5mm. Patient consented for laparoscopic cholecystectomy after medical optimization.
+
+**PROCEDURE DETAILS:**  
+Patient was positioned supine after induction of general anesthesia. Abdomen was prepped and draped in sterile fashion. Pneumoperitoneum was established via Veress needle at Palmer's point with insufflation to 15mmHg. A 10mm umbilical trocar was placed under direct visualization, followed by three additional ports: 5mm epigastric, 5mm right subcostal at midclavicular line, and 5mm right lateral.
+
+Diagnostic laparoscopy revealed mild adhesions and an inflamed, distended gallbladder. Calot's triangle was carefully dissected. Cystic artery and cystic duct were identified, isolated, and doubly clipped proximally and distally before division. Gallbladder was dissected from liver bed using electrocautery with adequate hemostasis. Specimen was removed via umbilical port using retrieval bag.
+
+Final inspection showed no bile leak or bleeding. Irrigation was performed. Fascia at umbilical site was closed with 0-Vicryl suture. Skin closed with 4-0 Monocryl subcuticular sutures.
+
+**Estimated Blood Loss:** 25mL  
+**Specimens:** Gallbladder with multiple stones to pathology  
+**Complications:** None  
+
+**Condition:** Patient tolerated procedure well and transferred to PACU in stable condition.
+
+---
+
+**Electronically signed by:**  
+Dr. Patricia Chen, MD, FACS  
+March 15, 2024 13:45

@@ -1,0 +1,65 @@
+**CLINIC D INTERNAL MEDICINE**
+
+**INTERNAL MEDICINE PROGRESS NOTE**
+
+---
+
+**Patient Name:** Patricia R. Henderson  
+**DOB:** 08/14/1962 | **Age:** 62 | **Sex:** F  
+**MRN:** 847293-CDM  
+**Date of Visit:** March 15, 2024  
+**Provider:** Dr. Michael Chen, MD
+
+---
+
+**CHIEF COMPLAINT:**  
+Follow-up for Type 2 Diabetes Mellitus and Hypertension
+
+**HISTORY OF PRESENT ILLNESS:**  
+Ms. Henderson returns for routine chronic disease management. She reports fair glycemic control with occasional morning hyperglycemia (fasting glucose 160-180 mg/dL). Denies polydipsia, polyuria, or visual changes. Blood pressure at home averages 138/84 mmHg. Compliant with current medications. Reports mild bilateral lower extremity edema, worse in evenings. Denies chest pain, dyspnea, or orthopnea.
+
+**PAST MEDICAL HISTORY:**  
+- Type 2 Diabetes Mellitus (diagnosed 2016)
+- Essential Hypertension
+- Hyperlipidemia
+- Chronic Kidney Disease, Stage 3a
+- Obesity (BMI 33.2)
+
+**CURRENT MEDICATIONS:**  
+- Metformin 1000mg BID
+- Glipizide 10mg daily
+- Lisinopril 20mg daily
+- Atorvastatin 40mg daily
+- Aspirin 81mg daily
+
+**PHYSICAL EXAMINATION:**  
+Vitals: BP 142/88, HR 76, Temp 98.4°F, Wt 187 lbs  
+General: Alert, obese female in no acute distress  
+CV: RRR, no murmurs  
+Lungs: Clear bilaterally  
+Extremities: 1+ pitting edema bilateral ankles; pedal pulses intact  
+Feet: No ulcerations, monofilament intact bilaterally
+
+**LABORATORY RESULTS (today):**  
+HbA1c: 7.8% (previous 7.4%)  
+Creatinine: 1.3 mg/dL, eGFR: 52 mL/min/1.73m²  
+LDL: 98 mg/dL  
+Microalbumin/creatinine ratio: 142 mg/g
+
+**ASSESSMENT & PLAN:**
+
+1. **Type 2 DM, uncontrolled:** Increase Glipizide to 10mg BID. Continue home glucose monitoring. Reinforce dietary modifications.
+
+2. **Hypertension, suboptimal control:** Increase Lisinopril to 30mg daily.
+
+3. **CKD Stage 3a with albuminuria:** Continue ACE inhibitor. Nephrology referral placed.
+
+4. **Hyperlipidemia, at goal:** Continue current statin therapy.
+
+Follow-up in 8 weeks with repeat labs.
+
+---
+
+**Electronically signed by:**  
+Michael Chen, MD  
+March 15, 2024 14:32

@@ -1,0 +1,64 @@
+# CLINIC F ONCOLOGY CENTER
+## Molecular Genomic Profiling Report
+
+**Patient Information:**
+Name: Rebecca Torres
+DOB: 08/15/1967
+MRN: CF-892034-T
+Specimen ID: ONC2024-3847
+
+**Ordering Physician:** Dr. Michael Chen, MD
+**Date of Collection:** January 18, 2024
+**Date of Report:** January 29, 2024
+
+---
+
+**SPECIMEN DETAILS:**
+- Type: Formalin-fixed paraffin-embedded (FFPE) tissue
+- Source: Left breast mass, core biopsy
+- Diagnosis: Invasive ductal carcinoma, Grade 2
+
+**TEST PERFORMED:**
+Comprehensive Solid Tumor Genomic Panel (384 genes)
+
+---
+
+**RESULTS:**
+
+**CLINICALLY SIGNIFICANT VARIANTS:**
+
+*PIK3CA* - c.3140A>G (p.His1047Arg)
+- Variant Classification: Pathogenic
+- Allele Frequency: 42%
+- Clinical Significance: Associated with PI3K pathway activation; potential therapeutic target
+
+*TP53* - c.743G>A (p.Arg248Gln)
+- Variant Classification: Pathogenic
+- Allele Frequency: 38%
+- Clinical Significance: Tumor suppressor loss of function
+
+**VARIANTS OF UNCERTAIN SIGNIFICANCE:**
+
+*CHEK2* - c.1100delC (p.Thr367fs)
+- Allele Frequency: 48%
+- May be associated with germline predisposition
+
+**NEGATIVE FINDINGS:**
+No mutations detected in: *BRCA1, BRCA2, HER2/ERBB2, EGFR, KRAS, NRAS, BRAF, ALK, ROS1*
+
+**TUMOR MUTATIONAL BURDEN:** 6.2 mutations/Mb (Low)
+
+**MICROSATELLITE STATUS:** Stable (MSS)
+
+**PD-L1 EXPRESSION:** 5% (Low)
+
+---
+
+**INTERPRETATION:**
+Genomic profiling reveals actionable mutations in PIK3CA and TP53. PIK3CA H1047R mutation may predict response to PI3K/AKT/mTOR pathway inhibitors such as alpelisib in combination with endocrine therapy. Germline genetic counseling is recommended for CHEK2 variant assessment.
+
+**Reported by:** Dr. Sarah Patel, MD, PhD - Molecular Pathology
+**Medical Director:** Dr. James Wong, MD - Genomic Medicine
+
+---
+*This test was performed in a CAP/CLIA accredited laboratory.*

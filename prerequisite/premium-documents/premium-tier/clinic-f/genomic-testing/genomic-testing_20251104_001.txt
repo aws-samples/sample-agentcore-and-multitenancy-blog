@@ -1,0 +1,66 @@
+# CLINIC F ONCOLOGY CENTER
+**Molecular Oncology & Genomic Diagnostics Laboratory**
+
+---
+
+**GENOMIC TESTING REPORT**
+
+**Patient Information:**
+- Name: Patricia Morrison
+- DOB: 08/14/1967
+- MRN: CF-89234-TX
+- Specimen ID: NGS-2024-4782
+- Collection Date: January 15, 2024
+- Report Date: January 29, 2024
+
+**Ordering Physician:** Dr. Samuel Chen, MD
+**Indication:** Stage IIB invasive ductal carcinoma, left breast
+
+---
+
+**TEST PERFORMED:**
+Comprehensive Solid Tumor Panel - Next Generation Sequencing (NGS)
+- 324 cancer-related genes analyzed
+- Tumor Mutational Burden (TMB) assessment
+- Microsatellite Instability (MSI) status
+
+**SPECIMEN TYPE:** Formalin-fixed paraffin-embedded (FFPE) tissue
+**Tumor Content:** 65%
+
+---
+
+**RESULTS:**
+
+**PATHOGENIC VARIANTS DETECTED:**
+
+1. **TP53** (c.742C>T; p.Arg248Trp) - Exon 7
+   - Variant Allele Frequency: 48%
+   - Classification: Pathogenic
+   - Clinical Significance: Loss of tumor suppressor function
+
+2. **PIK3CA** (c.3140A>G; p.His1047Arg)
+   - Variant Allele Frequency: 32%
+   - Classification: Pathogenic
+   - Clinical Significance: Activating mutation; potential therapeutic target
+
+**ADDITIONAL FINDINGS:**
+- **ERBB2 (HER2):** No amplification detected
+- **BRCA1/BRCA2:** No pathogenic germline variants identified
+- **Tumor Mutational Burden:** 4.2 mutations/Mb (Low)
+- **Microsatellite Status:** Stable (MSS)
+- **PD-L1 Expression:** 5% (by immunohistochemistry)
+
+---
+
+**INTERPRETATION:**
+Genomic profiling reveals pathogenic mutations in TP53 and PIK3CA. The PIK3CA H1047R mutation may predict response to PI3K/AKT/mTOR pathway inhibitors such as alpelisib in combination with endocrine therapy. Low TMB and MSS status suggest limited benefit from immune checkpoint inhibitors as monotherapy.
+
+**RECOMMENDATION:**
+Consider targeted therapy options based on hormone receptor status. Genetic counseling recommended to assess hereditary cancer risk.
+
+---
+
+*Report electronically signed by:*
+**Dr. Maria Rodriguez, PhD, FACMG**
+Laboratory Director, Molecular Diagnostics
+CLIA #: 45D2108392 | CAP #: 8847291

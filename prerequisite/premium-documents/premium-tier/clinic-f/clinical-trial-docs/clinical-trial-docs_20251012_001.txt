@@ -1,0 +1,67 @@
+# CLINIC F ONCOLOGY CENTER
+**Clinical Trial Documentation**
+
+---
+
+**PROTOCOL NUMBER:** CF-ONC-2024-187  
+**STUDY TITLE:** Phase II Trial of Pembrolizumab Combined with Carboplatin in Advanced Non-Small Cell Lung Cancer
+
+**PRINCIPAL INVESTIGATOR:** Dr. Rebecca Morrison, MD, FACP  
+**STUDY COORDINATOR:** Jennifer Huang, RN, OCN
+
+---
+
+## PATIENT INFORMATION
+
+**Subject ID:** CF-0187-042  
+**Initials:** M.K.  
+**DOB:** 03/15/1968  
+**Enrollment Date:** January 12, 2024
+
+## DIAGNOSIS & ELIGIBILITY
+
+**Primary Diagnosis:** Stage IIIB Non-Small Cell Lung Carcinoma (Adenocarcinoma)  
+**Histology Confirmed:** 11/28/2023  
+**PD-L1 Expression:** 55% (High Expresser)  
+**EGFR/ALK Status:** Negative  
+**ECOG Performance Status:** 1
+
+**Inclusion Criteria Met:**
+- Measurable disease per RECIST v1.1
+- Adequate organ function (ANC >1500/μL, Platelets >100,000/μL)
+- No prior systemic therapy for advanced disease
+- Life expectancy ≥12 weeks
+
+## TREATMENT PROTOCOL
+
+**Cycle 1 Initiated:** January 19, 2024
+
+**Treatment Regimen:**
+- Pembrolizumab 200mg IV Q3W (Day 1)
+- Carboplatin AUC 5 IV Q3W (Day 1)
+- 21-day cycles, up to 6 cycles chemotherapy + pembrolizumab maintenance
+
+## CYCLE 1 ADMINISTRATION SUMMARY
+
+**Day 1 Vital Signs (Pre-infusion):**
+- BP: 128/82 mmHg | HR: 76 bpm | Temp: 36.8°C | SpO2: 96% on RA
+
+**Adverse Events:**
+- Grade 1 Fatigue (Day 3-5)
+- Grade 1 Nausea (managed with ondansetron)
+- No immune-related adverse events noted
+
+**Laboratory Values (Day 15):**
+- WBC: 4.2 K/μL | ANC: 2.1 K/μL
+- Hemoglobin: 11.8 g/dL
+- Platelets: 145 K/μL
+- Creatinine: 0.9 mg/dL
+- AST/ALT: Within normal limits
+
+**Next Assessment:** CT chest/abdomen/pelvis scheduled at Week 9 for response evaluation per RECIST criteria.
+
+---
+
+**Documented by:** J. Huang, RN, OCN  
+**Date:** February 02, 2024  
+**Signature on File**

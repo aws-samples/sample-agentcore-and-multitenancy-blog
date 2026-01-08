@@ -1,0 +1,55 @@
+**CLINIC D INTERNAL MEDICINE**
+**INTERNAL MEDICINE OUTPATIENT VISIT NOTE**
+
+---
+
+**Patient:** Margaret Foster (MRN: 847293-D)  
+**DOB:** 06/15/1959 | **Age:** 64 | **Sex:** F  
+**Date of Visit:** January 18, 2025  
+**Provider:** Dr. Samuel Chen, MD
+
+---
+
+**CHIEF COMPLAINT:** Follow-up for Type 2 Diabetes Mellitus and Hypertension
+
+**HISTORY OF PRESENT ILLNESS:**  
+Ms. Foster presents for routine chronic disease management. She reports generally good adherence to medications. Home glucose monitoring shows fasting values ranging 110-145 mg/dL. She denies polyuria, polydipsia, or visual changes. Reports occasional mild lower extremity edema by evening. No chest pain, dyspnea, or orthopnea. Diet adherence has been challenging during holidays.
+
+**PAST MEDICAL HISTORY:**
+- Type 2 Diabetes Mellitus (diagnosed 2018)
+- Essential Hypertension (diagnosed 2015)
+- Hyperlipidemia
+- Chronic Kidney Disease Stage 3a
+- Obesity (BMI 34.2)
+
+**CURRENT MEDICATIONS:**
+- Metformin 1000mg PO BID
+- Lisinopril 20mg PO daily
+- Atorvastatin 40mg PO QHS
+- Aspirin 81mg PO daily
+
+**PHYSICAL EXAMINATION:**  
+BP: 142/88 mmHg | HR: 76 bpm | Temp: 98.4°F | Wt: 198 lbs  
+General: Alert, oriented, no acute distress  
+CV: RRR, no murmurs. Trace bilateral ankle edema  
+Resp: Clear to auscultation bilaterally  
+Extremities: Bilateral pedal pulses 2+, monofilament sensation intact
+
+**LABS REVIEWED (01/10/2025):**
+- HbA1c: 7.8% (previous 7.4%)
+- eGFR: 52 mL/min/1.73m²
+- Creatinine: 1.3 mg/dL
+- LDL: 98 mg/dL
+- Urine albumin-to-creatinine ratio: 45 mg/g
+
+**ASSESSMENT & PLAN:**
+1. **Type 2 DM:** Suboptimal control. Increase Metformin to 1500mg AM, 1000mg PM. Reinforce dietary counseling. Repeat HbA1c in 3 months.
+2. **Hypertension:** Above goal. Increase Lisinopril to 30mg daily.
+3. **CKD Stage 3a:** Stable. Continue ACE inhibitor for renal protection.
+4. **Hyperlipidemia:** At goal, continue current statin.
+
+**Follow-up:** 3 months or PRN
+
+---
+
+*Electronically signed by Dr. Samuel Chen, MD on 01/18/2025 at 15:42*

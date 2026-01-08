@@ -1,0 +1,55 @@
+**HOSPITAL B ACADEMIC MEDICAL CENTER**
+Department of Internal Medicine
+Admission Note
+
+**DATE OF ADMISSION:** 03/15/2024
+**TIME:** 14:30
+
+**PATIENT INFORMATION:**
+Name: Rodriguez, Maria C.
+MRN: 8842156
+DOB: 08/22/1967 (56 years old)
+Gender: Female
+
+**CHIEF COMPLAINT:** 
+"Shortness of breath and chest tightness for 2 days"
+
+**HISTORY OF PRESENT ILLNESS:**
+56-year-old female with history of hypertension and type 2 diabetes mellitus presents to ED with progressive dyspnea and substernal chest pressure starting 48 hours prior to admission. Patient reports orthopnea requiring 3 pillows and paroxysmal nocturnal dyspnea. Denies fever, cough, or recent illness. Reports medication compliance but dietary indiscretion over past week.
+
+**PAST MEDICAL HISTORY:**
+- Hypertension (diagnosed 2015)
+- Type 2 Diabetes Mellitus (diagnosed 2018)
+- Hyperlipidemia
+- Obesity (BMI 34.2)
+
+**MEDICATIONS:**
+- Lisinopril 20mg daily
+- Metformin 1000mg BID
+- Atorvastatin 40mg daily
+- Aspirin 81mg daily
+
+**ALLERGIES:** NKDA
+
+**SOCIAL HISTORY:**
+Non-smoker, occasional alcohol use, works as elementary school teacher, lives with spouse.
+
+**PHYSICAL EXAMINATION:**
+Vitals: BP 168/94, HR 102, RR 22, Temp 98.4°F, SpO2 91% on RA
+General: Alert, oriented, mild respiratory distress
+CV: Tachycardic, regular rhythm, S3 gallop present, no murmurs
+Lungs: Bilateral basilar crackles, decreased breath sounds at bases
+Extremities: 2+ pitting edema bilateral lower extremities to mid-shin
+
+**INITIAL DIAGNOSTIC RESULTS:**
+- BNP: 1847 pg/mL (elevated)
+- Troponin I: 0.08 ng/mL (mildly elevated)
+- CXR: Pulmonary vascular congestion, cardiomegaly
+- EKG: Sinus tachycardia, no acute ST changes
+
+**ASSESSMENT/PLAN:**
+Acute decompensated heart failure, likely new diagnosis. Admit to telemetry unit. IV diuresis with furosemide, maintain aspirin, cardiology consultation requested. Echocardiogram scheduled for AM.
+
+**ADMITTING PHYSICIAN:**
+Dr. James Patterson, MD
+Internal Medicine

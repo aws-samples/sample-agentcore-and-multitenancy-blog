@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate synthetic healthcare documents for multi-tenant demo.
-This script generates ~213 clinical documents across 8 clinics.
+This script generates ~80 clinical documents across 8 clinics.
 """
 
 import boto3
@@ -11,27 +11,39 @@ from datetime import datetime, timedelta
 import random
 from pathlib import Path
 
+# Clinic name mapping for consistent facility names in documents
+CLINIC_NAMES = {
+    'clinic-a': 'Clinic A Family Practice',
+    'clinic-b': 'Clinic B Urgent Care Center',
+    'clinic-c': 'Clinic C Pediatric Associates',
+    'clinic-d': 'Clinic D Internal Medicine',
+    'hospital-a': 'Hospital A Multi-Specialty Medical Center',
+    'clinic-e': 'Clinic E Cardiology Specialists',
+    'clinic-f': 'Clinic F Oncology Center',
+    'hospital-b': 'Hospital B Academic Medical Center'
+}
+
 # Configuration
 BASIC_CLINICS = {
     'clinic-a': {
         'specialty': 'Family Practice',
         'document_types': ['patient-intake', 'appointment-notes', 'lab-results', 'prescriptions'],
-        'count_per_type': 6  # 24 total
+        'count_per_type': 2  # 8 total
     },
     'clinic-b': {
         'specialty': 'Urgent Care',
         'document_types': ['patient-intake', 'injury-reports', 'diagnostic-notes', 'discharge-instructions'],
-        'count_per_type': 7  # 28 total
+        'count_per_type': 2  # 8 total
     },
     'clinic-c': {
         'specialty': 'Pediatrics',
         'document_types': ['well-child-visits', 'vaccination-records', 'sick-visit-notes', 'growth-charts'],
-        'count_per_type': 6  # 24 total
+        'count_per_type': 2  # 8 total
     },
     'clinic-d': {
         'specialty': 'Internal Medicine',
         'document_types': ['chronic-disease-notes', 'annual-physicals', 'lab-results', 'specialist-referrals'],
-        'count_per_type': 6  # 24 total
+        'count_per_type': 2  # 8 total
     }
 }
 
@@ -40,25 +52,25 @@ PREMIUM_CLINICS = {
         'specialty': 'Multi-Specialty Hospital',
         'document_types': ['diagnostic-reports', 'imaging-studies', 'pathology-reports', 
                           'surgical-notes', 'specialist-consultations', 'research-data'],
-        'count_per_type': 5  # 30 total
+        'count_per_type': 2  # 12 total
     },
     'clinic-e': {
         'specialty': 'Cardiology',
         'document_types': ['catheterization-reports', 'echocardiogram-reports', 'stress-test-results',
                           'holter-monitor-reports', 'cardiac-imaging'],
-        'count_per_type': 5  # 25 total
+        'count_per_type': 2  # 10 total
     },
     'clinic-f': {
         'specialty': 'Oncology',
         'document_types': ['pathology-reports', 'imaging-studies', 'treatment-plans',
                           'clinical-trial-docs', 'tumor-board-notes', 'genomic-testing'],
-        'count_per_type': 5  # 30 total
+        'count_per_type': 2  # 12 total
     },
     'hospital-b': {
         'specialty': 'Academic Medical Center',
         'document_types': ['admission-notes', 'progress-notes', 'procedure-notes',
                           'discharge-summaries', 'teaching-cases', 'research-data', 'imaging-studies'],
-        'count_per_type': 4  # 28 total
+        'count_per_type': 2  # 14 total
     }
 }
 
@@ -72,48 +84,65 @@ def check_documents_exist():
     
     return basic_exists and premium_exists
 
-def generate_clinical_document(document_type, clinic_specialty, bedrock_client):
+def generate_clinical_document(document_type, clinic_specialty, clinic_id, bedrock_client):
     """Generate a synthetic clinical document using Claude Sonnet 4.5"""
     
+    facility_name = CLINIC_NAMES.get(clinic_id, clinic_id)
+    
     prompts = {
-        'patient-intake': f"""Generate a realistic but synthetic patient intake form for a {clinic_specialty} clinic.
+        'patient-intake': f"""Generate a realistic but synthetic patient intake form for {facility_name}, a {clinic_specialty} clinic.
 Include: patient demographics (synthetic), chief complaint, medical history, current medications, allergies.
 Use realistic medical terminology. Ensure all data is completely synthetic (no real PHI).
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
 Format as a structured clinical document. Keep it concise (200-400 words).""",
         
-        'appointment-notes': f"""Generate a realistic but synthetic appointment note for a {clinic_specialty} visit.
+        'appointment-notes': f"""Generate a realistic but synthetic appointment note for {facility_name}, a {clinic_specialty} clinic.
 Include: chief complaint, history of present illness, physical exam findings, assessment, plan.
-Use SOAP note format. All data must be synthetic. Keep it concise (200-400 words).""",
+Use SOAP note format. All data must be synthetic.
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
+Keep it concise (200-400 words).""",
         
-        'lab-results': f"""Generate realistic but synthetic lab results appropriate for {clinic_specialty}.
+        'lab-results': f"""Generate realistic but synthetic lab results from {facility_name}, a {clinic_specialty} clinic.
 Include: test names, values, reference ranges, interpretation notes.
-Use common lab panels. All data must be synthetic. Keep it concise (200-400 words).""",
+Use common lab panels. All data must be synthetic.
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
+Keep it concise (200-400 words).""",
         
-        'prescriptions': f"""Generate a realistic but synthetic prescription record for a {clinic_specialty} clinic.
+        'prescriptions': f"""Generate a realistic but synthetic prescription record from {facility_name}, a {clinic_specialty} clinic.
 Include: patient name (synthetic), medication name, dosage, frequency, duration, prescriber.
-Use realistic medical terminology. All data must be synthetic. Keep it concise (150-300 words).""",
+Use realistic medical terminology. All data must be synthetic.
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
+Keep it concise (150-300 words).""",
         
-        'injury-reports': f"""Generate a realistic but synthetic injury report for an {clinic_specialty} clinic.
+        'injury-reports': f"""Generate a realistic but synthetic injury report from {facility_name}, a {clinic_specialty} clinic.
 Include: mechanism of injury, physical examination, treatment provided, disposition.
-Use realistic medical terminology. All data must be synthetic. Keep it concise (200-400 words).""",
+Use realistic medical terminology. All data must be synthetic.
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
+Keep it concise (200-400 words).""",
         
-        'diagnostic-notes': f"""Generate a realistic but synthetic diagnostic note for an {clinic_specialty} clinic.
+        'diagnostic-notes': f"""Generate a realistic but synthetic diagnostic note from {facility_name}, a {clinic_specialty} clinic.
 Include: presenting symptoms, differential diagnosis, diagnostic reasoning, treatment plan.
-All data must be synthetic. Keep it concise (200-400 words).""",
+All data must be synthetic.
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
+Keep it concise (200-400 words).""",
         
-        'discharge-instructions': f"""Generate realistic but synthetic discharge instructions for an {clinic_specialty} clinic.
+        'discharge-instructions': f"""Generate realistic but synthetic discharge instructions from {facility_name}, a {clinic_specialty} clinic.
 Include: diagnosis, treatment provided, home care instructions, follow-up recommendations, warning signs.
-All data must be synthetic. Keep it concise (200-400 words).""",
+All data must be synthetic.
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
+Keep it concise (200-400 words).""",
     }
     
     # Use generic prompt for document types not in the dictionary
     prompt = prompts.get(document_type, f"""Generate a realistic but synthetic {document_type.replace('-', ' ')} 
-for a {clinic_specialty} clinic. Use realistic medical terminology. Ensure all data is completely synthetic (no real PHI).
+from {facility_name}, a {clinic_specialty} clinic. Use realistic medical terminology. 
+Ensure all data is completely synthetic (no real PHI).
+IMPORTANT: Use "{facility_name}" as the facility name in the document header.
 Keep it concise (200-400 words).""")
     
     try:
         response = bedrock_client.invoke_model(
-            modelId='us.anthropic.claude-sonnet-4-v2:0',
+            modelId='global.anthropic.claude-sonnet-4-5-20250929-v1:0',
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 1000,
@@ -128,8 +157,10 @@ Keep it concise (200-400 words).""")
         return result['content'][0]['text']
     except Exception as e:
         print(f"⚠️  Error generating document: {e}")
+        facility_name = CLINIC_NAMES.get(clinic_id, clinic_id)
         return f"""SYNTHETIC CLINICAL DOCUMENT - {document_type.upper()}
 
+Facility: {facility_name}
 Clinic Specialty: {clinic_specialty}
 Date: {datetime.now().strftime('%Y-%m-%d')}
 
@@ -147,7 +178,7 @@ def generate_documents_for_clinic(clinic_id, tier, specialty, document_types, co
     for doc_type in document_types:
         print(f"  Generating {count_per_type} {doc_type} documents...")
         for i in range(count_per_type):
-            content = generate_clinical_document(doc_type, specialty, bedrock_client)
+            content = generate_clinical_document(doc_type, specialty, clinic_id, bedrock_client)
             doc_date = datetime.now() - timedelta(days=random.randint(1, 90))
             
             document = {
@@ -182,8 +213,8 @@ def main():
         print("✅ Healthcare documents already exist. Skipping generation.")
         return
     
-    print("📝 Generating ~213 synthetic clinical documents...")
-    print("   Using Claude Sonnet 4.5 (estimated cost: ~$1.67)")
+    print("📝 Generating ~80 synthetic clinical documents...")
+    print("   Using Claude Sonnet 4.5 (estimated cost: ~$0.63)")
     
     try:
         bedrock_client = boto3.client('bedrock-runtime', region_name='us-east-1')

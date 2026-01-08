@@ -243,15 +243,62 @@ class KnowledgeBasesForAmazonBedrock:
 
     def upload_directory(self, s3_path, bucket_name):
         """
-        Upload files from a local path to s3
-            s3_path: local path of the document
+        Upload files from a local path to s3 with metadata for clinic isolation.
+        Preserves directory structure and adds metadata for Knowledge Base filtering.
+        
+        Args:
+            s3_path: local path of the document directory
             bucket_name: bucket name
+            
+        Expected directory structure:
+            s3_path/
+                tier/              (e.g., basic-tier, premium-tier)
+                    clinic-id/     (e.g., clinic-a, hospital-a)
+                        doc-type/  (e.g., patient-intake, lab-results)
+                            file.txt
         """
+        base_path = os.path.abspath(s3_path)
+        
         for root, dirs, files in os.walk(s3_path):
             for file in files:
+                # Skip hidden files and system files
+                if file.startswith('.'):
+                    continue
+                    
                 file_to_upload = os.path.join(root, file)
-                print(f"uploading file {file_to_upload} to {bucket_name}")
-                self.s3_client.upload_file(file_to_upload, bucket_name, file)
+                
+                # Preserve directory structure as S3 key
+                relative_path = os.path.relpath(file_to_upload, base_path)
+                s3_key = relative_path.replace(os.sep, '/')  # Ensure forward slashes
+                
+                # Extract metadata from path structure
+                # Expected: tier/clinic-id/doc-type/filename
+                path_parts = relative_path.split(os.sep)
+                metadata = {}
+                
+                if len(path_parts) >= 3:
+                    metadata['tier'] = path_parts[0]
+                    metadata['clinic_id'] = path_parts[1]
+                    metadata['document_type'] = path_parts[2]
+                elif len(path_parts) >= 2:
+                    metadata['tier'] = path_parts[0]
+                    metadata['clinic_id'] = path_parts[1]
+                elif len(path_parts) >= 1:
+                    # Fallback: try to extract from filename or path
+                    metadata['tier'] = 'unknown'
+                    metadata['clinic_id'] = 'unknown'
+                
+                print(f"Uploading: {file_to_upload}")
+                print(f"  S3 Key: {s3_key}")
+                print(f"  Metadata: {metadata}")
+                
+                # Upload with metadata
+                self.s3_client.upload_file(
+                    file_to_upload, 
+                    bucket_name, 
+                    s3_key,
+                    ExtraArgs={'Metadata': metadata}
+                )
 
     def get_data_bucket_name(self):
         """
@@ -828,18 +875,27 @@ if __name__ == "__main__":
     smm_client = boto3.client("ssm")
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # Example usage:
-    config_path = f"{current_dir}/prereqs_config.yaml"
-    data = read_yaml_file(config_path)
-
     parser = argparse.ArgumentParser(description="Knowledge Base handler")
     parser.add_argument(
         "--mode",
         required=True,
-        help="Knowledge Base helper model. One for: create or delete.",
+        help="Knowledge Base helper mode. One of: create or delete.",
+    )
+    parser.add_argument(
+        "--config",
+        default="prereqs_config.yaml",
+        help="Config file name (default: prereqs_config.yaml). Use premium_prereqs_config.yaml for premium tier.",
     )
 
     args = parser.parse_args()
+
+    # Load config file
+    config_path = f"{current_dir}/{args.config}"
+    data = read_yaml_file(config_path)
+    
+    if not data:
+        print(f"❌ Failed to read config file: {config_path}")
+        exit(1)
 
     print(data)
     if args.mode == "create":

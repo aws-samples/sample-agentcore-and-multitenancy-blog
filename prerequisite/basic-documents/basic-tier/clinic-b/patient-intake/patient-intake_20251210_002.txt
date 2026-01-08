@@ -1,0 +1,66 @@
+```
+CLINIC B URGENT CARE CENTER
+Patient Intake Form
+
+Date: 03/14/2024                    Time: 14:30
+
+═══════════════════════════════════════════════════════════
+
+PATIENT DEMOGRAPHICS:
+Name: Martinez, Elena R.
+Date of Birth: 08/22/1967 (56 years)
+Sex: Female
+Address: 4782 Maple Grove Drive, Apt 3B, Springfield, IL 62704
+Phone: (217) 555-0342
+Email: e.martinez1967@emailservice.com
+Emergency Contact: Carlos Martinez (Spouse) - (217) 555-0343
+
+Insurance: BlueCross BlueShield PPO
+Policy #: XYZ887629401
+Group #: 50298
+
+═══════════════════════════════════════════════════════════
+
+CHIEF COMPLAINT:
+"Severe sore throat for 3 days with fever and difficulty swallowing"
+
+HISTORY OF PRESENT ILLNESS:
+Patient reports sudden onset of pharyngitis beginning 72 hours ago. 
+Associated symptoms include odynophagia, documented fever to 101.8°F 
+at home, fatigue, and tender anterior cervical lymphadenopathy. Denies 
+cough, rhinorrhea, or known sick contacts. Has tried OTC acetaminophen 
+with minimal relief.
+
+═══════════════════════════════════════════════════════════
+
+PAST MEDICAL HISTORY:
+- Hypertension (diagnosed 2015)
+- Type 2 Diabetes Mellitus (diagnosed 2018)
+- Hyperlipidemia
+- Cholecystectomy (2019)
+
+CURRENT MEDICATIONS:
+1. Lisinopril 20mg PO daily
+2. Metformin 1000mg PO BID
+3. Atorvastatin 40mg PO qHS
+4. Aspirin 81mg PO daily
+
+ALLERGIES:
+- Penicillin (rash, reported in childhood)
+- Sulfa drugs (hives)
+- NKDA (environmental)
+
+SOCIAL HISTORY:
+Non-smoker. Occasional alcohol use (1-2 drinks/week). 
+Works as elementary school teacher.
+
+REVIEW OF SYSTEMS:
+Constitutional: Fever, chills, fatigue
+HEENT: Sore throat, difficulty swallowing
+Respiratory: Negative for cough or SOB
+All other systems: Negative
+
+═══════════════════════════════════════════════════════════
+
+Patient Signature: ___Elena Martinez___    Date: 03/14/2024
+```

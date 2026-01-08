@@ -1,0 +1,61 @@
+# Hospital A Multi-Specialty Medical Center
+
+## DEPARTMENT OF PATHOLOGY
+
+**SURGICAL PATHOLOGY REPORT**
+
+---
+
+**PATIENT INFORMATION**  
+Patient Name: Rodriguez, Maria E.  
+Medical Record #: 8842716  
+Date of Birth: 03/15/1968  
+Age/Sex: 55 years / Female  
+Specimen Collection Date: 01/18/2025  
+Report Date: 01/20/2025
+
+**PHYSICIAN INFORMATION**  
+Ordering Physician: Dr. Kenneth Walsh, MD  
+Department: General Surgery  
+Pathologist: Dr. Sarah Chen, MD, FCAP
+
+---
+
+**SPECIMEN SUBMITTED:**  
+A. Gallbladder, cholecystectomy  
+B. Appendix, appendectomy
+
+**CLINICAL HISTORY:**  
+Chronic cholecystitis with cholelithiasis; incidental appendectomy during laparoscopic cholecystectomy.
+
+---
+
+**GROSS DESCRIPTION:**
+
+**Specimen A:** Received fresh, labeled with patient name, is an intact gallbladder measuring 9.5 x 3.2 x 2.8 cm. The serosal surface is smooth and glistening. Upon opening, the mucosa appears green-brown and velvety. Present within the lumen are approximately 15 yellow-tan calculi ranging from 0.4 to 1.8 cm in diameter. The wall thickness measures up to 0.4 cm. Representative sections submitted in cassettes A1-A3.
+
+**Specimen B:** Received is an appendix measuring 6.0 x 0.6 cm with attached mesoappendix measuring up to 2.5 cm in width. The serosal surface is smooth and pink-tan. The wall thickness is 0.2 cm. The lumen contains yellow-tan fecal material. Entirely submitted in cassettes B1-B2.
+
+---
+
+**MICROSCOPIC DESCRIPTION:**  
+Sections show gallbladder wall with chronic inflammation, fibrosis, and Rokitansky-Aschoff sinus proliferation consistent with chronic cholecystitis. No dysplasia or malignancy identified. The appendix shows unremarkable architecture with minimal lymphoid hyperplasia.
+
+---
+
+**FINAL DIAGNOSIS:**
+
+**A. Gallbladder, cholecystectomy:**  
+- Chronic cholecystitis with cholelithiasis  
+- No dysplasia or malignancy
+
+**B. Appendix, appendectomy:**  
+- Unremarkable appendiceal tissue
+
+---
+
+Electronically signed by: **Dr. Sarah Chen, MD, FCAP**  
+Date/Time: 01/20/2025 14:32
+
+---
+*End of Report*

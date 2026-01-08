@@ -1,0 +1,52 @@
+# Hospital B Academic Medical Center
+## Discharge Summary
+
+**Patient Name:** Martinez, Sandra E.  
+**Medical Record #:** 48293756  
+**Date of Birth:** 03/15/1968  
+**Age:** 56 years  
+**Sex:** Female  
+**Admission Date:** 01/18/2025  
+**Discharge Date:** 01/23/2025  
+**Attending Physician:** Dr. Michael Chen, MD  
+**Consulting Services:** Cardiology, Endocrinology  
+
+---
+
+**ADMITTING DIAGNOSIS:**  
+Acute decompensated heart failure, acute kidney injury
+
+**DISCHARGE DIAGNOSIS:**  
+1. Acute on chronic systolic heart failure (EF 35%)
+2. Acute kidney injury, resolved (Cr peak 2.1 mg/dL)
+3. Type 2 diabetes mellitus, uncontrolled
+4. Hypertension
+5. Obesity (BMI 34.2)
+
+**HOSPITAL COURSE:**  
+Ms. Martinez presented to the Emergency Department with progressive dyspnea, bilateral lower extremity edema, and orthopnea over three days. Physical examination revealed jugular venous distension, bibasilar crackles, and 3+ pitting edema. Chest radiograph demonstrated pulmonary vascular congestion and pleural effusions.
+
+Patient was admitted to the Cardiac Care Unit and initiated on IV furosemide 40 mg BID with net diuresis of approximately 3 liters. Echocardiography showed reduced ejection fraction at 35% with global hypokinesis. Renal function improved with diuresis; creatinine normalized to baseline of 1.1 mg/dL by discharge. HbA1c was elevated at 9.2%, prompting endocrinology consultation and adjustment of diabetic regimen.
+
+Patient responded well to treatment with significant clinical improvement. Transitioned to oral diuretics on day 4. Ambulation resumed without dyspnea. Patient and family received comprehensive heart failure education.
+
+**DISCHARGE MEDICATIONS:**  
+- Furosemide 40 mg PO daily
+- Carvedilol 12.5 mg PO BID
+- Lisinopril 20 mg PO daily
+- Metformin 1000 mg PO BID
+- Insulin glargine 30 units subcutaneous daily
+- Atorvastatin 40 mg PO nightly
+
+**DISCHARGE INSTRUCTIONS:**  
+Daily weights, low sodium diet (<2g/day), fluid restriction 1.5L/day, home health nursing arranged
+
+**FOLLOW-UP:**  
+Cardiology clinic in 1 week; PCP in 2 weeks
+
+**Discharge Condition:** Stable  
+**Disposition:** Home with services
+
+---
+
+_Electronically signed by: Dr. Michael Chen, MD | 01/23/2025 14:32_

@@ -1,0 +1,61 @@
+# CLINIC A FAMILY PRACTICE
+## Patient Intake Form
+
+**Date:** March 15, 2024  
+**Time:** 10:30 AM
+
+---
+
+### PATIENT DEMOGRAPHICS
+
+**Name:** Marcus J. Reynolds  
+**Date of Birth:** 08/22/1967 (Age: 56)  
+**Sex:** Male  
+**Address:** 742 Maple Street, Apt 3B, Springfield, IL 62704  
+**Phone:** (217) 555-0194  
+**Email:** m.reynolds.1967@email.com  
+**Emergency Contact:** Patricia Reynolds (Spouse) - (217) 555-0195  
+**Insurance:** BlueCross BlueShield - Policy #BC45789321
+
+---
+
+### CHIEF COMPLAINT
+
+Patient presents with persistent lower back pain radiating to left leg for 3 weeks. Reports pain worsens with standing and walking. Rates pain 6/10 at rest, 8/10 with activity.
+
+---
+
+### MEDICAL HISTORY
+
+- **Chronic Conditions:** Type 2 Diabetes Mellitus (diagnosed 2015), Hypertension (diagnosed 2018), Hyperlipidemia
+- **Surgical History:** Appendectomy (1989), Right knee arthroscopy (2019)
+- **Family History:** Father - CVA at age 72; Mother - Breast cancer at age 68; Brother - Type 2 DM
+- **Social History:** Former smoker (quit 2016, 20-pack-year history), occasional alcohol use (2-3 drinks/week), denies recreational drug use
+
+---
+
+### CURRENT MEDICATIONS
+
+1. Metformin 1000mg PO BID
+2. Lisinopril 20mg PO daily
+3. Atorvastatin 40mg PO qHS
+4. Aspirin 81mg PO daily
+5. Ibuprofen 400mg PO PRN (taking 2-3x daily for back pain)
+
+---
+
+### ALLERGIES
+
+- **Penicillin** - Rash, hives
+- **Sulfa drugs** - GI upset, nausea
+- **NKDA** to food or environmental allergens
+
+---
+
+### VITAL SIGNS
+
+BP: 142/88 mmHg | HR: 78 bpm | Temp: 98.4°F | RR: 16/min | O2 Sat: 98% RA | BMI: 31.2
+
+---
+
+**Provider:** ___________________ **Signature:** ___________________ **Date:** ___________

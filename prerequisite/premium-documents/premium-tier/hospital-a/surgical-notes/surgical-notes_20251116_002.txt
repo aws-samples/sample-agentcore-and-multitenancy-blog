@@ -1,0 +1,37 @@
+# HOSPITAL A MULTI-SPECIALTY MEDICAL CENTER
+
+## OPERATIVE REPORT
+
+**Patient Name:** Rodriguez, Maria C.  
+**MRN:** 847392015  
+**Date of Surgery:** March 15, 2024  
+**Date of Birth:** 08/22/1967  
+**Age:** 56 years  
+
+**Surgeon:** Dr. Benjamin Kowalski, MD, FACS  
+**Assistant:** Dr. Jennifer Patel, MD  
+**Anesthesiologist:** Dr. Michael Chen, MD  
+**Anesthesia Type:** General endotracheal anesthesia  
+
+**Preoperative Diagnosis:** Symptomatic cholelithiasis with chronic cholecystitis  
+**Postoperative Diagnosis:** Same  
+
+**Procedure Performed:** Laparoscopic cholecystectomy  
+
+**Indications:** The patient is a 56-year-old female with recurrent right upper quadrant pain, nausea, and positive Murphy's sign. Ultrasound revealed multiple gallstones and gallbladder wall thickening measuring 5mm. Conservative management failed, and patient consented for surgical intervention.
+
+**Procedure Details:**  
+The patient was positioned supine after induction of general anesthesia. Abdomen was prepped and draped in sterile fashion. Pneumoperitoneum established via Veress needle at Palmer's point to 15mmHg. A 10mm umbilical trocar was inserted under direct visualization, followed by three additional trocars (5mm epigastric, 5mm right midclavicular, 10mm right anterior axillary).
+
+Diagnostic laparoscopy revealed moderate adhesions between gallbladder and omentum, which were lysed using blunt dissection. Calot's triangle was carefully dissected, identifying cystic artery and cystic duct. Critical view of safety confirmed. Cystic artery clipped twice proximally, once distally, and divided. Cystic duct similarly clipped and transected. Gallbladder dissected from liver bed using electrocautery, achieving hemostasis. Specimen extracted via umbilical port in retrieval bag. Irrigation performed; no bile leakage noted. Fascia closed with 0-Vicryl, skin with 4-0 Monocryl subcuticular.
+
+**Estimated Blood Loss:** 25mL  
+**Complications:** None  
+**Specimens:** Gallbladder sent to pathology  
+**Condition:** Stable, transferred to PACU in satisfactory condition  
+
+**Plan:** Discharge tomorrow if tolerating diet, pain controlled.
+
+---
+**Electronically signed by:** Dr. Benjamin Kowalski, MD  
+**Date/Time:** 03/15/2024 14:35

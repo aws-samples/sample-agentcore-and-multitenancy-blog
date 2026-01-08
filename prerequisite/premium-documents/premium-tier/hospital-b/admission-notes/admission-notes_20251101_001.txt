@@ -1,0 +1,57 @@
+**HOSPITAL B ACADEMIC MEDICAL CENTER**
+Department of Internal Medicine
+Admission Note
+
+**DATE OF ADMISSION:** 03/15/2024
+**TIME:** 14:30
+
+**PATIENT INFORMATION:**
+Name: Marcus Thompson
+MRN: 8847392
+DOB: 08/22/1967 (56 years old)
+Gender: Male
+
+**CHIEF COMPLAINT:** 
+"I've had chest pain and shortness of breath since this morning."
+
+**HISTORY OF PRESENT ILLNESS:**
+56-year-old male with history of hypertension and hyperlipidemia presents to ED with substernal chest pressure radiating to left arm, onset approximately 6 hours prior to arrival. Associated symptoms include diaphoresis, nausea, and dyspnea on exertion. Pain described as 7/10 intensity, non-positional. Denies recent trauma, fever, or cough. Patient took aspirin 325mg at home prior to arrival.
+
+**PAST MEDICAL HISTORY:**
+- Hypertension (diagnosed 2018)
+- Hyperlipidemia
+- Type 2 Diabetes Mellitus
+- Former smoker (quit 2020, 30 pack-year history)
+
+**MEDICATIONS:**
+- Lisinopril 20mg daily
+- Atorvastatin 40mg daily
+- Metformin 1000mg twice daily
+
+**ALLERGIES:** NKDA
+
+**PHYSICAL EXAMINATION:**
+Vitals: BP 158/92, HR 94, RR 20, Temp 98.4°F, SpO2 94% on RA
+General: Anxious, diaphoretic male in moderate distress
+Cardiovascular: Regular rate, no murmurs/rubs/gallops
+Respiratory: Clear to auscultation bilaterally, no wheezes
+Abdomen: Soft, non-tender, non-distended
+
+**INITIAL WORKUP:**
+- ECG: ST-segment elevation 2mm in leads II, III, aVF
+- Troponin I: 2.4 ng/mL (elevated)
+- CBC, BMP pending
+- Chest X-ray: No acute cardiopulmonary process
+
+**ASSESSMENT & PLAN:**
+56-year-old male presenting with acute inferior STEMI.
+
+1. Cardiology consulted - patient accepted for emergent cardiac catheterization
+2. Aspirin 325mg, Plavix 600mg loading dose administered
+3. Heparin drip initiated
+4. NPO for procedure
+5. Continuous telemetry monitoring
+6. Serial troponins
+
+**ADMITTING PHYSICIAN:** Dr. Sarah Chen, MD
+**PGY-3 Internal Medicine Resident**

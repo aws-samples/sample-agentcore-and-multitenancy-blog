@@ -1,0 +1,62 @@
+# CLINIC F ONCOLOGY CENTER
+## Clinical Trial Documentation
+
+**Protocol Number:** CF-ONC-2024-087  
+**Trial Title:** Phase II Study of Pembrolizumab Combined with Carboplatin-Pemetrexed in Metastatic Non-Small Cell Lung Cancer
+
+---
+
+**Patient ID:** CT-8842-MNS  
+**Enrollment Date:** January 15, 2024  
+**Study Coordinator:** Dr. Patricia Holloway, MD, PhD
+
+### BASELINE ASSESSMENT
+
+**Demographics:**
+- Age: 62 years
+- Sex: Male
+- ECOG Performance Status: 1
+
+**Disease Characteristics:**
+- Primary Diagnosis: Stage IV Adenocarcinoma of the lung
+- Histology: Non-squamous NSCLC
+- PD-L1 Expression: 45% (tumor proportion score)
+- Molecular Profile: EGFR wild-type, ALK negative
+- Metastatic Sites: Mediastinal lymph nodes, left adrenal gland
+
+### TREATMENT PROTOCOL
+
+**Cycle 1 Initiated:** January 22, 2024
+
+**Dosing Regimen:**
+- Pembrolizumab 200mg IV Day 1 (Q3W)
+- Carboplatin AUC 5 IV Day 1 (Q3W)
+- Pemetrexed 500mg/m² IV Day 1 (Q3W)
+- Vitamin supplementation: Folic acid 400mcg daily, Vitamin B12 1000mcg IM Q9W
+
+### SAFETY MONITORING
+
+**Cycle 1 - Day 8 Assessment:**
+- CBC: WBC 3.2 K/µL, ANC 1.8 K/µL, Platelets 142 K/µL
+- Comprehensive Metabolic Panel: Within normal limits
+- Adverse Events: Grade 1 fatigue, Grade 1 nausea (managed with ondansetron)
+
+**Response Evaluation:**
+- Next CT imaging scheduled: March 18, 2024 (post-Cycle 3)
+- RECIST 1.1 criteria to be applied
+
+### PROTOCOL COMPLIANCE
+
+Patient demonstrates excellent compliance with study procedures. Informed consent properly obtained with witnessed documentation. No protocol deviations noted to date.
+
+**Next Visit:** February 12, 2024 (Cycle 2, Day 1)
+
+---
+
+**Principal Investigator Signature:** Dr. Patricia Holloway  
+**Date:** January 29, 2024
+
+**IRB Approval Number:** CF-IRB-2023-451  
+**IRB Expiration:** December 31, 2024
+
+*Confidential Clinical Trial Document*

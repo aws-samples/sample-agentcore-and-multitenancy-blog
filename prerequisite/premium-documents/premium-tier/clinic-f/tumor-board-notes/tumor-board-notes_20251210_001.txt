@@ -1,0 +1,53 @@
+# CLINIC F ONCOLOGY CENTER
+## MULTIDISCIPLINARY TUMOR BOARD CONFERENCE NOTES
+
+**Date:** March 14, 2024  
+**Time:** 14:00 - 15:30  
+**Location:** Cancer Center Conference Room B
+
+---
+
+**PATIENT IDENTIFIER:** MRN 847392-TB  
+**Age/Gender:** 67-year-old female  
+**Presentation Date:** March 14, 2024
+
+---
+
+**ATTENDING PHYSICIANS:**
+- Dr. Rebecca Morrison (Medical Oncology)
+- Dr. James Chen (Radiation Oncology)
+- Dr. Patricia Williams (Surgical Oncology)
+- Dr. Michael Torres (Pathology)
+- Dr. Sarah Ahmed (Radiology)
+
+---
+
+**CASE SUMMARY:**
+
+Patient presents with newly diagnosed stage IIIB adenocarcinoma of the right upper lobe. Initial presentation included persistent cough, hemoptysis, and 15-pound weight loss over three months. Non-smoker with no significant family history of malignancy.
+
+**DIAGNOSTIC FINDINGS:**
+
+*Imaging:* PET-CT scan reveals 4.2 cm spiculated mass in RUL with SUV max 8.7. Mediastinal lymphadenopathy involving stations 2R, 4R, and 7. No evidence of distant metastasis.
+
+*Pathology:* Core needle biopsy confirmed moderately differentiated adenocarcinoma. Immunohistochemistry positive for TTF-1 and napsin A. 
+
+*Molecular Testing:* EGFR wild-type, ALK negative, PD-L1 expression 65%.
+
+*Pulmonary Function:* FEV1 72% predicted, adequate for surgical consideration pending neoadjuvant therapy.
+
+---
+
+**TUMOR BOARD RECOMMENDATIONS:**
+
+1. **Primary Treatment:** Concurrent chemoradiation with carboplatin/pemetrexed and 60 Gy radiation therapy over 6 weeks
+2. **Immunotherapy:** Add durvalumab consolidation therapy post-chemoradiation given high PD-L1 expression
+3. **Surgical Re-evaluation:** Assess for surgical resectability after neoadjuvant therapy completion
+4. **Supportive Care:** Refer to palliative care for symptom management and nutritional support
+
+**Follow-up:** Repeat imaging in 8 weeks. Return to tumor board for surgical candidacy discussion.
+
+---
+
+**Documented by:** Dr. Rebecca Morrison  
+**Electronically signed:** March 14, 2024 15:45

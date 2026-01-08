@@ -1,0 +1,50 @@
+# Hospital A Multi-Specialty Medical Center
+
+## RADIOLOGY IMAGING REPORT
+
+**Patient Name:** Martinez, Carlos R.  
+**MRN:** 847392-HMA  
+**DOB:** 03/15/1968 (Age: 56)  
+**Gender:** Male  
+**Exam Date:** January 18, 2025 at 14:30  
+**Ordering Physician:** Dr. Jennifer Kowalski, Internal Medicine
+
+---
+
+### EXAMINATION: CT Chest with IV Contrast
+
+**CLINICAL INDICATION:** Persistent cough, weight loss, history of 40 pack-year smoking
+
+**TECHNIQUE:** Axial CT images of the chest were obtained following administration of 100 mL intravenous iodinated contrast. Multiplanar reconstructions were performed.
+
+**COMPARISON:** Chest X-ray dated December 3, 2024
+
+**FINDINGS:**
+
+*Lungs:* A 2.8 cm spiculated nodule is identified in the right upper lobe (Series 3, Image 47) with associated pleural puckering. Several smaller nodules measuring 4-6 mm are present bilaterally. No significant pleural effusion. No pneumothorax.
+
+*Mediastinum:* Enlarged right paratracheal lymph node measuring 1.5 cm in short axis. Subcarinal lymph nodes are borderline enlarged at 1.2 cm. No pericardial effusion.
+
+*Airways:* Patent central airways. Mild bronchial wall thickening consistent with chronic bronchitis.
+
+*Cardiovascular:* Moderate coronary artery calcifications. Heart size normal. Aorta demonstrates age-appropriate atherosclerotic changes.
+
+*Bones:* Mild degenerative changes of the thoracic spine. No suspicious osseous lesions.
+
+**IMPRESSION:**
+
+1. **2.8 cm spiculated right upper lobe nodule with associated lymphadenopathy – highly suspicious for primary bronchogenic carcinoma. Recommend PET-CT for staging and pulmonology referral for tissue diagnosis.**
+
+2. Multiple smaller bilateral pulmonary nodules requiring further characterization.
+
+3. Chronic bronchitic changes.
+
+4. Moderate coronary artery calcification.
+
+---
+
+**Radiologist:** Dr. Michael Chen, MD, FACR  
+**Electronically signed:** January 18, 2025 at 16:15  
+**Report Status:** Final  
+
+*Critical findings communicated to Dr. Kowalski via telephone at 16:20 on 01/18/2025.*

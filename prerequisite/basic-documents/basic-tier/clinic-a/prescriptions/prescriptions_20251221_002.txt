@@ -1,0 +1,61 @@
+# Clinic A Family Practice
+
+**PRESCRIPTION RECORD**
+
+---
+
+**Date:** March 15, 2024
+
+**Patient Information:**
+- **Name:** Jennifer M. Patterson
+- **Date of Birth:** 06/22/1978
+- **Patient ID:** FAM-45892-CP
+- **Address:** 742 Oakwood Drive, Springfield, IL 62704
+
+---
+
+**Prescriber Information:**
+- **Physician:** Dr. Robert Chen, MD
+- **License Number:** IL-MED-384756
+- **Phone:** (217) 555-0198
+- **NPI:** 1234567890
+
+---
+
+**PRESCRIPTION DETAILS:**
+
+**Medication #1:**
+- **Drug Name:** Lisinopril 10mg tablets
+- **Dosage:** 10mg
+- **Frequency:** Once daily in the morning
+- **Quantity:** 90 tablets
+- **Refills:** 3
+- **Duration:** 90 days
+
+**Medication #2:**
+- **Drug Name:** Metformin HCl 500mg tablets
+- **Dosage:** 500mg
+- **Frequency:** Twice daily with meals
+- **Quantity:** 180 tablets
+- **Refills:** 3
+- **Duration:** 90 days
+
+**Medication #3:**
+- **Drug Name:** Atorvastatin 20mg tablets
+- **Dosage:** 20mg
+- **Frequency:** Once daily at bedtime
+- **Quantity:** 90 tablets
+- **Refills:** 3
+- **Duration:** 90 days
+
+---
+
+**Clinical Notes:**
+Patient presents for routine follow-up of hypertension, type 2 diabetes mellitus, and hyperlipidemia. Blood pressure well-controlled at 128/82 mmHg. HbA1c at 6.8%. Continue current medication regimen. Patient counseled on diet, exercise, and medication compliance.
+
+**Next Appointment:** June 15, 2024
+
+---
+
+*Electronically signed by Dr. Robert Chen, MD*
+*Date/Time: 03/15/2024 10:45 AM*

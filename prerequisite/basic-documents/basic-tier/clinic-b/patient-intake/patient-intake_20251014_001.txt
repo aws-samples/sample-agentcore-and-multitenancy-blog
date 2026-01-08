@@ -1,0 +1,78 @@
+# CLINIC B URGENT CARE CENTER
+## Patient Intake Form
+
+**Date of Visit:** 03/15/2024  
+**Time:** 14:32
+
+---
+
+### PATIENT DEMOGRAPHICS
+
+**Name:** Martinez, Elena Sofia  
+**Date of Birth:** 08/22/1987 (36 years old)  
+**Sex:** Female  
+**Address:** 4521 Maple Grove Lane, Apt 2B, Springfield, IL 62704  
+**Phone:** (217) 555-0892  
+**Email:** e.martinez.1987@emailprovider.com  
+**Emergency Contact:** Roberto Martinez (Spouse) - (217) 555-0893  
+**Insurance:** BlueCross BlueShield - Policy #: XYZ847392015
+
+---
+
+### CHIEF COMPLAINT
+
+"Persistent cough and fever for 3 days, worsening shortness of breath since this morning."
+
+---
+
+### PRESENT ILLNESS
+
+Patient reports onset of dry cough 72 hours ago, accompanied by fever (self-reported max temp 101.8°F), chills, and generalized fatigue. Denies chest pain but notes mild dyspnea with exertion. No recent travel. Two household contacts with similar symptoms last week.
+
+---
+
+### MEDICAL HISTORY
+
+- Asthma (mild persistent) - diagnosed 2015
+- Seasonal allergic rhinitis
+- Appendectomy - 2009
+- G2P2 - Last delivery 2019, uncomplicated
+
+---
+
+### CURRENT MEDICATIONS
+
+1. Albuterol inhaler 90mcg - 2 puffs Q4-6H PRN
+2. Fluticasone nasal spray 50mcg - 1 spray each nostril daily
+3. Multivitamin - once daily
+4. Ibuprofen 200mg - PRN headaches
+
+---
+
+### ALLERGIES
+
+- **Penicillin** - Reaction: Hives, facial swelling (documented 2010)
+- **Shellfish** - Reaction: Urticaria, gastrointestinal distress
+- **NKDA** to environmental allergens requiring medical intervention
+
+---
+
+### SOCIAL HISTORY
+
+**Tobacco:** Never smoker  
+**Alcohol:** Occasional (1-2 drinks/month)  
+**Occupation:** Elementary school teacher
+
+---
+
+### VITAL SIGNS (Initial)
+
+- BP: 128/82 mmHg
+- HR: 94 bpm
+- RR: 22/min
+- Temp: 100.9°F (oral)
+- SpO2: 94% on room air
+
+---
+
+**Provider Signature:** _________________________ **Date:** ___________

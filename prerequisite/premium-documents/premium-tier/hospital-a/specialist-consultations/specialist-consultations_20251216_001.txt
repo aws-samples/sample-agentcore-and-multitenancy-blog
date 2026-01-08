@@ -1,0 +1,59 @@
+# Hospital A Multi-Specialty Medical Center
+
+## SPECIALIST CONSULTATION REPORT
+
+**PATIENT INFORMATION**
+- Name: Marcus Chen
+- MRN: 8847293
+- DOB: 06/14/1967 (Age: 56)
+- Date of Service: January 15, 2025
+- Referring Physician: Dr. Patricia Nguyen, Internal Medicine
+
+**CONSULTING SPECIALIST**
+Dr. Raymond Mitchell, MD, FACC
+Division of Cardiology
+
+---
+
+**REASON FOR CONSULTATION**
+Evaluation of exertional chest discomfort and abnormal stress test findings.
+
+**HISTORY OF PRESENT ILLNESS**
+Patient is a 56-year-old male with three-month history of substernal chest pressure occurring with moderate exertion, relieved by rest within 5-10 minutes. No radiation to jaw or arms. Associated mild dyspnea. No orthopnea or paroxysmal nocturnal dyspnea. Recent exercise stress test showed 1.5mm ST-segment depression in leads V4-V6 at 85% maximum predicted heart rate.
+
+**PAST MEDICAL HISTORY**
+- Type 2 Diabetes Mellitus (diagnosed 2018)
+- Hypertension
+- Hyperlipidemia
+- Former smoker (quit 2020, 20 pack-year history)
+
+**CURRENT MEDICATIONS**
+- Metformin 1000mg BID
+- Lisinopril 20mg daily
+- Atorvastatin 40mg daily
+- Aspirin 81mg daily
+
+**PHYSICAL EXAMINATION**
+BP 138/84, HR 72 regular, BMI 29.3
+Cardiovascular: Regular rhythm, normal S1/S2, no murmurs or gallops
+Lungs: Clear to auscultation bilaterally
+Extremities: No edema, pedal pulses 2+ bilaterally
+
+**ASSESSMENT**
+Stable angina pectoris, likely obstructive coronary artery disease given clinical presentation and positive stress test findings.
+
+**RECOMMENDATIONS**
+1. Schedule coronary angiography within 2 weeks
+2. Add metoprolol succinate 50mg daily
+3. Add sublingual nitroglycerin PRN for chest pain
+4. Continue aggressive risk factor modification
+5. Dietary consultation for weight management
+6. Follow-up post-procedure
+
+**DISPOSITION**
+Patient counseled regarding findings and treatment plan. All questions answered. Will coordinate scheduling for cardiac catheterization.
+
+---
+
+*Electronically signed by Dr. Raymond Mitchell, MD*
+*January 15, 2025 14:32*

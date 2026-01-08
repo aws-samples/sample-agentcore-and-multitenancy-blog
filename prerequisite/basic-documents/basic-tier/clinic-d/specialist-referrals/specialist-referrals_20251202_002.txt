@@ -1,0 +1,63 @@
+# SPECIALIST REFERRAL
+
+**CLINIC D INTERNAL MEDICINE**
+4582 Medical Plaza Drive, Suite 220
+Phone: (555) 432-7890 | Fax: (555) 432-7891
+
+---
+
+**Date:** March 15, 2024
+
+**REFERRING PROVIDER:** Dr. Sarah Mitchell, MD  
+**Provider NPI:** 1234567890
+
+**PATIENT INFORMATION:**
+- **Name:** Robert Chen
+- **DOB:** 08/12/1967 (56 years old)
+- **MRN:** CDM-887421
+- **Phone:** (555) 298-4103
+
+---
+
+**REFERRAL TO:**  
+Dr. James Patterson, Cardiology Associates  
+1890 Heart Health Center, Suite 400  
+Phone: (555) 671-2200
+
+**SPECIALTY:** Cardiology
+
+**REASON FOR REFERRAL:** Evaluation of newly diagnosed atrial fibrillation and consideration for anticoagulation management
+
+---
+
+**CLINICAL SUMMARY:**
+
+Mr. Chen presented to our clinic on March 12, 2024, reporting episodes of palpitations, mild dyspnea on exertion, and occasional dizziness over the past three weeks. Patient has a history of hypertension (controlled on lisinopril 20mg daily) and hyperlipidemia (atorvastatin 40mg daily).
+
+**Examination Findings:**
+- BP: 142/88 mmHg
+- HR: 98 bpm, irregularly irregular rhythm
+- Oxygen saturation: 97% on room air
+- Cardiovascular: Irregular rhythm, no murmurs
+- Lungs: Clear bilaterally
+
+**Diagnostic Studies:**
+- ECG (03/12/24): Atrial fibrillation with ventricular rate 95-105 bpm, no acute ST changes
+- CHA₂DS₂-VASc Score: 3 (age, hypertension, male)
+- TSH: 2.4 mIU/L (normal)
+- Basic metabolic panel: Within normal limits
+- eGFR: 78 mL/min/1.73m²
+
+**Current Medications:**
+- Lisinopril 20mg PO daily
+- Atorvastatin 40mg PO daily
+- Metoprolol tartrate 25mg PO BID (started 03/12/24)
+
+**REQUEST:** 
+Please evaluate for rate vs. rhythm control strategy, assess need for anticoagulation, and consider transesophageal echocardiogram if cardioversion planned.
+
+Thank you for your expertise.
+
+**Signature:** ______________________  
+Dr. Sarah Mitchell, MD  
+Internal Medicine

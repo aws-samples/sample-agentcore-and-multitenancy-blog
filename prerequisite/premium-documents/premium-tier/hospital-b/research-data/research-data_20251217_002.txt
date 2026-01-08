@@ -1,0 +1,68 @@
+# HOSPITAL B ACADEMIC MEDICAL CENTER
+## Department of Clinical Research
+### Academic Medical Center
+
+---
+
+**RESEARCH PROTOCOL DATA SUMMARY**
+
+**Study Title:** Efficacy of Novel Anticoagulation Protocol in Post-Operative Cardiac Surgery Patients
+
+**Protocol ID:** HBAMC-2024-CR-087  
+**Principal Investigator:** Dr. Michelle Torres, MD, FACC  
+**Study Period:** January 2024 - March 2024
+
+---
+
+**PATIENT COHORT DEMOGRAPHICS (N=45)**
+
+Mean Age: 64.3 years (SD ±8.7)  
+Gender Distribution: 27 Male (60%), 18 Female (40%)  
+Mean BMI: 28.4 kg/m² (SD ±4.2)
+
+**PRIMARY OUTCOME MEASURES:**
+
+*Treatment Group (n=23):*
+- Mean INR at 72 hours: 2.1 (Range: 1.8-2.6)
+- Thromboembolic events: 1 (4.3%)
+- Major bleeding complications: 0 (0%)
+- Mean length of stay: 6.2 days
+
+*Control Group (n=22):*
+- Mean INR at 72 hours: 2.4 (Range: 1.6-3.8)
+- Thromboembolic events: 2 (9.1%)
+- Major bleeding complications: 3 (13.6%)
+- Mean length of stay: 8.1 days
+
+**LABORATORY VALUES (Mean at Discharge):**
+
+Treatment Group:
+- Hemoglobin: 11.2 g/dL
+- Platelet count: 198 × 10⁹/L
+- aPTT: 34.2 seconds
+- D-dimer: 850 ng/mL
+
+Control Group:
+- Hemoglobin: 10.4 g/dL
+- Platelet count: 175 × 10⁹/L
+- aPTT: 42.8 seconds
+- D-dimer: 1,240 ng/mL
+
+**ADVERSE EVENTS:**
+
+Minor hematoma formation: 4 cases (treatment), 7 cases (control)  
+Transfusion requirement: 2 units (treatment), 8 units (control)
+
+**STATISTICAL ANALYSIS:**
+
+P-value for primary endpoint: 0.042 (significant)  
+95% CI for risk reduction: 1.2-8.7%
+
+**CONCLUSION:**
+
+Preliminary data demonstrates improved anticoagulation stability and reduced bleeding complications with the novel protocol. Study continuation recommended for Phase III trial expansion.
+
+---
+
+*Data verified by: Research Coordinator Sarah Chen, RN, CCRP*  
+*Date: March 28, 2024*

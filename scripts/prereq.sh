@@ -115,7 +115,9 @@ else
 fi
 
 echo "🏥 Checking for healthcare documents..."
-if [ ! -d "prerequisite/basic-documents" ] || [ ! -d "prerequisite/premium-documents" ]; then
+# Check if directories contain files
+if [ -z "$(ls -A prerequisite/basic-documents 2>/dev/null)" ] || \
+   [ -z "$(ls -A prerequisite/premium-documents 2>/dev/null)" ]; then
   echo "📝 Generating synthetic healthcare documents..."
   echo "   Using Claude Sonnet 4.5 (~213 documents, estimated cost: ~$1.67)"
   python scripts/generate_healthcare_documents.py
@@ -130,8 +132,12 @@ fi
 
 echo "🔍 Fetching Knowledge Base and Data Source IDs from SSM..."
 
-# ----- 6. Create Knowledge Base -----
+# ----- 6. Create Knowledge Bases (Basic and Premium) -----
 
-python prerequisite/knowledge_base.py --mode create
+echo "📚 Creating Basic Tier Knowledge Base..."
+python prerequisite/knowledge_base.py --mode create --config prereqs_config.yaml
+
+echo "📚 Creating Premium Tier Knowledge Base..."
+python prerequisite/knowledge_base.py --mode create --config premium_prereqs_config.yaml
 
 echo "✅ Deployment complete."

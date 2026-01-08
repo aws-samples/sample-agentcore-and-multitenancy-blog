@@ -1,0 +1,56 @@
+# Hospital A Multi-Specialty Medical Center
+
+## DIAGNOSTIC IMAGING REPORT
+
+**Patient Name:** Martinez, Carlos R.  
+**MRN:** 8847291  
+**DOB:** 03/15/1968  
+**Age/Sex:** 56 years / Male  
+**Exam Date:** January 18, 2025  
+**Report Date:** January 18, 2025  
+
+**Ordering Physician:** Dr. Jennifer Wong, Internal Medicine  
+**Radiologist:** Dr. Michael Chen, MD, FACR
+
+---
+
+### EXAMINATION: CT Abdomen and Pelvis with IV Contrast
+
+**CLINICAL HISTORY:** Right upper quadrant pain, elevated liver enzymes (ALT 142 U/L, AST 98 U/L), rule out hepatobiliary pathology.
+
+**TECHNIQUE:** Axial CT images obtained through abdomen and pelvis following administration of 100mL Omnipaque 350 IV contrast. Oral contrast administered. Total DLP: 850 mGy-cm.
+
+**COMPARISON:** Abdominal ultrasound dated 12/20/2024.
+
+### FINDINGS:
+
+**Liver:** Hepatomegaly measuring 18.2 cm in craniocaudal dimension. Moderate hepatic steatosis with diffuse decreased attenuation. No focal lesions identified. Portal vein patent.
+
+**Gallbladder:** Multiple small gallstones noted, largest measuring 8mm. Gallbladder wall thickening (4mm) with mild pericholecystic fluid consistent with acute cholecystitis.
+
+**Bile Ducts:** Common bile duct measures 5mm, within normal limits. No intra or extrahepatic biliary dilatation.
+
+**Pancreas, Spleen, Adrenals:** Unremarkable.
+
+**Kidneys:** Bilateral kidneys normal size and enhancement. No hydronephrosis or calculi.
+
+**Other:** No free fluid, lymphadenopathy, or suspicious masses identified.
+
+### IMPRESSION:
+
+1. **Acute cholecystitis** with cholelithiasis and gallbladder wall thickening
+2. **Hepatomegaly with hepatic steatosis** (fatty liver)
+3. No biliary obstruction
+
+### RECOMMENDATION:
+Surgical consultation recommended for cholecystectomy evaluation. Clinical correlation advised.
+
+---
+
+**Electronically signed by:**  
+**Dr. Michael Chen, MD, FACR**  
+Board Certified Radiologist  
+Date/Time: 01/18/2025 14:32
+
+*Report Status: Final*  
+*Hospital A Multi-Specialty Medical Center | 2500 Healthcare Blvd | Phone: (555) 123-4567*

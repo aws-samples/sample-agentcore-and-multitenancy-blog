@@ -139,6 +139,7 @@ Resources:
   # Usage Plans for demo - very low limits to show throttling
   PremiumUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiGatewayStage
     Properties:
       UsagePlanName: premium-tier-demo
       Description: Premium tier for demo - higher limits
@@ -150,10 +151,11 @@ Resources:
         Period: DAY
       ApiStages:
         - ApiId: !Ref AgentCoreApiGateway
-          Stage: prod
+          Stage: !Ref ApiGatewayStage
 
   BasicUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiGatewayStage
     Properties:
       UsagePlanName: basic-tier-demo
       Description: Basic tier for demo - very low limits
@@ -165,7 +167,7 @@ Resources:
         Period: DAY
       ApiStages:
         - ApiId: !Ref AgentCoreApiGateway
-          Stage: prod
+          Stage: !Ref ApiGatewayStage
 
   # API Keys for tenants
   PremiumApiKey:

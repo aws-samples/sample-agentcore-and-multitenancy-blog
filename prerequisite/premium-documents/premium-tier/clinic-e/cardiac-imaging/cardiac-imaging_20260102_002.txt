@@ -1,0 +1,67 @@
+# Clinic E Cardiology Specialists
+
+## CARDIAC IMAGING REPORT - TRANSTHORACIC ECHOCARDIOGRAM
+
+---
+
+**Patient Name:** Martinez, Robert K.  
+**MRN:** 847392-CE  
+**DOB:** 06/14/1967 (Age: 57)  
+**Date of Exam:** January 15, 2025  
+**Ordering Physician:** Dr. Sarah Chen, MD, FACC  
+**Sonographer:** Michelle Torres, RDCS
+
+---
+
+### INDICATION:
+Evaluation of chest pain and dyspnea on exertion. History of hypertension and hyperlipidemia.
+
+### TECHNICAL QUALITY:
+Adequate. Limited apical windows due to body habitus.
+
+### FINDINGS:
+
+**LEFT VENTRICLE:**
+- Normal size with mildly increased wall thickness (IVS 1.3 cm, PW 1.2 cm)
+- Left ventricular ejection fraction (LVEF): 55-60% (normal)
+- No regional wall motion abnormalities detected
+- Normal systolic function
+
+**LEFT ATRIUM:**
+- Mildly dilated (LA volume index: 32 mL/m²)
+
+**RIGHT VENTRICLE:**
+- Normal size and systolic function
+- TAPSE: 2.1 cm (normal)
+
+**VALVES:**
+- Mitral valve: Mild mitral annular calcification, trace regurgitation
+- Aortic valve: Trileaflet, mild sclerosis, no significant stenosis, trace regurgitation
+- Tricuspid valve: Structurally normal, trace regurgitation (TR jet 2.4 m/s)
+- Pulmonic valve: Normal
+
+**ESTIMATED PULMONARY ARTERY PRESSURE:**
+- Estimated RVSP: 28 mmHg (normal)
+
+**PERICARDIUM:**
+- No pericardial effusion
+
+**AORTA:**
+- Aortic root: 3.4 cm (normal)
+
+### IMPRESSION:
+1. Normal left ventricular size and systolic function (LVEF 55-60%)
+2. Mild concentric left ventricular hypertrophy, consistent with hypertensive changes
+3. Mildly dilated left atrium
+4. Mild degenerative valvular changes without hemodynamically significant disease
+5. Normal right ventricular function
+
+### RECOMMENDATION:
+Continue medical management of hypertension. Consider stress testing if symptoms persist.
+
+---
+
+**Electronically signed by:**  
+**Dr. James Sullivan, MD, FACC**  
+**Staff Cardiologist, Clinic E Cardiology Specialists**  
+**Date/Time:** January 15, 2025 at 16:45

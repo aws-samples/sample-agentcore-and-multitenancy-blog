@@ -1,0 +1,53 @@
+# CLINIC A FAMILY PRACTICE
+## Laboratory Results Report
+
+**Patient ID:** FP-2847-M  
+**Date of Service:** March 15, 2024  
+**Ordering Physician:** Dr. Sarah Mitchell, MD
+
+---
+
+### COMPLETE METABOLIC PANEL (CMP)
+
+| Test Name | Result | Reference Range | Status |
+|-----------|--------|-----------------|--------|
+| Glucose | 94 mg/dL | 70-100 mg/dL | Normal |
+| BUN | 16 mg/dL | 7-20 mg/dL | Normal |
+| Creatinine | 1.1 mg/dL | 0.7-1.3 mg/dL | Normal |
+| eGFR | 78 mL/min/1.73m² | >60 mL/min/1.73m² | Normal |
+| Sodium | 141 mEq/L | 136-145 mEq/L | Normal |
+| Potassium | 4.2 mEq/L | 3.5-5.1 mEq/L | Normal |
+| Chloride | 103 mEq/L | 98-107 mEq/L | Normal |
+| CO2 | 26 mEq/L | 22-30 mEq/L | Normal |
+| Calcium | 9.6 mg/dL | 8.5-10.5 mg/dL | Normal |
+
+### LIPID PANEL
+
+| Test Name | Result | Reference Range | Status |
+|-----------|--------|-----------------|--------|
+| Total Cholesterol | 218 mg/dL | <200 mg/dL | **High** |
+| Triglycerides | 165 mg/dL | <150 mg/dL | **High** |
+| HDL Cholesterol | 48 mg/dL | >40 mg/dL | Normal |
+| LDL Cholesterol | 137 mg/dL | <100 mg/dL | **High** |
+| VLDL | 33 mg/dL | 2-30 mg/dL | **High** |
+
+### COMPLETE BLOOD COUNT (CBC)
+
+| Test Name | Result | Reference Range | Status |
+|-----------|--------|-----------------|--------|
+| WBC | 7.2 K/uL | 4.5-11.0 K/uL | Normal |
+| RBC | 4.8 M/uL | 4.5-5.9 M/uL | Normal |
+| Hemoglobin | 14.5 g/dL | 13.5-17.5 g/dL | Normal |
+| Hematocrit | 43.2% | 39-49% | Normal |
+| Platelets | 245 K/uL | 150-400 K/uL | Normal |
+
+---
+
+**INTERPRETATION NOTES:**
+
+Metabolic panel within normal limits. Lipid panel shows borderline elevated cholesterol levels. Recommend lifestyle modifications including dietary changes and increased physical activity. Consider repeat lipid panel in 3 months. CBC unremarkable.
+
+**Electronically signed by:**  
+Clinical Laboratory Director  
+Clinic A Family Practice  
+Report Date: March 15, 2024

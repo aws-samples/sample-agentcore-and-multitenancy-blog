@@ -1,0 +1,59 @@
+# CLINIC D INTERNAL MEDICINE
+**Department of Laboratory Services**
+
+---
+
+**PATIENT INFORMATION**
+Patient ID: CDM-78924  
+Name: Robert Martinez  
+DOB: 03/15/1968 (Age: 56)  
+Date of Collection: January 15, 2025  
+Date of Report: January 16, 2025  
+Ordering Physician: Dr. Sarah Chen, MD
+
+---
+
+## COMPREHENSIVE METABOLIC PANEL
+
+| Test Name | Result | Reference Range | Flag |
+|-----------|---------|-----------------|------|
+| Glucose, Fasting | 118 mg/dL | 70-99 mg/dL | H |
+| BUN | 22 mg/dL | 7-20 mg/dL | H |
+| Creatinine | 1.3 mg/dL | 0.7-1.3 mg/dL | |
+| eGFR | 62 mL/min/1.73m² | >60 mL/min/1.73m² | |
+| Sodium | 141 mmol/L | 136-145 mmol/L | |
+| Potassium | 4.2 mmol/L | 3.5-5.1 mmol/L | |
+| Chloride | 103 mmol/L | 98-107 mmol/L | |
+| CO2 | 26 mmol/L | 22-30 mmol/L | |
+| Calcium | 9.6 mg/dL | 8.5-10.5 mg/dL | |
+| Total Protein | 7.1 g/dL | 6.0-8.3 g/dL | |
+| Albumin | 4.2 g/dL | 3.5-5.0 g/dL | |
+| Total Bilirubin | 0.8 mg/dL | 0.2-1.2 mg/dL | |
+| ALT | 34 U/L | 7-56 U/L | |
+| AST | 28 U/L | 10-40 U/L | |
+
+## LIPID PANEL
+
+| Test Name | Result | Reference Range | Flag |
+|-----------|---------|-----------------|------|
+| Total Cholesterol | 236 mg/dL | <200 mg/dL | H |
+| Triglycerides | 178 mg/dL | <150 mg/dL | H |
+| HDL Cholesterol | 42 mg/dL | >40 mg/dL | |
+| LDL Cholesterol | 158 mg/dL | <100 mg/dL | H |
+
+## HEMOGLOBIN A1C
+
+| Test Name | Result | Reference Range | Flag |
+|-----------|---------|-----------------|------|
+| HbA1c | 6.2% | <5.7% | H |
+
+---
+
+**INTERPRETATION NOTES:**
+
+Elevated fasting glucose and HbA1c consistent with prediabetes. Lipid panel shows borderline high total cholesterol and elevated LDL, indicating dyslipidemia. Slightly elevated BUN with normal creatinine. eGFR at lower normal limit. Recommend lifestyle modifications, dietary counseling, and follow-up in 3 months.
+
+---
+
+*Electronically reviewed and released by: James Wong, MD, Clinical Pathology*  
+**Clinic D Internal Medicine** | 456 Medical Plaza Dr. | Phone: (555) 234-5678

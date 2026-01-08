@@ -1,0 +1,82 @@
+# CLINIC A FAMILY PRACTICE
+## Patient Intake Form
+
+**Date:** March 15, 2024  
+**Time:** 10:30 AM
+
+---
+
+### PATIENT DEMOGRAPHICS
+
+**Name:** Jennifer Marie Thompson  
+**Date of Birth:** 06/12/1978 (Age: 45)  
+**Sex:** Female  
+**Address:** 2847 Maple Street, Springfield, IL 62704  
+**Phone:** (217) 555-0143  
+**Email:** jthompson.email@provider.com  
+**Emergency Contact:** Robert Thompson (Spouse) - (217) 555-0144  
+**Insurance:** BlueCross BlueShield - Policy #XYZ123456789
+
+---
+
+### CHIEF COMPLAINT
+
+Patient presents with persistent fatigue and occasional dizziness for the past 3 weeks. Reports difficulty concentrating at work and increased thirst.
+
+---
+
+### MEDICAL HISTORY
+
+**Current Diagnoses:**
+- Hypertension (diagnosed 2019)
+- Hypothyroidism (diagnosed 2021)
+- Obesity (BMI 32.4)
+
+**Past Surgical History:**
+- Cholecystectomy (2015)
+- Cesarean section x2 (2005, 2008)
+
+**Family History:**
+- Father: Type 2 Diabetes Mellitus, CAD
+- Mother: Hypothyroidism, breast cancer (age 58)
+- Sister: Type 2 Diabetes Mellitus
+
+**Social History:**
+- Occupation: Administrative assistant
+- Tobacco: Never smoker
+- Alcohol: Occasional (1-2 drinks/week)
+- Exercise: Sedentary lifestyle
+
+---
+
+### CURRENT MEDICATIONS
+
+1. Lisinopril 10 mg PO daily
+2. Levothyroxine 75 mcg PO daily
+3. Multivitamin daily
+4. Vitamin D3 2000 IU daily
+
+---
+
+### ALLERGIES
+
+- **Penicillin** - Reaction: Hives, reported in childhood
+- **Sulfa drugs** - Reaction: Rash
+- **NKDA to foods or environmental allergens**
+
+---
+
+### VITAL SIGNS
+
+- BP: 138/86 mmHg
+- HR: 78 bpm
+- Temp: 98.4°F
+- Resp: 16/min
+- Weight: 187 lbs
+- Height: 5'5"
+
+---
+
+**Provider Signature:** _________________________ **Date:** __________
+
+*Form completed by: M. Stevens, MA*

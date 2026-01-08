@@ -1,0 +1,58 @@
+```
+**DISCHARGE SUMMARY**
+
+HOSPITAL B ACADEMIC MEDICAL CENTER
+Academic Medical Center
+2400 Medical Plaza Drive
+Phone: (555) 246-8000
+
+=====================================
+
+PATIENT INFORMATION:
+Name: Martinez, Sofia E.
+MRN: 84762913
+DOB: 08/15/1967 (Age: 56)
+Sex: Female
+Admission Date: 03/14/2024
+Discharge Date: 03/18/2024
+Length of Stay: 4 days
+
+ATTENDING PHYSICIAN: Dr. Michael Chen, MD
+CONSULTING SERVICES: Cardiology, Internal Medicine
+
+ADMITTING DIAGNOSIS:
+Acute decompensated heart failure with reduced ejection fraction
+
+FINAL DIAGNOSIS:
+1. Acute on chronic systolic heart failure (EF 30%)
+2. Hypertension, uncontrolled
+3. Type 2 Diabetes Mellitus
+4. Chronic kidney disease, Stage 3a
+
+HOSPITAL COURSE:
+Ms. Martinez presented to the Emergency Department with progressive dyspnea, orthopnea, and bilateral lower extremity edema over five days. Initial evaluation revealed elevated BNP (2,450 pg/mL), chest radiograph showing pulmonary congestion, and echocardiography demonstrating reduced left ventricular ejection fraction of 30%.
+
+Patient was admitted to the cardiac telemetry unit and treated with intravenous furosemide 40mg BID, resulting in diuresis of approximately 3.2 liters net negative over 72 hours. Symptoms significantly improved with resolution of dyspnea at rest. Medication optimization included initiation of sacubitril-valsartan and uptitration of carvedilol. Renal function remained stable throughout hospitalization (Cr 1.4 mg/dL).
+
+DISCHARGE CONDITION: Stable, improved
+
+DISCHARGE MEDICATIONS:
+- Sacubitril-valsartan 24/26mg PO BID
+- Carvedilol 12.5mg PO BID
+- Furosemide 40mg PO daily
+- Metformin 1000mg PO BID
+- Atorvastatin 40mg PO daily
+
+FOLLOW-UP:
+- Cardiology clinic in 1 week (Dr. Rodriguez)
+- Primary care physician in 2 weeks
+- Daily weights; call if weight increases >3 lbs in 24 hours
+
+DISCHARGE INSTRUCTIONS:
+Strict fluid restriction (2L daily), low sodium diet (<2g daily), medication compliance emphasized.
+
+_________________________________
+Michael Chen, MD
+Date: 03/18/2024
+Time: 14:30
+```

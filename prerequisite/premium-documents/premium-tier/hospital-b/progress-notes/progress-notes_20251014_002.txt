@@ -1,0 +1,61 @@
+```
+================================================================================
+                    HOSPITAL B ACADEMIC MEDICAL CENTER
+                         PROGRESS NOTE - INTERNAL MEDICINE
+================================================================================
+
+PATIENT NAME: Thompson, Marcus D.
+MRN: 8847392
+DOB: 07/14/1968 (Age: 56)
+DATE OF SERVICE: 03/15/2024
+ATTENDING: Dr. Patricia Okonkwo, MD
+LOCATION: 7 East Medical Unit
+
+--------------------------------------------------------------------------------
+SUBJECTIVE:
+--------------------------------------------------------------------------------
+Patient is POD #3 s/p laparoscopic cholecystectomy for acute calculous 
+cholecystitis. Reports improved RUQ pain, now 3/10 from 8/10 on admission. 
+Tolerating clear liquids without nausea. Passing flatus. Denies fever, chills, 
+or dyspnea. Ambulating in hallway with PT twice daily.
+
+--------------------------------------------------------------------------------
+OBJECTIVE:
+--------------------------------------------------------------------------------
+Vitals: T 98.4°F, BP 128/76, HR 72, RR 16, SpO2 98% on RA
+General: Alert, comfortable, NAD
+CV: RRR, no m/r/g
+Lungs: CTAB, good air movement
+Abdomen: Soft, non-distended, mild TTP at port sites, bowel sounds present
+         Surgical incisions C/D/I with steri-strips intact
+Extremities: No edema, + pedal pulses bilaterally
+
+Labs (03/15/2024):
+WBC 8.2 K/uL, Hgb 13.1 g/dL, Plt 245 K/uL
+Na 139, K 4.1, Cl 102, CO2 25, BUN 14, Cr 0.9, Glucose 102
+AST 42, ALT 56, Alk Phos 88, T.Bili 1.1
+
+--------------------------------------------------------------------------------
+ASSESSMENT & PLAN:
+--------------------------------------------------------------------------------
+56 y/o M POD #3 s/p laparoscopic cholecystectomy with appropriate post-op 
+recovery.
+
+1. POST-OP PAIN: Well-controlled on PO acetaminophen and tramadol PRN
+   - Continue current regimen
+   
+2. DIET ADVANCEMENT: Tolerating clears
+   - Advance to regular diet as tolerated
+   
+3. PROPHYLAXIS: Continue enoxaparin 40mg SC daily, ambulation
+
+4. DISPOSITION: Clinically stable for discharge
+   - D/C home today if tolerates regular diet
+   - F/U with surgery clinic in 2 weeks
+   - Prescribe: tramadol 50mg PO Q6H PRN x 5 days
+
+--------------------------------------------------------------------------------
+Dr. Patricia Okonkwo, MD
+Electronically signed: 03/15/2024 14:32
+================================================================================
+```

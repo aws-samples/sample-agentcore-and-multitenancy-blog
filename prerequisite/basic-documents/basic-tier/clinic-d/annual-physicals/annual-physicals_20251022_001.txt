@@ -1,0 +1,63 @@
+# Clinic D Internal Medicine
+**Annual Physical Examination**
+
+---
+
+**Patient Name:** Marcus Chen  
+**Date of Birth:** 04/15/1978  
+**MRN:** CDM-847392  
+**Date of Visit:** October 12, 2024  
+**Provider:** Dr. Sarah Mitchell, MD
+
+---
+
+**CHIEF COMPLAINT:** Annual physical examination
+
+**VITAL SIGNS:**
+- BP: 128/82 mmHg
+- Pulse: 74 bpm, regular
+- Temperature: 98.4°F
+- Respirations: 16/min
+- Height: 5'10"
+- Weight: 182 lbs
+- BMI: 26.1
+
+**HISTORY OF PRESENT ILLNESS:**
+46-year-old male presents for routine annual examination. Reports generally good health. Exercises 2-3 times weekly. Denies chest pain, shortness of breath, or palpitations. Some occasional lower back stiffness with prolonged sitting. Sleep pattern adequate, 6-7 hours nightly.
+
+**PAST MEDICAL HISTORY:**
+- Hyperlipidemia (diagnosed 2019)
+- Seasonal allergic rhinitis
+
+**MEDICATIONS:**
+- Atorvastatin 20mg daily
+- Cetirizine 10mg PRN
+
+**SOCIAL HISTORY:**
+Non-smoker. Alcohol: 3-4 drinks weekly. Married, works in financial services.
+
+**PHYSICAL EXAMINATION:**
+- General: Well-appearing, alert and oriented
+- HEENT: Normocephalic, PERRLA, TMs clear bilaterally
+- Cardiovascular: RRR, no murmurs, rubs, or gallops
+- Respiratory: Clear to auscultation bilaterally
+- Abdomen: Soft, non-tender, no organomegaly
+- Musculoskeletal: Full ROM, mild lumbar paraspinal tenderness
+- Skin: No concerning lesions
+
+**ASSESSMENT & PLAN:**
+
+1. **Health maintenance:** Due for screening colonoscopy given age. Referral placed to gastroenterology.
+2. **Hyperlipidemia:** Well-controlled on current regimen. Continue atorvastatin.
+3. **Overweight:** BMI 26.1. Discussed dietary modifications and increasing exercise frequency.
+4. **Lower back pain:** Likely mechanical. Recommended core strengthening exercises and ergonomic workstation assessment.
+
+**ORDERS:**
+- Lipid panel, CMP, CBC, HbA1c, TSH
+- Colonoscopy referral
+- Tetanus booster (last dose 2014)
+
+**FOLLOW-UP:** Return in 1 year or sooner if concerns arise.
+
+---
+*Electronically signed by Dr. Sarah Mitchell, MD on 10/12/2024 at 3:42 PM*

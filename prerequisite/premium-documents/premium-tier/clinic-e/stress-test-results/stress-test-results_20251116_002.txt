@@ -1,0 +1,61 @@
+# CLINIC E CARDIOLOGY SPECIALISTS
+**Cardiology & Cardiovascular Imaging**
+
+---
+
+## EXERCISE STRESS TEST REPORT
+
+**Patient Name:** Morrison, Janet L.  
+**DOB:** 04/15/1968 | **Age:** 56 | **Sex:** Female  
+**MRN:** CE-78924-M  
+**Test Date:** January 15, 2025  
+**Ordering Physician:** Dr. Michael Chen, MD, FACC  
+**Technician:** R. Patterson, RCIS
+
+---
+
+### INDICATION:
+Atypical chest pain, history of hypertension, evaluation for coronary artery disease
+
+### PROTOCOL:
+Bruce Protocol with continuous 12-lead ECG monitoring and blood pressure assessment
+
+### BASELINE:
+- **Heart Rate:** 74 bpm  
+- **Blood Pressure:** 138/86 mmHg  
+- **Resting ECG:** Normal sinus rhythm, no ST-T abnormalities
+
+### EXERCISE PERFORMANCE:
+- **Duration:** 8 minutes 45 seconds (Stage III)
+- **Peak Heart Rate:** 142 bpm (86% of age-predicted maximum)
+- **Peak Blood Pressure:** 176/88 mmHg
+- **METS Achieved:** 9.2
+- **Reason for Termination:** Leg fatigue, dyspnea
+- **Symptoms:** Mild dyspnea, no chest pain or dizziness
+
+### HEMODYNAMIC RESPONSE:
+Appropriate heart rate and blood pressure response to exercise. No significant arrhythmias noted.
+
+### ECG FINDINGS:
+No significant ST-segment depression or elevation during exercise or recovery. Occasional isolated premature ventricular contractions at peak exercise. No ST-T wave changes suggestive of ischemia.
+
+### RECOVERY:
+Heart rate returned to 88 bpm at 3 minutes. Blood pressure 142/82 mmHg at 5 minutes recovery.
+
+### IMPRESSION:
+**NEGATIVE** for exercise-induced myocardial ischemia
+- Good functional capacity (9.2 METS)
+- Appropriate hemodynamic response to stress
+- No anginal symptoms or ECG changes during exercise
+
+### RECOMMENDATIONS:
+Continue current medical management. Optimize blood pressure control. Consider lipid panel if not recently performed. No further cardiac imaging indicated at this time based on stress test results.
+
+---
+
+**Interpreted by:** Dr. Michael Chen, MD, FACC  
+**Date/Time:** 01/15/2025 14:35  
+**Status:** Final Report
+
+---
+*Clinic E Cardiology Specialists | 2850 Medical Plaza Drive | Suite 400 | Phone: (555) 782-4100*

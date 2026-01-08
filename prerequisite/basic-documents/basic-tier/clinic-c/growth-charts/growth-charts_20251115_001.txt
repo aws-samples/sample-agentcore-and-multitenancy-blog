@@ -1,0 +1,60 @@
+# CLINIC C PEDIATRIC ASSOCIATES
+**Growth & Development Chart**
+
+---
+
+**Patient Information:**
+Name: Emma J. Rodriguez (Synthetic Patient)  
+Date of Birth: 03/15/2021  
+Medical Record #: CCP-458921  
+Sex: Female  
+Chart Date: 03/15/2024
+
+---
+
+## ANTHROPOMETRIC MEASUREMENTS
+
+### Current Visit (36 Months)
+- **Weight:** 14.2 kg (31.3 lbs) – 55th percentile
+- **Length/Height:** 95.5 cm (37.6 in) – 60th percentile
+- **Head Circumference:** 49.0 cm – 50th percentile
+- **BMI:** 15.6 kg/m² – 45th percentile
+
+---
+
+## GROWTH TRAJECTORY (Birth to 36 Months)
+
+| Age | Weight (kg) | Percentile | Length (cm) | Percentile | HC (cm) | Percentile |
+|-----|-------------|------------|-------------|------------|---------|------------|
+| Birth | 3.4 | 50th | 50.0 | 48th | 34.5 | 52nd |
+| 2 mo | 5.2 | 48th | 57.5 | 50th | 38.2 | 50th |
+| 6 mo | 7.8 | 52nd | 66.8 | 55th | 43.0 | 48th |
+| 12 mo | 9.6 | 50th | 75.2 | 58th | 46.0 | 50th |
+| 18 mo | 11.0 | 48th | 82.0 | 57th | 47.5 | 51st |
+| 24 mo | 12.4 | 52nd | 87.5 | 58th | 48.2 | 50th |
+| 30 mo | 13.3 | 53rd | 92.0 | 59th | 48.7 | 49th |
+| 36 mo | 14.2 | 55th | 95.5 | 60th | 49.0 | 50th |
+
+---
+
+## CLINICAL ASSESSMENT
+
+**Growth Pattern:** Consistent growth along 50th-60th percentile curves. Weight-for-length ratio appropriate. No concerns for failure to thrive or excessive weight gain.
+
+**Developmental Milestones:** Age-appropriate gross motor, fine motor, language, and social-emotional skills documented per Denver II screening.
+
+**Nutrition:** Consuming varied diet with adequate protein, fruits, vegetables. Takes multivitamin with iron daily.
+
+**Recommendations:**
+- Continue current dietary pattern
+- Encourage physical activity 60+ minutes daily
+- Return for well-child visit at 48 months
+- Routine immunizations up to date
+
+---
+
+**Reviewed by:** Dr. Sarah Mitchell, MD, FAAP  
+**Date:** 03/15/2024  
+**Next Appointment:** 03/15/2025
+
+*Document generated for training purposes only – Contains no real patient information*

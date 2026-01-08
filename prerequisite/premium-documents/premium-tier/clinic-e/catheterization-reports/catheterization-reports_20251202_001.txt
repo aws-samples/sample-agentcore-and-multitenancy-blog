@@ -1,0 +1,55 @@
+# CLINIC E CARDIOLOGY SPECIALISTS
+## Cardiac Catheterization Report
+
+**Patient ID:** CE-892456  
+**Date of Procedure:** March 15, 2024  
+**Time:** 09:30 - 11:15  
+**Attending Physician:** Dr. Michael Chen, MD, FACC  
+**Fellow:** Dr. Sarah Martinez, MD  
+
+---
+
+**INDICATION:**  
+67-year-old male with exertional chest pain, abnormal stress test showing anterolateral ischemia, and history of hypertension and hyperlipidemia.
+
+**PROCEDURE PERFORMED:**  
+Left heart catheterization with coronary angiography and left ventriculography via right femoral artery access.
+
+**ACCESS:**  
+Right common femoral artery using modified Seldinger technique. 6-French sheath placed without complications.
+
+**HEMODYNAMICS:**  
+- Aortic pressure: 145/82 mmHg  
+- LV pressure: 148/12 mmHg  
+- LVEDP: 16 mmHg  
+
+**LEFT VENTRICULOGRAPHY:**  
+Normal left ventricular size with preserved systolic function. Estimated ejection fraction 55-60%. No regional wall motion abnormalities. Mild mitral regurgitation noted.
+
+**CORONARY ANGIOGRAPHY FINDINGS:**
+
+*Left Main:* Patent without significant disease  
+*LAD:* 85% stenosis in mid-segment with TIMI-2 flow  
+*LCx:* 40% stenosis in proximal segment, non-flow limiting  
+*RCA:* Dominant vessel with 60% stenosis in mid-segment  
+
+**COMPLICATIONS:** None
+
+**ASSESSMENT:**  
+Severe obstructive coronary artery disease with significant mid-LAD stenosis. Moderate disease in RCA. Preserved left ventricular function.
+
+**RECOMMENDATIONS:**  
+1. Proceed with percutaneous coronary intervention to mid-LAD lesion
+2. Continue dual antiplatelet therapy (aspirin 81mg daily, clopidogrel 75mg daily)
+3. Optimize medical management with high-intensity statin therapy
+4. Schedule follow-up in interventional cardiology clinic within 1 week
+5. Cardiac rehabilitation referral post-intervention
+
+---
+
+**Electronically signed by:**  
+Dr. Michael Chen, MD, FACC  
+March 15, 2024 14:22
+
+---
+*Clinic E Cardiology Specialists | 2850 Medical Plaza Drive | Phone: (555) 246-8100*

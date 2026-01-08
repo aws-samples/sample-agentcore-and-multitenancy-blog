@@ -1,0 +1,56 @@
+# Hospital B Academic Medical Center
+
+## TEACHING CASE STUDY
+
+**Case ID:** 2024-TC-0847  
+**Department:** Internal Medicine  
+**Date:** March 15, 2024
+
+---
+
+### PATIENT PRESENTATION
+
+**Demographics:** 68-year-old female  
+**Chief Complaint:** Progressive dyspnea and bilateral lower extremity edema over 3 weeks
+
+### CLINICAL HISTORY
+
+Patient JM presented to the emergency department with worsening shortness of breath, orthopnea, and paroxysmal nocturnal dyspnea. She reported a 15-pound weight gain over three weeks and increasing difficulty with activities of daily living. Past medical history significant for hypertension (15 years), type 2 diabetes mellitus, and hyperlipidemia.
+
+### PHYSICAL EXAMINATION
+
+- Vital Signs: BP 158/94 mmHg, HR 98 bpm irregular, RR 22/min, SpO₂ 91% on room air, Temp 37.1°C
+- General: Mild respiratory distress, speaking in short sentences
+- Cardiovascular: Irregularly irregular rhythm, S3 gallop present, JVP elevated at 12 cm
+- Pulmonary: Bilateral basilar crackles extending to mid-lung fields
+- Extremities: 3+ pitting edema to mid-calf bilaterally
+
+### DIAGNOSTIC WORKUP
+
+- **ECG:** Atrial fibrillation with rapid ventricular response (110 bpm)
+- **Chest X-ray:** Cardiomegaly, pulmonary vascular congestion, bilateral pleural effusions
+- **BNP:** 1,850 pg/mL (elevated)
+- **Echocardiogram:** LV ejection fraction 35%, moderate mitral regurgitation, dilated left atrium
+- **Basic Metabolic Panel:** Sodium 134 mEq/L, creatinine 1.4 mg/dL
+
+### DIAGNOSIS
+
+Acute decompensated heart failure with reduced ejection fraction (HFrEF), new-onset atrial fibrillation with rapid ventricular response
+
+### MANAGEMENT
+
+1. IV furosemide 40 mg bolus, followed by continuous infusion
+2. Metoprolol for rate control
+3. Anticoagulation with heparin bridge to warfarin
+4. Strict I/O monitoring, daily weights, fluid restriction
+5. Cardiology consultation for optimization of guideline-directed medical therapy
+
+### TEACHING POINTS
+
+- Recognition of acute HF exacerbation triggers
+- Importance of volume status assessment
+- Management of new-onset atrial fibrillation in HF patients
+
+---
+
+*Prepared for educational purposes - Hospital B Academic Medical Center Graduate Medical Education*

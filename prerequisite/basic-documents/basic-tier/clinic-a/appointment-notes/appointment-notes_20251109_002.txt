@@ -1,0 +1,48 @@
+**CLINIC A FAMILY PRACTICE**
+
+**PATIENT:** Rodriguez, Maria  
+**DOB:** 08/15/1978  
+**MRN:** 445892  
+**DATE OF VISIT:** January 15, 2025  
+**PROVIDER:** Dr. Jennifer Walsh, MD
+
+---
+
+**CHIEF COMPLAINT:** Persistent cough and fatigue for 10 days
+
+**SUBJECTIVE:**
+
+HPI: 46-year-old female presents with non-productive cough x 10 days, progressively worsening. Reports fatigue, low-grade fever (99-100°F at home), mild sore throat that has since resolved, and nasal congestion. Denies shortness of breath, chest pain, or hemoptysis. Over-the-counter dextromethorphan provided minimal relief. No recent travel. Several coworkers recently ill with similar symptoms.
+
+PMH: Hypothyroidism, controlled on levothyroxine. GERD.  
+Medications: Levothyroxine 75 mcg daily, omeprazole 20 mg daily  
+Allergies: NKDA  
+Social Hx: Non-smoker, occasional alcohol use
+
+**OBJECTIVE:**
+
+Vitals: BP 118/76, HR 82, RR 16, Temp 98.8°F, SpO2 97% on RA  
+General: Alert, appears mildly fatigued but in no acute distress  
+HEENT: Mild erythema of posterior pharynx, no exudates. Nasal mucosa mildly congested.  
+Lungs: Clear to auscultation bilaterally, no wheezes, rales, or rhonchi  
+Heart: Regular rate and rhythm, no murmurs  
+Abdomen: Soft, non-tender
+
+**ASSESSMENT:**
+
+1. Acute viral upper respiratory infection with post-viral cough
+2. Hypothyroidism, stable
+3. GERD, stable
+
+**PLAN:**
+
+1. Supportive care for viral URI: increase fluid intake, rest, humidifier use
+2. Prescribed benzonatate 100 mg TID PRN for cough suppression
+3. Continue current medications
+4. Return precautions discussed: return if fever >101°F, develops shortness of breath, or symptoms persist beyond 3 weeks
+5. Follow-up PRN or as scheduled for annual physical in 3 months
+
+---
+
+**Electronically signed by:** Dr. Jennifer Walsh, MD  
+**Date/Time:** 01/15/2025 14:32

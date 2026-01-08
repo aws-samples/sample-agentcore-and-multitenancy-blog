@@ -100,22 +100,22 @@ BASIC_CLINICS = {
     'clinic-a': {
         'specialty': 'Family Practice',
         'document_types': ['patient-intake', 'appointment-notes', 'lab-results', 'prescriptions'],
-        'count_per_type': 6  # 24 total
+        'count_per_type': 2  
     },
     'clinic-b': {
         'specialty': 'Urgent Care',
         'document_types': ['patient-intake', 'injury-reports', 'diagnostic-notes', 'discharge-instructions'],
-        'count_per_type': 7  # 28 total
+        'count_per_type': 2  
     },
     'clinic-c': {
         'specialty': 'Pediatrics',
         'document_types': ['well-child-visits', 'vaccination-records', 'sick-visit-notes', 'growth-charts'],
-        'count_per_type': 6  # 24 total
+        'count_per_type': 2  
     },
     'clinic-d': {
         'specialty': 'Internal Medicine',
         'document_types': ['chronic-disease-notes', 'annual-physicals', 'lab-results', 'specialist-referrals'],
-        'count_per_type': 6  # 24 total
+        'count_per_type': 2  
     }
 }
 
@@ -124,25 +124,25 @@ PREMIUM_CLINICS = {
         'specialty': 'Multi-Specialty Hospital',
         'document_types': ['diagnostic-reports', 'imaging-studies', 'pathology-reports', 
                           'surgical-notes', 'specialist-consultations', 'research-data'],
-        'count_per_type': 5  # 30 total
+        'count_per_type': 2  
     },
     'clinic-e': {
         'specialty': 'Cardiology',
         'document_types': ['catheterization-reports', 'echocardiogram-reports', 'stress-test-results',
                           'holter-monitor-reports', 'cardiac-imaging'],
-        'count_per_type': 5  # 25 total
+        'count_per_type': 2  
     },
     'clinic-f': {
         'specialty': 'Oncology',
         'document_types': ['pathology-reports', 'imaging-studies', 'treatment-plans',
                           'clinical-trial-docs', 'tumor-board-notes', 'genomic-testing'],
-        'count_per_type': 5  # 30 total
+        'count_per_type': 2 
     },
     'hospital-b': {
         'specialty': 'Academic Medical Center',
         'document_types': ['admission-notes', 'progress-notes', 'procedure-notes',
                           'discharge-summaries', 'teaching-cases', 'research-data', 'imaging-studies'],
-        'count_per_type': 4  # 28 total
+        'count_per_type': 2  
     }
 }
 
@@ -250,8 +250,8 @@ def main():
         print("✅ Healthcare documents already exist. Skipping generation.")
         return
     
-    print("📝 Generating ~213 synthetic clinical documents...")
-    print("   Using Claude Sonnet 4.5 (estimated cost: ~$1.67)")
+    print("📝 Generating ~80 synthetic clinical documents...")
+    print("   Using Claude Sonnet 4.5 (estimated cost: ~$0.63)")
     
     try:
         bedrock_client = boto3.client('bedrock-runtime', region_name='us-east-1')
@@ -310,71 +310,71 @@ if __name__ == '__main__':
 
 ### Step 2: Document Templates by Clinic
 
-#### Basic Tier Document Templates (20-30 documents per clinic)
+#### Basic Tier Document Templates (8 documents per clinic)
 
-**Clinic A (Family Practice) - 24 documents**:
-- 6 Patient Intake Forms
-- 6 Appointment Notes
-- 6 Lab Results (CBC, metabolic panel, urinalysis)
-- 6 Prescriptions
+**Clinic A (Family Practice) - 8 documents**:
+- 2 Patient Intake Forms
+- 2 Appointment Notes
+- 2 Lab Results (CBC, metabolic panel, urinalysis)
+- 2 Prescriptions
 
-**Clinic B (Urgent Care) - 28 documents**:
-- 7 Patient Intake Forms (rapid triage)
-- 7 Injury Reports (lacerations, sprains, fractures)
-- 7 Diagnostic Notes
-- 7 Discharge Instructions
+**Clinic B (Urgent Care) - 8 documents**:
+- 2 Patient Intake Forms (rapid triage)
+- 2 Injury Reports (lacerations, sprains, fractures)
+- 2 Diagnostic Notes
+- 2 Discharge Instructions
 
-**Clinic C (Pediatrics) - 24 documents**:
-- 6 Well-Child Visit Notes
-- 6 Vaccination Records
-- 6 Sick Visit Notes
-- 6 Growth Charts
+**Clinic C (Pediatrics) - 8 documents**:
+- 2 Well-Child Visit Notes
+- 2 Vaccination Records
+- 2 Sick Visit Notes
+- 2 Growth Charts
 
-**Clinic D (Internal Medicine) - 24 documents**:
-- 6 Chronic Disease Management Notes
-- 6 Annual Physical Exams
-- 6 Lab Results (lipid panels, A1C, thyroid)
-- 6 Specialist Referrals
+**Clinic D (Internal Medicine) - 8 documents**:
+- 2 Chronic Disease Management Notes
+- 2 Annual Physical Exams
+- 2 Lab Results (lipid panels, A1C, thyroid)
+- 2 Specialist Referrals
 
-**Basic Tier Total**: ~100 documents
+**Basic Tier Total**: ~32 documents
 
-#### Premium Tier Document Templates (20-30 documents per clinic)
+#### Premium Tier Document Templates (10-14 documents per clinic)
 
-**Hospital A (Multi-Specialty) - 30 documents**:
-- 5 Diagnostic Reports (cardiac cath, stress tests)
-- 5 Imaging Studies (CT, MRI, PET scans)
-- 5 Pathology Reports
-- 5 Surgical Notes
-- 5 Specialist Consultations
-- 5 Research Data
+**Hospital A (Multi-Specialty) - 12 documents**:
+- 2 Diagnostic Reports (cardiac cath, stress tests)
+- 2 Imaging Studies (CT, MRI, PET scans)
+- 2 Pathology Reports
+- 2 Surgical Notes
+- 2 Specialist Consultations
+- 2 Research Data
 
-**Clinic E (Cardiology) - 25 documents**:
-- 5 Cardiac Catheterization Reports
-- 5 Echocardiogram Reports
-- 5 Stress Test Results
-- 5 Holter Monitor Reports
-- 5 Cardiac Imaging (MRI/CT)
+**Clinic E (Cardiology) - 10 documents**:
+- 2 Cardiac Catheterization Reports
+- 2 Echocardiogram Reports
+- 2 Stress Test Results
+- 2 Holter Monitor Reports
+- 2 Cardiac Imaging (MRI/CT)
 
-**Clinic F (Oncology) - 30 documents**:
-- 5 Pathology Reports (tumor histology, molecular markers)
-- 5 Imaging Studies (staging, response assessment)
-- 5 Treatment Plans
-- 5 Clinical Trial Documents
-- 5 Tumor Board Notes
-- 5 Genomic Testing Reports
+**Clinic F (Oncology) - 12 documents**:
+- 2 Pathology Reports (tumor histology, molecular markers)
+- 2 Imaging Studies (staging, response assessment)
+- 2 Treatment Plans
+- 2 Clinical Trial Documents
+- 2 Tumor Board Notes
+- 2 Genomic Testing Reports
 
-**Hospital B (Academic Medical Center) - 28 documents**:
-- 4 Admission Notes
-- 4 Progress Notes
-- 4 Procedure Notes
-- 4 Discharge Summaries
-- 4 Teaching Case Presentations
-- 4 Research Data
-- 4 Imaging Studies
+**Hospital B (Academic Medical Center) - 14 documents**:
+- 2 Admission Notes
+- 2 Progress Notes
+- 2 Procedure Notes
+- 2 Discharge Summaries
+- 2 Teaching Case Presentations
+- 2 Research Data
+- 2 Imaging Studies
 
-**Premium Tier Total**: ~113 documents
+**Premium Tier Total**: ~48 documents
 
-**Grand Total**: ~213 documents across 8 clinics
+**Grand Total**: ~80 documents across 8 clinics
 
 ### Step 3: Document Upload Script
 
@@ -573,18 +573,18 @@ Recommendation: PCI to LAD lesion vs. medical management
 - [ ] Verify HIPAA compliance of synthetic data
 
 ### Day 3: Basic Tier Document Generation
-- [ ] Generate documents for Clinic A (24 docs)
-- [ ] Generate documents for Clinic B (28 docs)
-- [ ] Generate documents for Clinic C (24 docs)
-- [ ] Generate documents for Clinic D (24 docs)
-- [ ] Total: ~100 documents
+- [ ] Generate documents for Clinic A (8 docs)
+- [ ] Generate documents for Clinic B (8 docs)
+- [ ] Generate documents for Clinic C (8 docs)
+- [ ] Generate documents for Clinic D (8 docs)
+- [ ] Total: ~32 documents
 
 ### Day 4: Premium Tier Document Generation
-- [ ] Generate documents for Hospital A (30 docs)
-- [ ] Generate documents for Clinic E (25 docs)
-- [ ] Generate documents for Clinic F (30 docs)
-- [ ] Generate documents for Hospital B (28 docs)
-- [ ] Total: ~113 documents
+- [ ] Generate documents for Hospital A (12 docs)
+- [ ] Generate documents for Clinic E (10 docs)
+- [ ] Generate documents for Clinic F (12 docs)
+- [ ] Generate documents for Hospital B (14 docs)
+- [ ] Total: ~48 documents
 
 ### Day 5: Upload and Verification
 - [ ] Upload all documents to S3 with proper prefixes
@@ -710,19 +710,19 @@ test_queries = {
 ## Cost Estimation
 
 ### Document Generation Costs
-- Using Claude Sonnet 4.5 (us.anthropic.claude-sonnet-4-v2:0) for generation
-- ~213 documents × 500 tokens/doc = 106.5K tokens output
-- Input: 213 prompts × 100 tokens = 21.3K tokens
-- Output: 213 docs × 500 tokens = 106.5K tokens
-- Total: ~127.8K tokens
-- Cost: Input (21.3K × $0.003/1K) + Output (106.5K × $0.015/1K) ≈ $0.06 + $1.60 = **$1.66**
+- Using Claude Sonnet 4.5 (global.anthropic.claude-sonnet-4-5-20250929-v1:0) for generation
+- ~80 documents × 500 tokens/doc = 40K tokens output
+- Input: 80 prompts × 100 tokens = 8K tokens
+- Output: 80 docs × 500 tokens = 40K tokens
+- Total: ~48K tokens
+- Cost: Input (8K × $0.003/1K) + Output (40K × $0.015/1K) ≈ $0.02 + $0.60 = **$0.62**
 
 ### S3 Storage Costs
-- ~213 documents × 2KB average = ~426KB
+- ~80 documents × 2KB average = ~160KB
 - S3 Standard: $0.023/GB/month
 - Monthly cost: <$0.01
 
-**Total Phase 2.1 Cost**: ~$1.67
+**Total Phase 2.1 Cost**: ~$0.63
 
 ---
 

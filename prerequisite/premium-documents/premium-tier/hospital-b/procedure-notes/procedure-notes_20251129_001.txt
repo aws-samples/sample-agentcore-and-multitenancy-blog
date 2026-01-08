@@ -1,0 +1,50 @@
+```
+**Hospital B Academic Medical Center**
+Department of Surgery
+Procedure Note
+
+Patient Name: Rodriguez, Miguel A.
+MRN: 8842156
+DOB: 03/15/1968
+Date of Procedure: January 15, 2025
+Time: 14:30
+Attending Physician: Dr. Sarah Chen, MD
+Procedure Location: Endoscopy Suite 3
+
+**PROCEDURE PERFORMED:**
+Esophagogastroduodenoscopy (EGD) with biopsy
+
+**INDICATIONS:**
+56-year-old male with persistent dysphagia and epigastric pain for 3 months, unresponsive to proton pump inhibitor therapy. History of GERD. Evaluation for Barrett's esophagus versus stricture.
+
+**ANESTHESIA:**
+Moderate conscious sedation with Midazolam 3mg IV and Fentanyl 75mcg IV. Patient monitored continuously with pulse oximetry and cardiac telemetry.
+
+**PROCEDURE DETAILS:**
+Written informed consent obtained. Patient positioned in left lateral decubitus position. Olympus GIF-HQ190 gastroscope advanced under direct visualization through oropharynx. 
+
+Esophagus: Moderate erythema in distal third with salmon-colored mucosa extending 4cm proximal to GE junction, consistent with Barrett's esophagus. No ulcerations or masses. Biopsies obtained at 38, 40, and 42cm from incisors.
+
+Stomach: Gastric mucosa appeared normal. No ulcers, masses, or retained food. Retroflex view of cardia unremarkable.
+
+Duodenum: First and second portions examined. Normal villous architecture. No erosions or masses noted.
+
+**SPECIMENS:**
+Three tissue samples from distal esophagus sent to pathology for histologic evaluation and dysplasia assessment.
+
+**ESTIMATED BLOOD LOSS:** Minimal
+
+**COMPLICATIONS:** None
+
+**DISPOSITION:**
+Patient tolerated procedure well. Recovered in PACU for 45 minutes with stable vital signs. Discharged home with responsible adult. Post-procedure instructions provided including NPO for 2 hours and activity restrictions.
+
+**FOLLOW-UP:**
+Pathology results in 5-7 days. Patient to follow up in GI clinic in 2 weeks to discuss biopsy results and treatment plan.
+
+_______________________________
+Sarah Chen, MD
+Hospital B Academic Medical Center
+Gastroenterology and Hepatology
+Date: 01/15/2025 15:45
+```

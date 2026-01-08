@@ -1,0 +1,47 @@
+# CLINIC F ONCOLOGY CENTER
+## Department of Radiology & Imaging
+
+---
+
+**PATIENT INFORMATION**
+- Name: Thompson, Marcus R.
+- MRN: CF-89274-K
+- DOB: 03/15/1967 (Age: 57)
+- Date of Service: January 18, 2025
+- Referring Physician: Dr. Sarah Chen, Medical Oncology
+
+---
+
+**EXAMINATION: CT CHEST, ABDOMEN, AND PELVIS WITH IV CONTRAST**
+
+**CLINICAL INDICATION:** Restaging of known non-small cell lung carcinoma. Status post four cycles of carboplatin/pemetrexed chemotherapy.
+
+**TECHNIQUE:** Multidetector helical CT performed from lung apices through pubic symphysis following administration of 100mL Omnipaque 350 IV contrast. Oral contrast administered 90 minutes prior to examination.
+
+**COMPARISON:** Prior CT dated October 22, 2024
+
+**FINDINGS:**
+
+**CHEST:** The right upper lobe mass has decreased in size from 4.2 x 3.8 cm to 2.8 x 2.4 cm, demonstrating partial treatment response. Previously noted right hilar lymphadenopathy has similarly decreased from 2.1 cm to 1.3 cm in short axis. No new pulmonary nodules identified. Small right pleural effusion unchanged. No pericardial effusion.
+
+**ABDOMEN:** Liver demonstrates normal contour and attenuation without focal lesions. No intrahepatic or extrahepatic biliary dilatation. Spleen, pancreas, and adrenal glands unremarkable. Kidneys enhance and excrete contrast symmetrically without hydronephrosis.
+
+**PELVIS:** Urinary bladder normal in contour. No pelvic lymphadenopathy or free fluid.
+
+**BONES:** No suspicious osseous lesions. Mild degenerative changes in lumbar spine.
+
+**IMPRESSION:**
+1. Partial response to chemotherapy with decreased size of right upper lobe primary mass (approximately 35% reduction by RECIST criteria)
+2. Decreased right hilar lymphadenopathy
+3. Stable small right pleural effusion
+4. No evidence of new metastatic disease
+
+---
+
+**Electronically signed by:**
+**Robert Martinez, MD, FACR**
+Board Certified Radiologist
+January 18, 2025 14:32
+
+---
+*Report Status: Final*

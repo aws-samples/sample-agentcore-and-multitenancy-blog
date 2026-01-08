@@ -442,34 +442,35 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Now we run deploy.sh with healthcare-ready code**
 
-### 2.1 AWS Infrastructure Deployment (Day 1)
+### 3.1 AWS Infrastructure Deployment (Day 1)
 
 **Follows**: `deploy.sh` lines 34-36 → `scripts/prereq.sh`
 
-- [ ] **Run Infrastructure Setup**
-  - [ ] Execute: `chmod +x scripts/prereq.sh && ./scripts/prereq.sh`
-  - [ ] Creates S3 bucket: `healthcare-{account-id}`
-  - [ ] Deploys CloudFormation stacks:
+- [x] **Run Infrastructure Setup**
+  - [x] Execute: `chmod +x scripts/prereq.sh && ./scripts/prereq.sh`
+  - [x] Creates S3 bucket: `healthcare-{account-id}`
+  - [x] Deploys CloudFormation stacks:
     - `HealthcareStackInfra` (IAM roles, ECR repos)
     - `HealthcareStackCognito` (User pool, app client)
-  - [ ] Creates Knowledge Bases: `healthcare-basic-kb`, `healthcare-premium-kb`
-  - [ ] Stores all resource IDs in SSM: `/app/healthcare/*`
+    - `HealthcareStackApiGW`
+  - [x] Creates Knowledge Bases: `healthcare-basic-kb`, `healthcare-premium-kb`
+  - [x] Stores all resource IDs in SSM: `/app/healthcare/*`
 
-- [ ] **Verify Infrastructure**
-  - [ ] Check CloudFormation stacks: `COMPLETE` status
-  - [ ] Check S3 bucket created
-  - [ ] Check Knowledge Bases: `ACTIVE` status
-  - [ ] List SSM parameters: `./scripts/list_ssm_parameters.sh`
+- [x] **Verify Infrastructure**
+  - [x] Check CloudFormation stacks: `COMPLETE` status
+  - [x] Check S3 bucket created
+  - [x] Check Knowledge Bases: `ACTIVE` status
+  - [x] List SSM parameters: `./scripts/list_ssm_parameters.sh`
 
 **Deliverables**:
 - S3 bucket with Lambda code
 - 2 CloudFormation stacks deployed
-- 2 Knowledge Bases created
+- 3 Knowledge Bases created
 - SSM parameters populated
 
 ---
 
-### 2.2 Inference Profiles & Configuration (Day 2 - Morning)
+### 3.2 Inference Profiles & Configuration (Day 2 - Morning)
 
 **Follows**: `deploy.sh` lines 38-43
 

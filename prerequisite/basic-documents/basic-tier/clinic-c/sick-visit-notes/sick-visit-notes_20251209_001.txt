@@ -1,0 +1,59 @@
+**CLINIC C PEDIATRIC ASSOCIATES**
+
+**SICK VISIT NOTE**
+
+---
+
+**Patient Name:** Emma Rodriguez  
+**DOB:** 08/15/2017 (Age: 7 years)  
+**Date of Visit:** March 14, 2024  
+**Time:** 10:30 AM  
+**MRN:** 445-892-3371  
+
+**Provider:** Dr. Jennifer Walsh, MD  
+
+---
+
+**CHIEF COMPLAINT:**  
+Fever, cough, and sore throat for 3 days.
+
+**HISTORY OF PRESENT ILLNESS:**  
+Patient is a 7-year-old female presenting with 3-day history of fever (Tmax 101.8°F at home), productive cough with yellow sputum, and complaints of sore throat. Mother reports decreased appetite and increased fatigue. No difficulty breathing. No vomiting or diarrhea. One classmate reportedly out sick with similar symptoms. Takes acetaminophen at home with temporary improvement.
+
+**PAST MEDICAL HISTORY:**  
+No chronic conditions. Immunizations up to date.
+
+**ALLERGIES:**  
+NKDA
+
+**PHYSICAL EXAMINATION:**
+
+- **Vitals:** Temp 100.9°F, HR 98, RR 20, BP 105/68, SpO2 98% on RA
+- **General:** Alert, mildly fatigued appearing, non-toxic
+- **HEENT:** Bilateral tonsillar erythema and exudate present. Pharyngeal erythema noted. TMs clear bilaterally. No rhinorrhea.
+- **Neck:** Bilateral tender anterior cervical lymphadenopathy
+- **Lungs:** Clear to auscultation bilaterally, no wheezing or rales
+- **Heart:** RRR, no murmurs
+- **Abdomen:** Soft, non-tender, non-distended
+
+**DIAGNOSTIC TESTING:**  
+Rapid Strep A: **POSITIVE**
+
+**ASSESSMENT:**  
+Acute Group A Streptococcal pharyngitis (Strep throat)
+
+**PLAN:**  
+1. Amoxicillin 500 mg PO BID x 10 days prescribed
+2. Supportive care: rest, fluids, soft foods
+3. Acetaminophen or ibuprofen for fever/pain as needed
+4. Return to school 24 hours after starting antibiotics and when fever-free
+5. Return if worsening symptoms, difficulty breathing, or no improvement in 48-72 hours
+6. Follow-up PRN
+
+**Patient Education:** Discussed contagious nature and importance of completing full antibiotic course.
+
+---
+
+**Electronically signed by:**  
+Dr. Jennifer Walsh, MD  
+March 14, 2024, 11:05 AM

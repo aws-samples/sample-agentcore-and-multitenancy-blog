@@ -1,0 +1,50 @@
+# VACCINATION RECORD
+
+**CLINIC C PEDIATRIC ASSOCIATES**  
+4582 Maple Grove Boulevard, Suite 220  
+Springfield, IL 62704  
+Phone: (217) 555-0198 | Fax: (217) 555-0199
+
+---
+
+**PATIENT INFORMATION**
+
+Name: Emma L. Patterson  
+Date of Birth: 03/15/2021  
+Medical Record #: CCP-48291  
+Parent/Guardian: Michael Patterson  
+Date of Report: January 12, 2025
+
+---
+
+**IMMUNIZATION HISTORY**
+
+| Vaccine | Date Given | Dose | Manufacturer | Lot Number | Site | Provider |
+|---------|------------|------|--------------|------------|------|----------|
+| Hepatitis B | 03/16/2021 | #1 | Merck | HB4729K | LT (Left Thigh) | Dr. A. Chen |
+| Hepatitis B | 05/12/2021 | #2 | Merck | HB5103M | RT (Right Thigh) | Dr. A. Chen |
+| DTaP | 05/12/2021 | #1 | Sanofi | DT6849P | LT | Dr. A. Chen |
+| Hib | 05/12/2021 | #1 | GSK | HI2947L | RT | Dr. A. Chen |
+| IPV | 05/12/2021 | #1 | Sanofi | IP3841N | LT | Dr. A. Chen |
+| PCV13 | 05/12/2021 | #1 | Pfizer | PC7293R | RT | Dr. A. Chen |
+| DTaP | 07/15/2021 | #2 | Sanofi | DT7152Q | LT | NP S. Williams |
+| Hib | 07/15/2021 | #2 | GSK | HI3204T | RT | NP S. Williams |
+| IPV | 07/15/2021 | #2 | Sanofi | IP4093V | LT | NP S. Williams |
+| PCV13 | 07/15/2021 | #2 | Pfizer | PC8157W | RT | NP S. Williams |
+| Hepatitis B | 09/20/2021 | #3 | Merck | HB6284S | LT | Dr. A. Chen |
+| MMR | 03/28/2022 | #1 | Merck | MM4792X | RT | Dr. A. Chen |
+| Varicella | 03/28/2022 | #1 | Merck | VR2849Y | LT | Dr. A. Chen |
+
+---
+
+**NOTES:**
+
+All vaccines administered per CDC Advisory Committee on Immunization Practices (ACIP) guidelines. No adverse reactions reported. VIS statements provided to guardian prior to each administration. Records electronically submitted to State Immunization Registry.
+
+Next scheduled immunizations due: 09/15/2025 (DTaP #4, Hib #3, IPV #3, PCV13 #4)
+
+---
+
+**Certified by:**  
+Amanda Chen, MD, FAAP  
+Medical Director, Clinic C Pediatric Associates

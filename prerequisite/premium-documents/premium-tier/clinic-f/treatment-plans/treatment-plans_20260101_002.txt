@@ -1,0 +1,62 @@
+# CLINIC F ONCOLOGY CENTER
+## Comprehensive Treatment Plan
+
+**Patient ID:** MRN-847392  
+**Patient Name:** Sarah Mitchell (Synthetic)  
+**DOB:** 03/15/1967 | **Age:** 57 | **Sex:** Female  
+**Date of Service:** January 15, 2025  
+**Attending Oncologist:** Dr. James Patterson, MD, FACP
+
+---
+
+### DIAGNOSIS
+Primary: Invasive Ductal Carcinoma, Left Breast (T2N1M0, Stage IIB)  
+**Histology:** ER+/PR+/HER2- (Luminal A subtype)  
+**Ki-67 Index:** 18%
+
+---
+
+### TREATMENT PLAN
+
+**1. SURGICAL INTERVENTION**
+- Left breast lumpectomy with sentinel lymph node biopsy completed 12/10/2024
+- Margins: Clear (>5mm)
+- Lymph nodes: 2/4 positive for metastatic disease
+
+**2. ADJUVANT CHEMOTHERAPY**
+Regimen: TC (Docetaxel/Cyclophosphamide)
+- Docetaxel 75 mg/m² IV + Cyclophosphamide 600 mg/m² IV
+- Schedule: Every 21 days × 4 cycles
+- Start Date: February 1, 2025
+- Premedication: Dexamethasone, ondansetron, famotidine
+- Growth factor support: Pegfilgrastim 6mg SQ day 2 of each cycle
+
+**3. RADIATION THERAPY**
+- Whole breast irradiation: 50 Gy in 25 fractions (2 Gy/fraction)
+- Tumor bed boost: 10 Gy in 5 fractions
+- Begin 3-4 weeks post-chemotherapy completion
+- Estimated start: May 2025
+
+**4. ENDOCRINE THERAPY**
+- Tamoxifen 20mg PO daily × 5-10 years
+- Initiate following radiation completion
+- Annual gynecologic monitoring
+
+**5. SUPPORTIVE CARE**
+- Zofran 8mg PO q8h PRN nausea
+- Compazine 10mg PO q6h PRN breakthrough nausea
+- Neulasta on-body injector for neutropenia prophylaxis
+
+---
+
+### FOLLOW-UP SCHEDULE
+- Weekly labs during chemotherapy
+- Oncology visits every 3 months × 2 years, then every 6 months
+- Annual diagnostic mammography
+- Survivorship care plan to be provided upon treatment completion
+
+**Next Appointment:** January 29, 2025 - Pre-chemotherapy evaluation
+
+---
+
+*Electronically signed by Dr. James Patterson, MD | January 15, 2025 14:32*
