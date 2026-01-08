@@ -1,8 +1,9 @@
 from .utils import get_ssm_parameter
 from agent_config.memory_hook_provider import MemoryHook
+from agent_config.tools.retrieve_clinic_documents import retrieve_clinic_documents  # Import custom tool
 from mcp.client.streamable_http import streamablehttp_client
 from strands import Agent
-from strands_tools import current_time, retrieve
+from strands_tools import current_time  # Keep current_time
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 from typing import List
@@ -56,14 +57,16 @@ YOUR ASSIGNED CONTEXT:
 - Document Scope: {s3_prefix}
 
 AVAILABLE TOOLS:
+- retrieve_clinic_documents: Search knowledge base for medical information and clinical documents
+  * Automatically filtered to your clinic: {clinic_id}
+  * Searches documents under your clinic's scope: {s3_prefix}
+  * Returns relevant documents with context from the knowledge base
 - patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications, visit history)
   * Use patient_id for single patient lookup
   * Use list_patients=true to get all patients for the clinic
   * Automatically filtered to your clinic for security
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
   * Defaults to your clinic if no clinic_id specified
-- retrieve: Search knowledge base for medical information and clinical documents
-  * Searches documents under your clinic's scope: {s3_prefix}
 - current_time: Get current date and time
 
 CRITICAL SECURITY RULES:
@@ -105,9 +108,18 @@ Remember: You are serving {clinic_id} only. All data access is automatically res
         except Exception as e:
             raise f"Error initializing agent: {str(e)}"
 
+        # Create wrapper for retrieve_clinic_documents with clinic_id pre-filled
+        def retrieve_with_clinic(query: str, max_results: int = 5) -> str:
+            """Wrapper that automatically provides clinic_id"""
+            return retrieve_clinic_documents(query, clinic_id, max_results)
+        
+        # Copy tool metadata
+        retrieve_with_clinic.__name__ = 'retrieve_clinic_documents'
+        retrieve_with_clinic.__doc__ = retrieve_clinic_documents.__doc__
+
         self.tools = (
             [
-                retrieve,
+                retrieve_with_clinic,  # Custom tool with clinic_id pre-filled
                 current_time,
             ]
             + self.gateway_client.list_tools_sync()  # Use tools directly

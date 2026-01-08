@@ -191,19 +191,42 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
   - [x] Add logging for tenant context
 
 - [x] **Verify Strands Framework Configuration**
-  - [ ] Custom retrieval tool with metadata filtering configured:
-    - Lambda function: `retrieve_clinic_documents` with clinic_id filtering
-    - Registered with both basic and premium AgentCore gateways
-    - Replaces built-in `strands_tools.retrieve` for proper tenant isolation
-  - [ ] Knowledge Base integration via custom tool:
-    - KB IDs set via environment variable in Lambda
-    - Retrieved from SSM: `/app/healthcare/knowledge_base/knowledge_base_id`
-    - Premium uses: `/app/healthcare/premium_knowledge_base/knowledge_base_id`
-  - [ ] Tenant isolation enforced via:
-    - **Vector-level filtering**: Metadata filter on clinic_id in KB query
-    - S3 prefix in KB data sources (basic-tier/clinic-a/, premium-tier/hospital-a/)
-    - MCP gateway headers include clinic_id for Lambda invocation
-    - System prompts explicitly state document scope restrictions
+  - [x] Custom retrieval tool with metadata filtering configured:
+    - [x] Created `agent_config/tools/retrieve_clinic_documents.py` with `@tool` decorator
+    - [x] Created `agent_config_premium/tools/retrieve_clinic_documents.py` with `@tool` decorator
+    - [x] Uses Bedrock Agent Runtime `retrieve()` API with clinic_id filtering
+    - [x] Replaces built-in `strands_tools.retrieve` for proper tenant isolation
+  - [x] Knowledge Base integration via custom tool:
+    - [x] KB IDs set via environment variable in main.py and main_premium.py
+    - [x] Retrieved from SSM: `/app/customersupport/knowledge_base/knowledge_base_id`
+    - [x] Premium uses: `/app/customersupport/premium_knowledge_base/knowledge_base_id`
+  - [x] Tenant isolation enforced via:
+    - [x] **Vector-level filtering**: Metadata filter on clinic_id in KB query
+    - [x] S3 prefix in KB data sources (basic-tier/clinic-a/, premium-tier/hospital-a/)
+    - [x] MCP gateway headers include clinic_id for Lambda invocation
+    - [x] System prompts explicitly state document scope restrictions
+  
+  **Note**: Custom `retrieve_clinic_documents` tool provides vector-level isolation via metadata filtering, ensuring each clinic can only access their documents at the Knowledge Base query level.
+
+**Deliverables**:
+- Refactored agent classes with healthcare prompts ✅
+- Updated tool configurations ✅
+- Strands framework configured for KB integration ✅
+- Tenant context properly passed to agents ✅
+- Code ready for deployment (NOT deployed yet) ✅
+
+- [x] **Update agent_config_premium/agent.py (Premium Tier)**
+  - [x] Update system prompt for premium healthcare capabilities with web search
+  - [x] Add Nova 2 web grounding configuration via `tool_config`
+  - [x] Configure BedrockModel with `systemTool: nova_grounding`
+  - [x] Update tool descriptions for clinical context
+  - [x] Update MCP gateway headers to include clinic_id, s3_prefix
+
+- [x] **Update agent_task.py files (Both Tiers)**
+  - [x] Pass all tenant context parameters to agent initialization
+  - [x] Include clinic_id, user_id, role, s3_prefix in agent creation
+  - [x] Add logging for tenant context
+
   
   **Note**: Custom `retrieve_clinic_documents` tool provides vector-level isolation via metadata filtering, ensuring each clinic can only access their documents at the Knowledge Base query level.
 
@@ -299,16 +322,20 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Note**: Custom retrieval tool with metadata filtering provides vector-level tenant isolation for Knowledge Base queries.
 
-- [ ] **Create retrieve_clinic_documents.py** (`prerequisite/lambda/python/retrieve_clinic_documents.py`)
-  - [ ] Implement Lambda function for Knowledge Base retrieval with metadata filtering
-  - [ ] Accept parameters: query, clinic_id, max_results
-  - [ ] Use Bedrock Agent Runtime `retrieve()` API with vectorSearchConfiguration filter
-  - [ ] Filter by clinic_id metadata: `{'equals': {'key': 'clinic_id', 'value': clinic_id}}`
-  - [ ] Format results with relevance scores and source attribution
-  - [ ] Add error handling and logging
-  - [ ] **Security**: Vector-level isolation ensures clinic cannot access other clinics' documents
 
-- [ ] **Create patient_context.py** (`prerequisite/lambda/python/patient_context.py`)
+- [x] **Create retrieve_clinic_documents.py** (`agent_config/tools/retrieve_clinic_documents.py` and `agent_config_premium/tools/retrieve_clinic_documents.py`)
+  - [x] Implement custom tool using `@tool` decorator (runs in agent process, not Lambda)
+  - [x] Accept parameters: query, clinic_id, max_results
+  - [x] Use Bedrock Agent Runtime `retrieve()` API with vectorSearchConfiguration filter
+  - [x] Filter by clinic_id metadata: `{'equals': {'key': 'clinic_id', 'value': clinic_id}}`
+  - [x] Format results with content from knowledge base
+  - [x] Add error handling and logging
+  - [x] **Security**: Vector-level isolation ensures clinic cannot access other clinics' documents
+  - [x] Integrated into agent.py with clinic_id wrapper function
+  - [x] Updated system prompts to reference `retrieve_clinic_documents`
+  - [x] Set KNOWLEDGE_BASE_ID environment variable in main.py and main_premium.py
+
+- [x] **Create patient_context.py** (`prerequisite/lambda/python/patient_context.py`)
   - [x] Create DynamoDB table: `healthcare-patient-metadata` via infrastructure.yaml
   - [x] Generate synthetic patient metadata based on clinic profiles (see `DESIGN/clinic-profiles.md`) and integrate this step into the deploy.sh so the end user deployment flow isn't interrupted. You can refer to /design/deployment-integration-plan.md to see a related example
   - [x] Implement Lambda function for structured patient lookup
@@ -345,11 +372,17 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
   - [x] Used by agent to understand clinic context and capabilities
 
 **Deliverables**:
+- Custom retrieval tool implemented with `@tool` decorator ✅
+- Vector-level isolation via metadata filtering ✅
+- Tool integrated into both agent.py files ✅
+- System prompts updated ✅
 - Patient context tool with clinic isolation ✅
 - Clinic configuration tool ✅
 - DynamoDB tables with synthetic data from clinic profiles ✅
 - Context tools integrated into deployment flow ✅
 - Data population script (`scripts/populate_healthcare_data.py`) ✅
+
+**Note**: Custom retrieval tool runs directly in agent process (not Lambda) - no gateway registration needed for this tool.
 
 ---
 
@@ -357,30 +390,48 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Note**: Web search capability is now built into Nova 2 via native web grounding - no separate Lambda tool needed!
 
-- [ ] **Register Tools with AgentCore Gateways**
-  - [ ] Update api_spec.json with tool schemas
-  - [ ] Register with **Basic Gateway** (`healthcare-basic-gw`):
-    - retrieve_clinic_documents (Lambda target) - **Custom KB retrieval with metadata filtering**
-    - patient_context (Lambda target)
-    - clinic_config (Lambda target)
-  - [ ] Register with **Premium Gateway** (`healthcare-premium-gw`):
-    - retrieve_clinic_documents (Lambda target) - **Custom KB retrieval with metadata filtering**
-    - patient_context (Lambda target)
-    - clinic_config (Lambda target)
-    - **Web grounding enabled via Nova 2 model** - No Lambda needed!
-  - [ ] Use `scripts/agentcore_gateway.py` for tool registration
-  - [ ] Verify tool registration for both gateways
-  - [ ] Update agent system prompt to reflect the latest tools
+- [x] **Update Lambda Function Handler**
+  - [x] Refactored `lambda_function.py` to route to healthcare tools
+  - [x] Removed gaming/finance tool routing
+  - [x] Added proper tenant context extraction from headers
+  - [x] Routes to `patient_context` and `clinic_config` handlers
+
+- [x] **Verify API Specification**
+  - [x] `api_spec.json` already contains correct tool schemas
+  - [x] patient_context: Patient metadata with list/single lookup
+  - [x] clinic_config: Clinic configuration retrieval
+  - [x] Both tools support clinic isolation via headers
+
+- [x] **Verify Agent System Prompts**
+  - [x] Basic tier agent already references all tools correctly
+  - [x] Premium tier agent includes web grounding capability
+  - [x] Both agents have proper security rules documented
+  - [x] Tool descriptions match API spec
+
+- [x] **Create Tool Testing Suite**
+  - [x] Created `test/test_healthcare_tools.py`
+  - [x] Supports testing both basic and premium tiers
+  - [x] Includes verification command to check tool registration
+  - [x] Includes interactive query command for manual testing
+  - [x] Tests clinic isolation and tenant context
+
+- [ ] **Deploy and Test** (Ready for Phase 3 deployment)
+  - [ ] Run `deploy.sh` to create gateways with tools
+  - [ ] Verify tool registration: `python test/test_healthcare_tools.py verify`
+  - [ ] Run comprehensive tests: `python test/test_healthcare_tools.py test`
+  - [ ] Test interactive queries: `python test/test_healthcare_tools.py query --tier basic --prompt "What services are available?"`
 
 **Deliverables**:
-- Custom retrieval tool with vector-level isolation registered
-- Context tools registered with appropriate gateways
-- Premium web search enabled via Nova 2 native capability
-- Tool testing suite completed
+- ✅ Lambda handler updated for healthcare tools
+- ✅ API spec verified and correct
+- ✅ Agent system prompts verified
+- ✅ Comprehensive tool testing suite created
+- ⏳ Ready for deployment in Phase 3
 
 **Key Advantage**: 
 - Custom retrieval tool provides **defense in depth** - combines S3 prefix isolation with query-time metadata filtering
 - Nova 2's built-in web grounding eliminates need for external API integration
+- Tools are registered automatically during gateway creation via `api_spec.json`
 
 
 ---

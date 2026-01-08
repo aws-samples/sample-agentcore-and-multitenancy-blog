@@ -67,146 +67,210 @@ Formatted Response to Agent
 
 ## Implementation
 
-### 1. Lambda Function: retrieve_clinic_documents.py
+### 1. Custom Tool with @tool Decorator
 
-**Location**: `prerequisite/lambda/python/retrieve_clinic_documents.py`
+**Location**: `agent_config/tools.py` and `agent_config_premium/tools.py`
+
+Following the Strands pattern from the screenshot, we create a custom tool using the `@tool` decorator:
 
 ```python
 import boto3
 import os
-import json
-from typing import Dict, Any, List
+from strands import tool
 
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+@tool
+def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5) -> str:
     """
-    Retrieve clinic-specific documents from Knowledge Base with metadata filtering.
-    
-    Security: Enforces clinic isolation via metadata filtering at vector search level.
+    Handle document-based, narrative, and conceptual queries using the unstructured knowledge base.
     
     Args:
-        event: {
-            'query': str - Search query
-            'clinic_id': str - Clinic identifier for filtering
-            'max_results': int - Number of results (default: 5)
-        }
-        context: Lambda context
+        query: A question about clinical documents, patient information, medical procedures, 
+               or requiring document comprehension and qualitative analysis
+        clinic_id: Clinic identifier for filtering
+        max_results: Number of results to return (default: 5)
     
     Returns:
-        {
-            'results': str - Formatted document results
-            'count': int - Number of documents found
-            'clinic_id': str - Clinic that was queried
-        }
+        Formatted string response from the knowledge base
     """
-    # Extract parameters
-    query = event.get('query', '')
-    clinic_id = event.get('clinic_id', 'demo-clinic')
-    max_results = event.get('max_results', 5)
+    region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+    kb_id = os.environ.get("KNOWLEDGE_BASE_ID")
     
-    # Get Knowledge Base ID from environment
-    kb_id = os.environ.get('KNOWLEDGE_BASE_ID')
-    
-    # Validation
-    if not query:
-        return {'error': 'Query parameter is required'}
-    
-    if not kb_id:
-        return {'error': 'Knowledge Base ID not configured'}
-    
-    # Initialize Bedrock Agent Runtime client
-    bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name='us-east-1')
+    bedrock_agent_runtime = boto3.client("bedrock-agent-runtime", region_name=region)
     
     try:
-        # Query Knowledge Base with metadata filtering
-        response = bedrock_agent_runtime.retrieve(
+        retrieve_response = bedrock_agent_runtime.retrieve(
             knowledgeBaseId=kb_id,
-            retrievalQuery={'text': query},
+            retrievalQuery={"text": query},
             retrievalConfiguration={
-                'vectorSearchConfiguration': {
-                    'numberOfResults': max_results,
-                    'filter': {
-                        'equals': {
-                            'key': 'clinic_id',
-                            'value': clinic_id
-                        }
-                    }
+                "vectorSearchConfiguration": {
+                    "numberOfResults": max_results,
+                    "filter": {"equals": {"key": "clinic_id", "value": clinic_id}}
                 }
             }
         )
         
-        # Format results
+        # Format the response for better readability
         results = []
-        for result in response.get('retrievalResults', []):
+        for result in retrieve_response.get('retrievalResults', []):
             content = result.get('content', {}).get('text', '')
-            metadata = result.get('metadata', {})
-            score = result.get('score', 0)
-            location = result.get('location', {})
-            
-            # Extract S3 URI
-            s3_uri = location.get('s3Location', {}).get('uri', 'Unknown')
-            
-            results.append({
-                'content': content,
-                'score': score,
-                'metadata': metadata,
-                'source': s3_uri
-            })
+            if content:
+                # Optionally include score and source for transparency
+                score = result.get('score', 0)
+                s3_uri = result.get('location', {}).get('s3Location', {}).get('uri', '')
+                
+                # Format with score and source for audit trail
+                results.append(f"[Score: {score:.2f}]\n{content}\nSource: {s3_uri}")
         
-        # Format as readable text for agent
-        formatted_results = []
-        for idx, result in enumerate(results, 1):
-            formatted_results.append(
-                f"[Document {idx}] (Relevance: {result['score']:.2f})\n"
-                f"{result['content']}\n"
-                f"Source: {result['source']}\n"
-                f"Metadata: {json.dumps(result['metadata'])}"
-            )
-        
-        result_text = '\n\n---\n\n'.join(formatted_results) if formatted_results else 'No relevant documents found.'
-        
-        # Log for audit trail
-        print(f"Retrieved {len(results)} documents for clinic: {clinic_id}, query: {query}")
-        
-        return {
-            'results': result_text,
-            'count': len(results),
-            'clinic_id': clinic_id
-        }
+        return "\n\n---\n\n".join(results) if results else "No relevant documents found."
         
     except Exception as e:
-        print(f"Error retrieving documents: {str(e)}")
-        return {'error': f'Error retrieving documents: {str(e)}'}
+        return f"Error retrieving clinical documents: {str(e)}"
 ```
 
 ### 2. Agent Configuration Updates
 
-**Update both `agent_config/agent.py` and `agent_config_premium/agent.py`**:
+**Create `agent_config/tools.py`**:
 
 ```python
-# Remove Strands retrieve import
-# from strands_tools import retrieve  # REMOVE THIS
+"""Custom tools for healthcare document retrieval with clinic isolation."""
+import boto3
+import os
+from strands import tool
 
-# Update tools list
-self.tools = (
-    [
-        current_time,  # Keep this
-        # retrieve,  # REMOVE - replaced by custom tool from gateway
-    ]
-    + self.gateway_client.list_tools_sync()  # This now includes retrieve_clinic_documents
-    + tools
-)
+@tool
+def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5) -> str:
+    """
+    Handle document-based, narrative, and conceptual queries using the unstructured knowledge base.
+    
+    Args:
+        query: A question about clinical documents, patient information, medical procedures,
+               or requiring document comprehension and qualitative analysis
+        clinic_id: Clinic identifier for filtering
+        max_results: Number of results to return (default: 5)
+    
+    Returns:
+        Formatted string response from the knowledge base
+    """
+    region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+    kb_id = os.environ.get("KNOWLEDGE_BASE_ID")
+    
+    bedrock_agent_runtime = boto3.client("bedrock-agent-runtime", region_name=region)
+    
+    try:
+        retrieve_response = bedrock_agent_runtime.retrieve(
+            knowledgeBaseId=kb_id,
+            retrievalQuery={"text": query},
+            retrievalConfiguration={
+                "vectorSearchConfiguration": {
+                    "numberOfResults": max_results,
+                    "filter": {"equals": {"key": "clinic_id", "value": clinic_id}}
+                }
+            }
+        )
+        
+        # Format the response for better readability
+        results = []
+        for result in retrieve_response.get('retrievalResults', []):
+            content = result.get('content', {}).get('text', '')
+            if content:
+                results.append(content)
+        
+        return "\n\n".join(results) if results else "No relevant information found."
+        
+    except Exception as e:
+        return f"Error in clinical document retrieval: {str(e)}"
 ```
 
-**System Prompt Update** (both tiers):
+**Update `agent_config/agent.py`** (Basic Tier):
+
+```python
+from .utils import get_ssm_parameter
+from agent_config.memory_hook_provider import MemoryHook
+from agent_config.tools import retrieve_clinic_documents  # Import custom tool
+from mcp.client.streamable_http import streamablehttp_client
+from strands import Agent
+from strands_tools import current_time  # Keep current_time
+# Remove: from strands_tools import retrieve  # REMOVED
+from strands.models import BedrockModel
+from strands.tools.mcp import MCPClient
+from typing import List
+
+
+class CustomerSupport:
+    def __init__(
+        self,
+        bearer_token: str,
+        memory_hook: MemoryHook,
+        bedrock_model_id: str = "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        system_prompt: str = None,
+        tools: List[callable] = None,
+        tenant_id: str = "basic",
+        clinic_id: str = "demo-clinic",
+        user_id: str = "demo-user",
+        role: str = "user",
+        s3_prefix: str = "basic-tier/demo-clinic/",
+        guardrail_id: str = None,
+    ):
+        # ... existing model configuration ...
+        
+        # Gateway client setup
+        gateway_url = get_ssm_parameter("/app/customersupport/agentcore/gateway_url")
+        
+        try:
+            self.gateway_client = MCPClient(
+                lambda: streamablehttp_client(
+                    gateway_url,
+                    headers={
+                        "Authorization": f"Bearer {bearer_token}",
+                        "X-Tenant-ID": tenant_id,
+                        "X-Clinic-ID": clinic_id,
+                        "X-S3-Prefix": s3_prefix
+                    },
+                )
+            )
+            self.gateway_client.start()
+        except Exception as e:
+            raise f"Error initializing agent: {str(e)}"
+        
+        # Create wrapper for retrieve_clinic_documents with clinic_id pre-filled
+        def retrieve_with_clinic(query: str, max_results: int = 5) -> str:
+            """Wrapper that automatically provides clinic_id"""
+            return retrieve_clinic_documents(query, clinic_id, max_results)
+        
+        # Copy tool metadata
+        retrieve_with_clinic.__name__ = 'retrieve_clinic_documents'
+        retrieve_with_clinic.__doc__ = retrieve_clinic_documents.__doc__
+        
+        # Build tools list with custom retrieval tool
+        self.tools = (
+            [
+                retrieve_with_clinic,  # Custom tool with clinic_id pre-filled
+                current_time,
+            ]
+            + self.gateway_client.list_tools_sync()  # MCP gateway tools
+            + (tools or [])
+        )
+        
+        self.memory_hook = memory_hook
+        
+        self.agent = Agent(
+            model=self.model,
+            system_prompt=self.system_prompt,
+            tools=self.tools,
+            hooks=[self.memory_hook],
+        )
+```
+
+**Update System Prompt**:
 
 ```python
 AVAILABLE TOOLS:
-- retrieve_clinic_documents: Search clinical documents with automatic clinic filtering
+- retrieve_clinic_documents: Search knowledge base for medical information and clinical documents
   * Automatically filtered to your clinic: {clinic_id}
-  * Searches documents under: {s3_prefix}
-  * Returns relevant documents with relevance scores
-- patient_context: Retrieve patient metadata
-- clinic_config: Get clinic configuration
+  * Searches documents under your clinic's scope: {s3_prefix}
+  * Returns relevant documents with relevance scores and sources
+- patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications, visit history)
+- clinic_config: Get clinic configuration (specialty, services, hours, providers)
 - current_time: Get current date and time
 ```
 
@@ -267,51 +331,27 @@ data_source_config = {
 }
 ```
 
-### 4. Gateway Tool Registration
+### 4. Environment Configuration
 
-**Tool Schema** (api_spec.json):
+**Update `main.py` and `main_premium.py`**:
 
-```json
-{
-  "tools": [
-    {
-      "name": "retrieve_clinic_documents",
-      "description": "Search clinical documents for the authenticated clinic. Automatically filters results to only include documents belonging to the clinic.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "Search query for clinical documents"
-          },
-          "max_results": {
-            "type": "integer",
-            "description": "Maximum number of results to return (default: 5)",
-            "default": 5
-          }
-        },
-        "required": ["query"]
-      }
-    }
-  ]
-}
+```python
+import os
+from agent_config.utils import get_ssm_parameter
+
+# Set Knowledge Base ID from SSM
+kb_id = get_ssm_parameter("/app/healthcare/knowledge_base/knowledge_base_id")
+os.environ['KNOWLEDGE_BASE_ID'] = kb_id
+
+# Set AWS region
+os.environ['AWS_REGION'] = 'us-east-1'
 ```
 
-**Registration Command**:
-
-```bash
-# Register with basic gateway
-python scripts/agentcore_gateway.py register-tool \
-  --gateway-name healthcare-basic-gw \
-  --tool-name retrieve_clinic_documents \
-  --lambda-arn arn:aws:lambda:us-east-1:ACCOUNT:function:retrieve-clinic-documents
-
-# Register with premium gateway
-python scripts/agentcore_gateway.py register-tool \
-  --gateway-name healthcare-premium-gw \
-  --tool-name retrieve_clinic_documents \
-  --lambda-arn arn:aws:lambda:us-east-1:ACCOUNT:function:retrieve-clinic-documents
-```
+**No Lambda or Gateway Registration Needed**:
+- The `@tool` decorator makes the function directly available to the Strands agent
+- No need for Lambda deployment
+- No need for MCP gateway tool registration
+- Tool runs in the same process as the agent
 
 ## Security Benefits
 
@@ -375,16 +415,18 @@ def test_cross_clinic_isolation():
 
 ## Deployment Checklist
 
-- [ ] Create Lambda function: `retrieve_clinic_documents`
-- [ ] Set environment variable: `KNOWLEDGE_BASE_ID`
-- [ ] Grant Lambda permissions to call Bedrock Agent Runtime
-- [ ] Upload documents with clinic_id metadata
-- [ ] Verify Knowledge Base indexes metadata
-- [ ] Register tool with both gateways
-- [ ] Update agent.py to remove Strands retrieve
-- [ ] Update system prompts
-- [ ] Test cross-clinic isolation
-- [ ] Verify audit logging
+- [x] Create `agent_config/tools/retrieve_clinic_documents.py` with `@tool` decorator
+- [x] Create `agent_config_premium/tools/retrieve_clinic_documents.py` (same content)
+- [x] Update `agent_config/agent.py` to import and use custom tool
+- [x] Update `agent_config_premium/agent.py` to import and use custom tool
+- [x] Set `KNOWLEDGE_BASE_ID` environment variable in main.py and main_premium.py
+- [ ] Upload documents with clinic_id metadata (Phase 2.1)
+- [ ] Verify Knowledge Base indexes metadata (Phase 2.1)
+- [x] Update system prompts to reference new tool
+- [ ] Test cross-clinic isolation (Phase 2.3)
+- [ ] Verify audit logging (Phase 2.3)
+
+**No Lambda or Gateway Registration Required** - Tool runs directly in agent process using `@tool` decorator
 
 ## Monitoring and Observability
 
