@@ -115,7 +115,7 @@ Remember: You are serving {clinic_id} with premium-tier capabilities including w
 """
         )
 
-        gateway_url = get_ssm_parameter("/app/customersupport/agentcore/gateway_url")
+        gateway_url = get_ssm_parameter("/app/healthcare/agentcore/gateway_url")
         print(f"Gateway Endpoint - MCP URL: {gateway_url}")
 
         try:

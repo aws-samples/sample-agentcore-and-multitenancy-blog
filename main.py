@@ -15,7 +15,7 @@ os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
 
 os.environ["KNOWLEDGE_BASE_ID"] = get_ssm_parameter(
-    "/app/customersupport/knowledge_base/knowledge_base_id"
+    "/app/healthcare/knowledge_base/knowledge_base_id"
 )
 
 # Logging setup

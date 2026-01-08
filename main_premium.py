@@ -16,7 +16,7 @@ os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
 
 # Use premium knowledge base
 os.environ["KNOWLEDGE_BASE_ID"] = get_ssm_parameter(
-    "/app/customersupport/premium_knowledge_base/knowledge_base_id"
+    "/app/healthcare/premium_knowledge_base/knowledge_base_id"
 )
 
 # Logging setup

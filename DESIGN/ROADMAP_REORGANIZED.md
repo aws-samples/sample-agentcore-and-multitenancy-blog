@@ -498,43 +498,43 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 ---
 
-### 2.3 AgentCore Gateway & Credentials (Day 2 - Afternoon)
+### 3.3 AgentCore Gateway & Credentials (Day 2 - Afternoon)
 
 **Follows**: `deploy.sh` lines 47-52 (adapted for 2 gateways)
 
-- [ ] **Create AgentCore Gateways** (2 gateways for tier-specific tools)
-  - [ ] Create basic tier gateway:
+- [x] **Create AgentCore Gateways** (2 gateways for tier-specific tools)
+  - [x] Create basic tier gateway:
     ```bash
     python scripts/agentcore_gateway.py create --name healthcare-basic-gw
     ```
-  - [ ] Create premium tier gateway:
+  - [x] Create premium tier gateway:
     ```bash
     python scripts/agentcore_gateway.py create --name healthcare-premium-gw
     ```
-  - [ ] Verify both gateways created and active
-  - [ ] Store gateway URLs in SSM:
+  - [x] Verify both gateways created and active
+  - [x] Store gateway URLs in SSM:
     - `/app/healthcare/agentcore/basic_gateway_url`
     - `/app/healthcare/agentcore/premium_gateway_url`
 
-- [ ] **Setup Cognito Credential Provider** (1 shared provider for both gateways)
-  - [ ] Create single credential provider shared by both tiers:
+- [x] **Setup Cognito Credential Provider** (1 shared provider for both gateways)
+  - [x] Create single credential provider shared by both tiers:
     ```bash
     python scripts/cognito_credentials_provider.py create --name healthcare-cognito-provider
     ```
-  - [ ] Links Cognito to both basic and premium AgentCore gateways
-  - [ ] Verify credential provider is active
-  - [ ] Note: Single Cognito User Pool with custom JWT claims (`custom:tenant_id`, `custom:clinic_id`) handles tenant differentiation
+  - [x] Links Cognito to both basic and premium AgentCore gateways
+  - [x] Verify credential provider is active
+  - [x] Note: Single Cognito User Pool with custom JWT claims (`custom:tenant_id`, `custom:clinic_id`) handles tenant differentiation
 
-- [ ] **Register Tools with Gateways**
-  - [ ] Register basic tools with basic gateway:
+- [x] **Register Tools with Gateways**
+  - [x] Register basic tools with basic gateway:
     - patient_context (Lambda target)
     - clinic_config (Lambda target)
-  - [ ] Register premium tools with premium gateway:
+  - [x] Register premium tools with premium gateway:
     - patient_context (Lambda target)
     - clinic_config (Lambda target)
     - **Web grounding enabled via Nova 2 model configuration** - No Lambda needed!
-  - [ ] Use `scripts/agentcore_gateway.py` target registration functionality
-  - [ ] Verify tool registration for both gateways
+  - [x] Use `scripts/agentcore_gateway.py` target registration functionality
+  - [x] Verify tool registration for both gateways
 
 - [ ] **Test Gateways** (with placeholder prompts)
   - [ ] Test basic gateway: `python test/test_gateway.py --gateway basic --prompt "Test healthcare gateway"`
@@ -551,37 +551,24 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 ---
 
-### 2.4 Memory Resources & Observability (Day 3)
+### 3.4 Memory Resources & Observability (Day 3)
 
 **Follows**: `deploy.sh` lines 54-61 (adapted)
 
-- [ ] **Create Memory Resources**
-  - [ ] Run:
-    ```bash
-    python scripts/agentcore_memory.py create \
-      --name healthcare-basic-memory \
-      --namespaces "clinic/{actorId}/facts/{sessionId}" "clinic/{actorId}/preferences" \
-      --expiry-days 90
-    ```
-  - [ ] Run:
-    ```bash
-    python scripts/agentcore_memory.py create \
-      --name healthcare-premium-memory \
-      --namespaces "clinic/{actorId}/insights/{sessionId}" "clinic/{actorId}/preferences" "clinic/{actorId}/analytics" \
-      --expiry-days 180
-    ```
-  - [ ] Verify memory resources: `ACTIVE` status
-  - [ ] Memory IDs stored in SSM
+- [x] **Create Memory Resources**
+  - [x] Create basic and premium memory resources
+  - [x] Verify memory resources: `ACTIVE` status
+  - [x] Memory IDs stored in SSM
 
-- [ ] **Enable Memory Observability** (NOW we run the script we created)
-  - [ ] Run:
+- [x] **Enable Memory Observability** (NOW we run the script we created)
+  - [x] Run:
     ```bash
     python scripts/setup_memory_observability.py \
       --memory-id healthcare-basic-memory \
       --memory-id healthcare-premium-memory
     ```
-  - [ ] Verify CloudWatch log groups created
-  - [ ] Verify X-Ray traces enabled
+  - [x] Verify CloudWatch log groups created
+  - [x] Verify X-Ray traces enabled
 
 - [ ] **Test Memory Functionality**
   - [ ] Run: `python test/test_memory.py load-conversation`
@@ -595,25 +582,25 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 ---
 
-### 2.5 Agent Configuration & Cognito Users (Day 4)
+### 3.5 Agent Configuration & Cognito Users (Day 4)
 
 **Follows**: `deploy.sh` lines 63-77 + user setup
 
-- [ ] **Configure Agents**
-  - [ ] Get runtime role: `RUNTIME_ROLE=$(./scripts/list_ssm_parameters.sh | grep runtime_iam_role | cut -d'=' -f2)`
-  - [ ] Configure basic agent:
+- [x] **Configure Agents using direct code deployment**
+  - [x] Get runtime role: `RUNTIME_ROLE=$(./scripts/list_ssm_parameters.sh | grep runtime_iam_role | cut -d'=' -f2)`
+  - [x] Configure basic agent:
     ```bash
     agentcore configure --entrypoint main.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare-basic
     ```
-  - [ ] Configure premium agent:
+  - [x] Configure premium agent:
     ```bash
     agentcore configure --entrypoint main_premium.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare-premium
     ```
-  - [ ] Clean up: `rm -f .agentcore.yaml`
+  - [x] Clean up: `rm -f .agentcore.yaml`
 
 - [ ] **Create Test Users Script**
   - [ ] Create `scripts/create_test_users.py`

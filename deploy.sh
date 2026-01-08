@@ -11,7 +11,12 @@ echo "🚀 Starting Multi-Tenant AgentCore Deployment"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Configuration
+DEPLOYMENT_TYPE="${DEPLOYMENT_TYPE:-direct_code_deploy}"  # Default to direct_code_deploy, set to "container" for container deployment
+PYTHON_RUNTIME="${PYTHON_RUNTIME:-PYTHON_3_12}"  # For direct_code_deploy only
 
 # Function to print colored output
 print_step() {
@@ -24,6 +29,10 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
 # Check if virtual environment exists
@@ -46,8 +55,13 @@ python scripts/populate_healthcare_data.py
 print_step "Creating Bedrock inference profiles..."
 python scripts/create_inference_profiles.py
 
+print_info "Deployment type: ${DEPLOYMENT_TYPE}"
+if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
+    print_info "Python runtime: ${PYTHON_RUNTIME}"
+fi
+
 print_step "Updating configuration with created resources..."
-python scripts/configure_deployment.py
+python scripts/configure_deployment.py "$DEPLOYMENT_TYPE"
 
 print_step "Listing SSM parameters..."
 chmod +x scripts/list_ssm_parameters.sh
@@ -70,14 +84,6 @@ python scripts/setup_memory_observability.py enable-all
 print_step "Verifying Memory Observability configuration..."
 python scripts/setup_memory_observability.py verify-all
 
-print_step "Testing gateway with basic tenant..."
-python test/test_gateway.py --prompt "Check warranty with serial number MNO33333333"
-
-print_step "Testing memory functionality..."
-python test/test_memory.py load-conversation
-python test/test_memory.py load-prompt "My preference of gaming console is V5 Pro"
-python test/test_memory.py list-memory
-
 print_step "Getting runtime role from SSM..."
 RUNTIME_ROLE=$(./scripts/list_ssm_parameters.sh | grep runtime_iam_role | cut -d'=' -f2 | tr -d ' ')
 
@@ -86,29 +92,60 @@ if [ -z "$RUNTIME_ROLE" ]; then
     exit 1
 fi
 
+print_info "Runtime IAM Role: $RUNTIME_ROLE"
+
 print_step "Configuring basic tier agent..."
-agentcore configure --entrypoint main.py \
-  -er "$RUNTIME_ROLE" \
-  --name healthcare-basic
+if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
+    agentcore configure --entrypoint main.py \
+      -er "$RUNTIME_ROLE" \
+      --name healthcare_basic \
+      --deployment-type direct_code_deploy \
+      --runtime "$PYTHON_RUNTIME" \
+      --non-interactive
+else
+    agentcore configure --entrypoint main.py \
+      -er "$RUNTIME_ROLE" \
+      --name healthcare_basic \
+      --deployment-type container \
+      --non-interactive
+fi
 
 print_step "Configuring premium tier agent..."
-agentcore configure --entrypoint main_premium.py \
-  -er "$RUNTIME_ROLE" \
-  --name healthcare-premium
+if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
+    agentcore configure --entrypoint main_premium.py \
+      -er "$RUNTIME_ROLE" \
+      --name healthcare_premium \
+      --deployment-type direct_code_deploy \
+      --runtime "$PYTHON_RUNTIME" \
+      --non-interactive
+else
+    agentcore configure --entrypoint main_premium.py \
+      -er "$RUNTIME_ROLE" \
+      --name healthcare_premium \
+      --deployment-type container \
+      --non-interactive
+fi
 
-print_step "Removing old agentcore config..."
-rm -f .agentcore.yaml
 
 print_step "Deployment completed successfully!"
 echo ""
 echo "🎉 Multi-tenant AgentCore deployment is ready!"
 echo ""
-echo "To launch the agents:"
-echo "1. Launch AgentCore: agentcore launch"
-echo "2. In another terminal, start Streamlit: streamlit run app.py --server.port 8501 -- --agent=healthcare-basic"
+echo "Deployment Configuration:"
+echo "  Type: $DEPLOYMENT_TYPE"
+if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
+    echo "  Runtime: $PYTHON_RUNTIME"
+fi
+echo ""
+echo "To deploy the agents:"
+echo "  agentcore deploy --agent healthcare_basic"
+echo "  agentcore deploy --agent healthcare_premium"
+echo ""
+echo "To launch the agents (after deployment):"
+echo "1. Start Streamlit: streamlit run app.py --server.port 8501 -- --agent=healthcare-basic"
 echo ""
 echo "Available agents:"
-echo "- healthcare-basic"
-echo "- healthcare-premium"
+echo "- healthcare_basic"
+echo "- healthcare_premium"
 echo ""
 echo "Use ./scripts/list_ssm_parameters.sh to view configuration parameters"

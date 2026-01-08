@@ -1,66 +1,118 @@
+default_agent: healthcare_premium
 agents:
-  healthcare-basic:
-    authorizer_configuration:
-      customJWTAuthorizer:
-        allowedClients:
-        - 71dvaqhfvo1srna6sd8e55onjl
-        discoveryUrl: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_bo5fvclJc/.well-known/openid-configuration
+  healthcare_basic:
+    name: healthcare_basic
+    entrypoint: /Users/ashchenn/Documents/projects/agentcore_multitenancy/agentcore-and-multitenancy/main.py
+    deployment_type: direct_code_deploy
+    runtime_type: PYTHON_3_11
+    platform: linux/arm64
+    container_runtime: null
+    source_path: /Users/ashchenn/Documents/projects/agentcore_multitenancy/agentcore-and-multitenancy
     aws:
-      account: '345667997821'
-      ecr_auto_create: false
-      ecr_repository: 345667997821.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-healthcare-basic
-      execution_role: arn:aws:iam::345667997821:role/HealthcareStackInfra-RuntimeAgentCoreRole-V396McTDSliH
+      execution_role: arn:aws:iam::345667997821:role/|/app/healthcare/agentcore/runtime_iam_role|arn:aws:iam::345667997821:role/HealthcareStackInfra-RuntimeAgentCoreRole-V396McTDSliH|
       execution_role_auto_create: true
+      account: '345667997821'
+      region: us-east-1
+      ecr_repository: null
+      ecr_auto_create: false
+      s3_path: null
+      s3_auto_create: true
       network_configuration:
         network_mode: PUBLIC
-      observability:
-        enabled: true
+        network_mode_config: null
       protocol_configuration:
         server_protocol: HTTP
-      region: us-east-1
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
     bedrock_agentcore:
-      agent_arn: arn:aws:bedrock-agentcore:us-east-1:345667997821:runtime/healthcare-basic-AGENT_ID
-      agent_id: healthcare-basic-AGENT_ID
+      agent_id: null
+      agent_arn: null
       agent_session_id: null
     codebuild:
-      execution_role: arn:aws:iam::345667997821:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1
-      project_name: bedrock-agentcore-healthcare-basic-builder
-      source_bucket: bedrock-agentcore-codebuild-sources-345667997821-us-east-1
-    container_runtime: finch
-    entrypoint: main.py
-    name: healthcare-basic
+      project_name: null
+      execution_role: null
+      source_bucket: null
+    memory:
+      mode: STM_ONLY
+      memory_id: null
+      memory_arn: null
+      memory_name: healthcare_basic_memory
+      event_expiry_days: 30
+      first_invoke_memory_check_done: false
+      was_created_by_toolkit: false
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
     oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false
+  healthcare_premium:
+    name: healthcare_premium
+    entrypoint: /Users/ashchenn/Documents/projects/agentcore_multitenancy/agentcore-and-multitenancy/main_premium.py
+    deployment_type: direct_code_deploy
+    runtime_type: PYTHON_3_11
     platform: linux/arm64
-  healthcare-premium:
-    authorizer_configuration:
-      customJWTAuthorizer:
-        allowedClients:
-        - 71dvaqhfvo1srna6sd8e55onjl
-        discoveryUrl: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_bo5fvclJc/.well-known/openid-configuration
+    container_runtime: null
+    source_path: /Users/ashchenn/Documents/projects/agentcore_multitenancy/agentcore-and-multitenancy
     aws:
-      account: '345667997821'
-      ecr_auto_create: false
-      ecr_repository: 345667997821.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-healthcare-premium
-      execution_role: arn:aws:iam::345667997821:role/HealthcareStackInfra-RuntimeAgentCoreRole-V396McTDSliH
+      execution_role: arn:aws:iam::345667997821:role/|/app/healthcare/agentcore/runtime_iam_role|arn:aws:iam::345667997821:role/HealthcareStackInfra-RuntimeAgentCoreRole-V396McTDSliH|
       execution_role_auto_create: true
+      account: '345667997821'
+      region: us-east-1
+      ecr_repository: null
+      ecr_auto_create: false
+      s3_path: null
+      s3_auto_create: true
       network_configuration:
         network_mode: PUBLIC
-      observability:
-        enabled: true
+        network_mode_config: null
       protocol_configuration:
         server_protocol: HTTP
-      region: us-east-1
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
     bedrock_agentcore:
-      agent_arn: arn:aws:bedrock-agentcore:us-east-1:345667997821:runtime/healthcare-premium-AGENT_ID
-      agent_id: healthcare-premium-AGENT_ID
+      agent_id: null
+      agent_arn: null
       agent_session_id: null
     codebuild:
-      execution_role: arn:aws:iam::345667997821:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1
-      project_name: bedrock-agentcore-healthcare-premium-builder
-      source_bucket: bedrock-agentcore-codebuild-sources-345667997821-us-east-1
-    container_runtime: finch
-    entrypoint: main_premium.py
-    name: healthcare-premium
+      project_name: null
+      execution_role: null
+      source_bucket: null
+    memory:
+      mode: STM_ONLY
+      memory_id: null
+      memory_arn: null
+      memory_name: healthcare_premium_memory
+      event_expiry_days: 30
+      first_invoke_memory_check_done: false
+      was_created_by_toolkit: false
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
     oauth_configuration: null
-    platform: linux/arm64
-default_agent: healthcare-basic
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false

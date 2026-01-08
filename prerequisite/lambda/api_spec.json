@@ -11,15 +11,11 @@
                 },
                 "list_patients": {
                     "type": "boolean",
-                    "description": "If true, returns paginated list of all patients for the clinic instead of single patient lookup",
-                    "default": false
+                    "description": "If true, returns paginated list of all patients for the clinic instead of single patient lookup. Defaults to false if not provided"
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "Number of patients to return in list (default: 20, max: 100). Only used when list_patients=true",
-                    "minimum": 1,
-                    "maximum": 100,
-                    "default": 20
+                    "description": "Number of patients to return in list (defaults to 20 if not provided, maximum 100). Only used when list_patients=true"
                 },
                 "last_evaluated_key": {
                     "type": "object",

@@ -2,6 +2,7 @@
 from typing import List
 import os
 import sys
+import time
 import boto3
 import click
 
@@ -21,6 +22,47 @@ gateway_client = boto3.client(
     "bedrock-agentcore-control",
     region_name=REGION,
 )
+
+
+def wait_for_gateway_active(gateway_id: str, max_wait_seconds: int = 300) -> bool:
+    """Wait for gateway to become READY.
+    
+    Args:
+        gateway_id: The gateway ID to wait for
+        max_wait_seconds: Maximum time to wait in seconds (default: 300)
+        
+    Returns:
+        True if gateway became ready, False if timeout or error
+        
+    Valid gateway statuses: CREATING | UPDATING | UPDATE_UNSUCCESSFUL | DELETING | READY | FAILED
+    """
+    click.echo(f"⏳ Waiting for gateway {gateway_id} to become READY...")
+    start_time = time.time()
+    
+    while time.time() - start_time < max_wait_seconds:
+        try:
+            response = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
+            status = response.get("status")
+            
+            if status == "READY":
+                click.echo(f"✅ Gateway is now READY")
+                return True
+            elif status in ["FAILED", "UPDATE_UNSUCCESSFUL", "DELETING"]:
+                click.echo(f"❌ Gateway entered {status} state", err=True)
+                return False
+            elif status in ["CREATING", "UPDATING"]:
+                # Still in progress, wait a bit
+                time.sleep(5)
+            else:
+                click.echo(f"⚠️  Unknown gateway status: {status}", err=True)
+                time.sleep(5)
+            
+        except Exception as e:
+            click.echo(f"❌ Error checking gateway status: {str(e)}", err=True)
+            return False
+    
+    click.echo(f"❌ Timeout waiting for gateway to become READY", err=True)
+    return False
 
 
 def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> dict:
@@ -74,11 +116,16 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
             description=f"Healthcare Clinical Document Processing Gateway - {tier.title()} Tier",
         )
 
-        click.echo(f"✅ Gateway created: {create_response['gatewayId']}")
+        gateway_id = create_response["gatewayId"]
+        click.echo(f"✅ Gateway created: {gateway_id}")
+        
+        # Wait for gateway to become ACTIVE before creating target
+        if not wait_for_gateway_active(gateway_id):
+            click.echo(f"❌ Gateway did not become active, cannot create target", err=True)
+            sys.exit(1)
 
         # Create gateway target
         credential_config = [{"credentialProviderType": "GATEWAY_IAM_ROLE"}]
-        gateway_id = create_response["gatewayId"]
 
         create_target_response = gateway_client.create_gateway_target(
             gatewayIdentifier=gateway_id,

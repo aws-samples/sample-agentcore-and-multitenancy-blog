@@ -35,7 +35,7 @@ async def agent_task(user_message: str, session_id: str, actor_id: str, memory_s
                 logger.warning(f"⚠️  No memory session provided, creating fallback MemoryHook")
                 memory_hook = MemoryHook(
                     memory_client=memory_client,
-                    memory_id=get_ssm_parameter("/app/customersupport/agentcore/premium_memory_id"),
+                    memory_id=get_ssm_parameter("/app/healthcare/agentcore/premium_memory_id"),
                     actor_id=actor_id,
                     session_id=session_id,
                 )
@@ -58,7 +58,7 @@ async def agent_task(user_message: str, session_id: str, actor_id: str, memory_s
                 role=role,
                 s3_prefix=s3_prefix,
                 tools=[],  # Removed Google tools temporarily
-                guardrail_id=get_ssm_parameter("/app/customersupport/agentcore/basic_guardrail_id"),
+                guardrail_id=get_ssm_parameter("/app/healthcare/agentcore/basic_guardrail_id"),
             )
 
             CustomerSupportContext.set_agent_ctx(agent)

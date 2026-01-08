@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-NAMESPACE="/app/customersupport"
+NAMESPACE="/app/healthcare"
 REGION=$(aws configure get region)
 
 echo "🔍 Listing SSM parameters under namespace: $NAMESPACE/*"

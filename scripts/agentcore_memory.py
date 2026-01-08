@@ -47,7 +47,7 @@ def cli(ctx):
 
 @cli.command()
 @click.option(
-    "--name", default="healthcare-basic-memory", help="Name of the memory resource (e.g., healthcare-basic-memory)"
+    "--name", default="healthcare_basic_memory", help="Name of the memory resource (e.g., healthcare_basic_memory)"
 )
 @click.option(
     "--tier",
@@ -91,56 +91,50 @@ def create(name, tier, ssm_param, event_expiry_days):
     click.echo(f"⏱️  Event expiry: {event_expiry_days} days")
 
     # Tier-specific namespace templates for clinic and user isolation
+    # Note: Each strategy can only have ONE namespace
     if tier == "basic":
         strategies = [
             {
                 StrategyType.SEMANTIC.value: {
-                    "name": "clinical-facts",
+                    "name": "clinical_facts",
                     "description": "Clinical facts and patient information",
-                    "namespaces": [
-                        "clinic/{actorId}/facts/{sessionId}",
-                        "clinic/{actorId}/preferences"
-                    ],
+                    "namespaces": ["clinic/{actorId}/facts/{sessionId}"],
                 },
             },
             {
                 StrategyType.SUMMARY.value: {
-                    "name": "conversation-summary",
+                    "name": "conversation_summary",
                     "description": "Conversation summaries for clinical interactions",
                     "namespaces": ["clinic/{actorId}/summaries/{sessionId}"],
                 },
             },
         ]
-        description = "Memory for healthcare basic tier - clinical document processing"
+        description = "Memory for healthcare basic tier clinical document processing"
     else:  # premium
         strategies = [
             {
                 StrategyType.SEMANTIC.value: {
-                    "name": "clinical-insights",
+                    "name": "clinical_insights",
                     "description": "Advanced clinical insights and analytics",
-                    "namespaces": [
-                        "clinic/{actorId}/insights/{sessionId}",
-                        "clinic/{actorId}/preferences",
-                        "clinic/{actorId}/analytics"
-                    ],
+                    "namespaces": ["clinic/{actorId}/insights/{sessionId}"],
                 },
             },
             {
                 StrategyType.SUMMARY.value: {
-                    "name": "advanced-summary",
+                    "name": "advanced_summary",
                     "description": "Advanced conversation summaries with clinical context",
                     "namespaces": ["clinic/{actorId}/summaries/{sessionId}"],
                 },
             },
             {
                 StrategyType.USER_PREFERENCE.value: {
-                    "name": "user-preferences",
+                    "name": "user_preferences",
                     "description": "User preferences and clinical workflow settings",
                     "namespaces": ["clinic/{actorId}/preferences"],
                 },
             },
         ]
-        description = "Memory for healthcare premium tier - advanced clinical analytics"
+        description = "Memory for healthcare premium tier advanced clinical analytics"
 
     try:
         click.echo("🔄 Creating memory resource...")
@@ -201,13 +195,13 @@ def create_all():
     click.echo("Creating Basic Tier Memory")
     click.echo("="*60)
     ctx = click.get_current_context()
-    ctx.invoke(create, name="healthcare-basic-memory", tier="basic")
+    ctx.invoke(create, name="healthcare_basic_memory", tier="basic")
     
     # Create premium tier memory
     click.echo("\n" + "="*60)
     click.echo("Creating Premium Tier Memory")
     click.echo("="*60)
-    ctx.invoke(create, name="healthcare-premium-memory", tier="premium")
+    ctx.invoke(create, name="healthcare_premium_memory", tier="premium")
     
     click.echo("\n" + "="*60)
     click.echo("🎉 Both memory resources created successfully!")

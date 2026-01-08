@@ -101,103 +101,40 @@ def update_agent_config_files(config: Dict[str, Any]):
         premium_agent_file.write_text(content)
         print("✅ Updated premium agent configuration")
 
-def generate_agentcore_yaml(config: Dict[str, Any]):
-    """Generate .bedrock_agentcore.yaml with dynamic values"""
+def generate_agentcore_yaml(config: Dict[str, Any], deployment_type: str = "direct_code_deploy"):
+    """Generate .bedrock_agentcore.yaml with dynamic values
     
-    template = {
-        "default_agent": "healthcare-basic",
-        "agents": {
-            "healthcare-basic": {
-                "name": "healthcare-basic",
-                "entrypoint": "main.py",
-                "platform": "linux/arm64",
-                "container_runtime": "finch",
-                "aws": {
-                    "execution_role": config['iam']['execution_role'],
-                    "execution_role_auto_create": True,
-                    "account": config['aws']['account_id'],
-                    "region": config['aws']['region'],
-                    "ecr_repository": config['ecr']['basic_repository'],
-                    "ecr_auto_create": False,
-                    "network_configuration": {
-                        "network_mode": "PUBLIC"
-                    },
-                    "protocol_configuration": {
-                        "server_protocol": "HTTP"
-                    },
-                    "observability": {
-                        "enabled": True
-                    }
-                },
-                "bedrock_agentcore": {
-                    "agent_id": config['agents']['basic']['agent_id'],
-                    "agent_arn": config['agents']['basic']['agent_arn'],
-                    "agent_session_id": None
-                },
-                "codebuild": {
-                    "project_name": f"bedrock-agentcore-healthcare-basic-builder",
-                    "execution_role": config['iam']['codebuild_role'],
-                    "source_bucket": f"bedrock-agentcore-codebuild-sources-{config['aws']['account_id']}-{config['aws']['region']}"
-                },
-                "authorizer_configuration": {
-                    "customJWTAuthorizer": {
-                        "discoveryUrl": config['cognito']['discovery_url'],
-                        "allowedClients": [config['cognito']['client_id']]
-                    }
-                },
-                "oauth_configuration": None
-            },
-            "healthcare-premium": {
-                "name": "healthcare-premium",
-                "entrypoint": "main_premium.py",
-                "platform": "linux/arm64",
-                "container_runtime": "finch",
-                "aws": {
-                    "execution_role": config['iam']['execution_role'],
-                    "execution_role_auto_create": True,
-                    "account": config['aws']['account_id'],
-                    "region": config['aws']['region'],
-                    "ecr_repository": config['ecr']['premium_repository'],
-                    "ecr_auto_create": False,
-                    "network_configuration": {
-                        "network_mode": "PUBLIC"
-                    },
-                    "protocol_configuration": {
-                        "server_protocol": "HTTP"
-                    },
-                    "observability": {
-                        "enabled": True
-                    }
-                },
-                "bedrock_agentcore": {
-                    "agent_id": config['agents']['premium']['agent_id'],
-                    "agent_arn": config['agents']['premium']['agent_arn'],
-                    "agent_session_id": None
-                },
-                "codebuild": {
-                    "project_name": f"bedrock-agentcore-healthcare-premium-builder",
-                    "execution_role": config['iam']['codebuild_role'],
-                    "source_bucket": f"bedrock-agentcore-codebuild-sources-{config['aws']['account_id']}-{config['aws']['region']}"
-                },
-                "authorizer_configuration": {
-                    "customJWTAuthorizer": {
-                        "discoveryUrl": config['cognito']['discovery_url'],
-                        "allowedClients": [config['cognito']['client_id']]
-                    }
-                },
-                "oauth_configuration": None
-            }
-        }
-    }
+    Args:
+        config: Configuration dictionary
+        deployment_type: Either "direct_code_deploy" or "container" (default: direct_code_deploy)
     
-    with open('.bedrock_agentcore.yaml', 'w') as f:
-        yaml.dump(template, f, default_flow_style=False)
+    Note: This function is now DEPRECATED for agent configuration.
+    Use 'agentcore configure' CLI command instead, which will create the yaml file.
+    This function is kept only for reference and backward compatibility.
+    """
     
-    print("✅ Generated .bedrock_agentcore.yaml with account-specific values")
+    print(f"⚠️  Skipping .bedrock_agentcore.yaml generation")
+    print(f"   The 'agentcore configure' command will create this file with correct settings")
+    print(f"   Deployment type will be: {deployment_type}")
+    
+    # Don't generate the file - let agentcore configure do it
+    return
 
 def main():
     """Main configuration function"""
     print("🔧 Configuring deployment for your AWS account...")
+    
+    # Check for deployment type argument
+    deployment_type = "direct_code_deploy"  # Default to direct_code_deploy
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ["container", "direct_code_deploy"]:
+            deployment_type = sys.argv[1]
+        else:
+            print(f"⚠️ Invalid deployment type: {sys.argv[1]}")
+            print("Usage: python configure_deployment.py [container|direct_code_deploy]")
+            print("Defaulting to: direct_code_deploy")
+    
+    print(f"📦 Deployment Type: {deployment_type}")
     
     # Get AWS account information
     account_id = get_aws_account_id()
@@ -270,7 +207,7 @@ def main():
     
     # Update configuration files
     update_agent_config_files(config)
-    generate_agentcore_yaml(config)
+    generate_agentcore_yaml(config, deployment_type)
     
     print("✅ Configuration completed!")
     print("📁 Configuration saved to: config/deployment_config.json")
