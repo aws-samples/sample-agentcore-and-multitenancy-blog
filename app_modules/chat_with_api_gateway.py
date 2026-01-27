@@ -20,9 +20,8 @@ def remove_thinking_tags(text):
 
 
 class ChatManager:
-    def __init__(self, agent_name: str = "default", api_gateway_url: str = None):
+    def __init__(self, api_gateway_url: str = None):
         self.auth_url_matching = ".amazonaws.com/identities/oauth2/authorize"
-        self.agent_name = agent_name
         self.api_gateway_url = api_gateway_url or self._get_api_gateway_url()
         self._init_session_state()
 
@@ -35,11 +34,8 @@ class ChatManager:
         if "session_id" not in st.session_state:
             st.session_state["session_id"] = str(uuid.uuid4())
 
-        if "agent_arn" not in st.session_state:
-            runtime_config = read_config(".bedrock_agentcore.yaml")
-            st.session_state["agent_arn"] = runtime_config["agents"][self.agent_name][
-                "bedrock_agentcore"
-            ]["agent_arn"]
+        # Agent ARN will be set dynamically based on user tier
+        # Don't initialize it here anymore
 
         if "region" not in st.session_state:
             st.session_state["region"] = get_aws_region()
@@ -49,6 +45,22 @@ class ChatManager:
 
         if "pending_assistant" not in st.session_state:
             st.session_state["pending_assistant"] = False
+    
+    def set_agent_for_user(self, user_tier: str):
+        """Set the agent ARN based on user tier"""
+        runtime_config = read_config(".bedrock_agentcore.yaml")
+        
+        # Map tier to agent name
+        tier_to_agent = {
+            "basic": "healthcare_basic",
+            "premium": "healthcare_premium"
+        }
+        
+        agent_name = tier_to_agent.get(user_tier, "healthcare_basic")
+        
+        # Set agent ARN in session state
+        st.session_state["agent_arn"] = runtime_config["agents"][agent_name]["bedrock_agentcore"]["agent_arn"]
+        st.session_state["agent_name"] = agent_name
 
     def invoke_endpoint(
         self,

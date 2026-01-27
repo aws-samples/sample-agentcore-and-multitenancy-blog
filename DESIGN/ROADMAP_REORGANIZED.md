@@ -797,11 +797,29 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
   - [x] Integrate all new UI components
   - [x] Remove default conversation initialization (show suggestions instead)
 
+- [x] **Update Chat Manager** (`app_modules/chat_with_api_gateway.py`)
+  - [x] Remove hardcoded agent parameter
+  - [x] Implement dynamic agent selection based on user tier
+  - [x] Add `set_agent_for_user()` method for tier-based routing
+  - [x] Map basic tier → healthcare_basic agent
+  - [x] Map premium tier → healthcare_premium agent
+
+- [x] **Update Styling** (`app_modules/styles.py`)
+  - [x] Implement professional dark theme with healthcare colors
+  - [x] Fix text contrast issues (light text on dark backgrounds)
+  - [x] Add gradient chat bubbles with proper shadows
+  - [x] Style sidebar with matching dark theme
+  - [x] Update info boxes with dark backgrounds and light text
+  - [x] Add smooth animations and transitions
+  - [x] Improve button styling with hover effects
+
 **Deliverables**:
 - Healthcare-focused Streamlit UI ✅
 - Clinic-aware authentication and branding ✅
 - Tier-specific features and prompt suggestions ✅
 - Document scope indicators for data isolation ✅
+- Dynamic agent selection based on user tier ✅
+- Professional dark theme with excellent contrast ✅
 
 ---
 
