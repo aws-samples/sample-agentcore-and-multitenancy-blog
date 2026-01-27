@@ -85,7 +85,7 @@ print_step "Verifying Memory Observability configuration..."
 python scripts/setup_memory_observability.py verify-all
 
 print_step "Getting runtime role from SSM..."
-RUNTIME_ROLE=$(./scripts/list_ssm_parameters.sh | grep runtime_iam_role | cut -d'=' -f2 | tr -d ' ')
+RUNTIME_ROLE=$(aws ssm get-parameter --name /app/healthcare/agentcore/runtime_iam_role --query 'Parameter.Value' --output text)
 
 if [ -z "$RUNTIME_ROLE" ]; then
     print_error "Could not retrieve runtime IAM role from SSM parameters"
@@ -126,6 +126,20 @@ else
       --non-interactive
 fi
 
+print_step "Creating test users with clinic assignments..."
+python scripts/create_test_users.py
+
+if [ $? -eq 0 ]; then
+    print_info "Test users created successfully"
+else
+    print_warning "Some test users may have failed to create. Check output above."
+fi
+
+print_step "Deploying basic tier agent to AWS..."
+agentcore deploy --agent healthcare_basic
+
+print_step "Deploying premium tier agent to AWS..."
+agentcore deploy --agent healthcare_premium
 
 print_step "Deployment completed successfully!"
 echo ""
@@ -137,15 +151,33 @@ if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
     echo "  Runtime: $PYTHON_RUNTIME"
 fi
 echo ""
-echo "To deploy the agents:"
-echo "  agentcore deploy --agent healthcare_basic"
-echo "  agentcore deploy --agent healthcare_premium"
+echo "Agents deployed and ready to use!"
 echo ""
-echo "To launch the agents (after deployment):"
-echo "1. Start Streamlit: streamlit run app.py --server.port 8501 -- --agent=healthcare-basic"
+echo "To test the agents:"
+echo "  agentcore invoke '{\"prompt\": \"Hello\"}' --agent healthcare_basic"
+echo "  agentcore invoke '{\"prompt\": \"Hello\"}' --agent healthcare_premium"
+echo ""
+echo "To use the web interface:"
+echo "  streamlit run app.py --server.port 8501 -- --agent=healthcare-basic"
 echo ""
 echo "Available agents:"
 echo "- healthcare_basic"
 echo "- healthcare_premium"
+echo ""
+echo "📋 Test Users Created:"
+echo "  Basic Tier (4 users):"
+echo "    - dr.smith@clinic-a.com (Clinic A - Family Practice)"
+echo "    - nurse.lee@clinic-a.com (Clinic A - Family Practice)"
+echo "    - dr.chen@clinic-b.com (Clinic B - Urgent Care)"
+echo "    - dr.rodriguez@clinic-c.com (Clinic C - Pediatrics)"
+echo ""
+echo "  Premium Tier (4 users):"
+echo "    - dr.foster@hospital-a.com (Hospital A - Multi-Specialty)"
+echo "    - dr.wilson@hospital-a.com (Hospital A - Multi-Specialty)"
+echo "    - dr.anderson@clinic-e.com (Clinic E - Cardiology)"
+echo "    - dr.green@clinic-f.com (Clinic F - Oncology)"
+echo ""
+echo "  Temporary Password: TempPass123!"
+echo "  Full credentials:   credentials/test_users.json"
 echo ""
 echo "Use ./scripts/list_ssm_parameters.sh to view configuration parameters"

@@ -4,3 +4,6 @@ DESIGN/ROADMAP_KEY_CHANGE.md
 DESIGN/ROADMAP_UPDATES_SUMMARY.md
 DESIGN/ROADMAP_GAP_ANALYSIS.md
 .bedrock_agentcore.yaml
+# Credentials directory (contains test user passwords)
+credentials/
+.bedrock_agentcore/

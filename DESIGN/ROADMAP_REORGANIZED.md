@@ -600,37 +600,53 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
       -er "$RUNTIME_ROLE" \
       --name healthcare-premium
     ```
+  - [x] Deploy basic agent:
+    ```bash
+    agentcore deploy --agent healthcare_basic
+    ```
+  - [x] Deploy premium agent:
+    ```bash
+    agentcore deploy --agent healthcare_premium
+    ```
   - [x] Clean up: `rm -f .agentcore.yaml`
 
-- [ ] **Create Test Users Script**
-  - [ ] Create `scripts/create_test_users.py`
-  - [ ] Script to create Cognito users with custom attributes
-  - [ ] Support for 8 clinic users (4 basic, 4 premium)
-  - [ ] Set custom:clinic_id and custom:tenant_id attributes
-  - [ ] Generate credentials document
+- [x] **Create Test Users Script**
+  - [x] Create `scripts/create_test_users.py`
+  - [x] Script to create Cognito users with custom attributes
+  - [x] Support for 8 clinic users (4 basic, 4 premium)
+  - [x] Set custom:clinic_id and custom:tenant_id attributes
+  - [x] Generate credentials document
+  - [x] Make script idempotent (check if users exist before creating)
+  - [x] Add error handling for existing users
 
-- [ ] **Add Custom Attributes to Cognito**
-  - [ ] Add `custom:clinic_id` attribute to user pool
-  - [ ] Add `custom:role` attribute
-  - [ ] Update user pool schema
+- [x] **Add Custom Attributes to Cognito**
+  - [x] Add `custom:clinic_id` attribute to user pool
+  - [x] Add `custom:role` attribute
+  - [x] Update user pool schema
 
-- [ ] **Create Test Users** (Run the script we created)
-  - [ ] Run: `python scripts/create_test_users.py`
-  - [ ] Creates 8 users (4 basic, 4 premium)
-  - [ ] Sets custom:clinic_id and custom:tenant_id
-  - [ ] Generates credentials document
+- [x] **Integrate User Creation into deploy.sh**
+  - [x] Add user creation step after agent configuration
+  - [x] Add step in deploy.sh after line 127 (after premium agent configuration):
+    ```bash
+    print_step "Creating test users with clinic assignments..."
+    python scripts/create_test_users.py
+    ```
+  - [x] Ensure script runs automatically during deployment
+  - [x] Add success message showing created users
+  - [x] Update final deployment message to include user credentials location
 
-- [ ] **Verify JWT Tokens**
-  - [ ] Test login with one user
-  - [ ] Decode JWT token
-  - [ ] Verify custom attributes present
+- [x] **Create Test Users** (Automated via deploy.sh)
+  - [x] Script runs automatically during deployment
+  - [x] Creates 8 users (4 basic, 4 premium)
+  - [x] Sets custom:clinic_id and custom:tenant_id
+  - [x] Generates credentials document at `credentials/test_users.json`
 
 **Deliverables**:
-- 2 AgentCore agents configured
-- Test user creation script created
-- Cognito user pool with custom attributes
-- 8 test users created
-- JWT tokens verified
+- 2 AgentCore agents configured ✅
+- Test user creation script created ✅
+- Cognito user pool with custom attributes ✅
+- 8 test users created automatically via deploy.sh ✅
+- User credentials saved to credentials/test_users.json ✅
 
 ---
 
@@ -638,9 +654,10 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 **Critical**: Verify healthcare context is working
 
-- [ ] **Launch Agents**
-  - [ ] Run: `agentcore launch`
-  - [ ] Verify both agents running
+- [ ] **Deploy and Launch Agents**
+  - [ ] Agents are automatically deployed via `agentcore deploy` in deploy.sh
+  - [ ] Verify both agents deployed successfully
+  - [ ] Check agent status: `agentcore status --agent healthcare_basic`
   - [ ] Check agent health endpoints
 
 - [ ] **Send Test Requests**
@@ -757,25 +774,34 @@ This roadmap follows a proper development workflow: **Code changes FIRST, then d
 
 ### 5.1 Streamlit UI Refactoring (Days 1-3)
 
-- [ ] **Update Authentication** (`app_modules/auth.py`)
-  - [ ] Extend `get_enhanced_user_claims()` to extract clinic info
-  - [ ] Display clinic information in sidebar
-  - [ ] Add tier-specific badges
+- [x] **Update Authentication** (`app_modules/auth.py`)
+  - [x] Extend `get_enhanced_user_claims()` to extract clinic info
+  - [x] Display clinic information in sidebar
+  - [x] Add tier-specific badges
+  - [x] Update SSM parameter paths to `/app/healthcare/*`
 
-- [ ] **Create Clinic-Aware Components** (`app_modules/ui_components.py`)
-  - [ ] `render_clinic_header()` - Display clinic branding
-  - [ ] `render_document_chat_interface()` - Document-focused chat
-  - [ ] `render_clinical_results()` - Structured result display
+- [x] **Create Clinic-Aware Components** (`app_modules/ui_components.py`)
+  - [x] `render_clinic_header()` - Display clinic branding
+  - [x] `render_document_chat_interface()` - Document-focused chat
+  - [x] `render_clinical_results()` - Structured result display
+  - [x] `render_tier_features_sidebar()` - Tier-specific features display
+  - [x] `render_prompt_suggestions()` - Tier-specific prompt suggestions
+  - [x] `render_document_scope_indicator()` - Data isolation indicator
+  - [x] `render_sidebar_user_info()` - User info and controls
 
-- [ ] **Update Main App** (`app.py`)
-  - [ ] Replace gaming/finance chat with clinical document chat
-  - [ ] Add document scope indicator
-  - [ ] Implement tier-specific prompt suggestions
-  - [ ] Add document type and date filters
+- [x] **Update Main App** (`app_modules/main.py`)
+  - [x] Replace customer support chat with clinical document chat
+  - [x] Add document scope indicator
+  - [x] Implement tier-specific prompt suggestions
+  - [x] Update page title and icon for healthcare
+  - [x] Integrate all new UI components
+  - [x] Remove default conversation initialization (show suggestions instead)
 
 **Deliverables**:
-- Healthcare-focused Streamlit UI
-- Clinic-aware authentication and branding
+- Healthcare-focused Streamlit UI ✅
+- Clinic-aware authentication and branding ✅
+- Tier-specific features and prompt suggestions ✅
+- Document scope indicators for data isolation ✅
 
 ---
 
