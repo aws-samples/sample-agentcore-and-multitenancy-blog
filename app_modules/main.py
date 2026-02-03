@@ -86,7 +86,7 @@ def render_authenticated_interface(
             chat_manager.process_user_message(
                 suggested_prompt, 
                 auth_manager.get_user_claims(),  # Use original claims for backend
-                tokens["access_token"]
+                tokens["id_token"]  # Use ID token for JWT authorization (has 'aud' claim)
             )
             st.rerun()
     else:
@@ -98,7 +98,7 @@ def render_authenticated_interface(
         chat_manager.process_user_message(
             prompt, 
             auth_manager.get_user_claims(),  # Use original claims for backend
-            tokens["access_token"]
+            tokens["id_token"]  # Use ID token for JWT authorization (has 'aud' claim)
         )
 
 

@@ -19,7 +19,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         user_id = tenant_info['user_id']
         print(f"Tenant ID: {tenant_id}, Clinic ID: {clinic_id}, User ID: {user_id}")
         
-        # Get AgentCore endpoint details
+        # Get AgentCore endpoint details from path
+        proxy_path = event.get('pathParameters', {}).get('proxy', '')
         print(f"Proxy path (encoded): {proxy_path}")
         
         # URL decode the proxy path first
@@ -28,16 +29,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         # Extract agent_arn from proxy path (format: agent_arn/invocations)
         original_agent_arn = decoded_proxy_path.replace('/invocations', '')
-        print(f"Original Agent ARN: {original_agent_arn}")
+        print(f"Agent ARN from request: {original_agent_arn}")
         
-        # Route to appropriate agent based on tenant_id
-        if tenant_id == "premium":
-            # Replace with premium agent ARN
-            agent_arn = "arn:aws:bedrock-agentcore:us-east-1:962309198534:runtime/customersupport_premium-whZNC75vlw"
-            print(f"Routing premium tenant to: {agent_arn}")
-        else:
-            agent_arn = original_agent_arn
-            print(f"Routing basic tenant to: {agent_arn}")
+        # Use the agent ARN from the request path
+        # The UI/client is responsible for calling the correct agent based on tenant
+        agent_arn = original_agent_arn
         
         session_id = event['headers'].get('X-Amzn-Bedrock-AgentCore-Runtime-Session-Id')
         bearer_token = event['headers'].get('Authorization', '').replace('Bearer ', '')
@@ -89,11 +85,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
 
 def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
-    """Extract tenant information from request including clinic_id and user_id"""
-    # Option 1: From JWT claims
-    request_context = event.get('requestContext', {})
-    authorizer = request_context.get('authorizer', {})
-    claims = authorizer.get('claims', {})
+    """Extract tenant information from JWT token in Authorization header"""
+    import jwt
     
     tenant_info = {
         'tenant_id': 'basic',  # default tier
@@ -101,25 +94,41 @@ def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
         'user_id': 'demo-user'  # default user
     }
     
-    # Extract tenant_id (tier: basic/premium)
-    if 'custom:tenant_id' in claims:
-        tenant_info['tenant_id'] = claims['custom:tenant_id']
-    elif 'X-Tenant-ID' in event.get('headers', {}):
+    # Get Authorization header
+    auth_header = event.get('headers', {}).get('Authorization', '')
+    if not auth_header:
+        print("Warning: No Authorization header found, using defaults")
+        return tenant_info
+    
+    # Extract Bearer token
+    bearer_token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
+    
+    try:
+        # Decode JWT token without verification (already validated by AgentCore)
+        decoded = jwt.decode(bearer_token, options={"verify_signature": False})
+        
+        # Extract tenant_id (tier: basic/premium)
+        if 'custom:tenant_id' in decoded:
+            tenant_info['tenant_id'] = decoded['custom:tenant_id']
+        
+        # Extract clinic_id from JWT custom attribute
+        if 'custom:clinic_id' in decoded:
+            tenant_info['clinic_id'] = decoded['custom:clinic_id']
+        
+        # Extract user_id from cognito:username or sub
+        if 'cognito:username' in decoded:
+            tenant_info['user_id'] = decoded['cognito:username']
+        elif 'sub' in decoded:
+            tenant_info['user_id'] = decoded['sub']
+        
+        print(f"Extracted from JWT - tenant_id: {tenant_info['tenant_id']}, clinic_id: {tenant_info['clinic_id']}, user_id: {tenant_info['user_id']}")
+        
+    except Exception as e:
+        print(f"Warning: Could not decode JWT token: {e}, using defaults")
+    
+    # Fallback to headers if JWT decode failed
+    if tenant_info['tenant_id'] == 'basic' and 'X-Tenant-ID' in event.get('headers', {}):
         tenant_info['tenant_id'] = event['headers']['X-Tenant-ID']
-    
-    # Extract clinic_id from JWT custom attribute
-    if 'custom:clinic_id' in claims:
-        tenant_info['clinic_id'] = claims['custom:clinic_id']
-    elif 'X-Clinic-ID' in event.get('headers', {}):
-        tenant_info['clinic_id'] = event['headers']['X-Clinic-ID']
-    
-    # Extract user_id from cognito:username
-    if 'cognito:username' in claims:
-        username = claims['cognito:username']
-        # Extract user_id from username (handle email format)
-        tenant_info['user_id'] = username.split('@')[0] if '@' in username else username
-    elif 'X-User-ID' in event.get('headers', {}):
-        tenant_info['user_id'] = event['headers']['X-User-ID']
     
     return tenant_info
 

@@ -1,3 +1,12 @@
+import os
+import logging
+import asyncio
+
+# Set AWS region FIRST before any imports that use boto3
+if "AWS_REGION" not in os.environ:
+    os.environ["AWS_REGION"] = "us-east-1"
+
+# Now import modules that may use boto3
 from agent_config.context import CustomerSupportContext
 from agent_config.access_token import get_gateway_access_token
 from agent_config.agent_task import agent_task
@@ -6,16 +15,13 @@ from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from bedrock_agentcore.memory import MemorySessionManager
 from scripts.utils import get_ssm_parameter
 from opentelemetry import baggage, context
-import asyncio
-import logging
-import os
 
 # Environment flags
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
 
 os.environ["KNOWLEDGE_BASE_ID"] = get_ssm_parameter(
-    "/app/healthcare/knowledge_base/knowledge_base_id"
+    "/app/healthcare/knowledge_base/basic_kb_id"
 )
 
 # Logging setup

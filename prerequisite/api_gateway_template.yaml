@@ -199,6 +199,38 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref BasicUsagePlan
 
+  # SSM Parameters for API Keys
+  PremiumApiKeyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/premium_api_key
+      Type: String
+      Value: !Ref PremiumApiKey
+      Description: Premium tier API key for API Gateway
+      Tags:
+        Application: Healthcare
+
+  BasicApiKeyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/basic_api_key
+      Type: String
+      Value: !Ref BasicApiKey
+      Description: Basic tier API key for API Gateway
+      Tags:
+        Application: Healthcare
+
+  # SSM Parameter for API Gateway URL
+  ApiGatewayUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/api_gateway_url
+      Type: String
+      Value: !Sub 'https://${AgentCoreApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+      Description: API Gateway URL for healthcare AgentCore
+      Tags:
+        Application: Healthcare
+
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway endpoint URL

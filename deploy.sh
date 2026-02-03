@@ -94,35 +94,57 @@ fi
 
 print_info "Runtime IAM Role: $RUNTIME_ROLE"
 
-print_step "Configuring basic tier agent..."
+print_step "Getting Cognito configuration for JWT authorization..."
+COGNITO_DISCOVERY_URL=$(aws ssm get-parameter --name /app/healthcare/agentcore/cognito_discovery_url --query 'Parameter.Value' --output text)
+COGNITO_MACHINE_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/machine_client_id --query 'Parameter.Value' --output text)
+COGNITO_WEB_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/web_client_id --query 'Parameter.Value' --output text)
+
+if [ -z "$COGNITO_DISCOVERY_URL" ] || [ -z "$COGNITO_MACHINE_CLIENT_ID" ] || [ -z "$COGNITO_WEB_CLIENT_ID" ]; then
+    print_error "Could not retrieve Cognito configuration from SSM parameters"
+    exit 1
+fi
+
+print_info "Cognito Discovery URL: $COGNITO_DISCOVERY_URL"
+print_info "Cognito Machine Client ID: $COGNITO_MACHINE_CLIENT_ID"
+print_info "Cognito Web Client ID: $COGNITO_WEB_CLIENT_ID"
+
+# Build JWT authorizer configuration with both allowedClients (for access tokens) and allowedAudience (for ID tokens)
+# AUTHORIZER_CONFIG="{\"customJWTAuthorizer\":{\"discoveryUrl\":\"$COGNITO_DISCOVERY_URL\",\"allowedClients\":[\"$COGNITO_MACHINE_CLIENT_ID\",\"$COGNITO_WEB_CLIENT_ID\"],\"allowedAudience\":[\"$COGNITO_WEB_CLIENT_ID\"]}}"
+AUTHORIZER_CONFIG="{\"customJWTAuthorizer\":{\"discoveryUrl\":\"$COGNITO_DISCOVERY_URL\",\"allowedAudience\":[\"$COGNITO_WEB_CLIENT_ID\"]}}"
+
+print_step "Configuring basic tier agent with JWT authorization..."
 if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
     agentcore configure --entrypoint main.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare_basic \
       --deployment-type direct_code_deploy \
       --runtime "$PYTHON_RUNTIME" \
+      --authorizer-config "$AUTHORIZER_CONFIG" \
       --non-interactive
 else
     agentcore configure --entrypoint main.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare_basic \
       --deployment-type container \
+      --authorizer-config "$AUTHORIZER_CONFIG" \
       --non-interactive
 fi
 
-print_step "Configuring premium tier agent..."
+print_step "Configuring premium tier agent with JWT authorization..."
 if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
     agentcore configure --entrypoint main_premium.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare_premium \
       --deployment-type direct_code_deploy \
       --runtime "$PYTHON_RUNTIME" \
+      --authorizer-config "$AUTHORIZER_CONFIG" \
       --non-interactive
 else
     agentcore configure --entrypoint main_premium.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare_premium \
       --deployment-type container \
+      --authorizer-config "$AUTHORIZER_CONFIG" \
       --non-interactive
 fi
 
