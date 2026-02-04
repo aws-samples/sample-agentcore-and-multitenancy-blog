@@ -7,3 +7,31 @@ DESIGN/ROADMAP_GAP_ANALYSIS.md
 # Credentials directory (contains test user passwords)
 credentials/
 .bedrock_agentcore/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/

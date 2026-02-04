@@ -22,23 +22,28 @@ async def agent_task(user_message: str, session_id: str, actor_id: str, memory_s
         raise RuntimeError("Gateway Access token is none")
     try:
         if agent is None:
+            # TEMPORARILY DISABLED: Memory functionality commented out for testing
             # Use provided memory_session or create new MemoryHook
-            if memory_session:
-                logger.info(f"✅ Using provided memory session for actor_id={actor_id}")
-                memory_hook = MemoryHook(
-                    memory_client=memory_client,
-                    memory_id=CustomerSupportContext.get_memory_id_ctx() or get_ssm_parameter("/app/healthcare/memory/premium_id"),
-                    actor_id=actor_id,
-                    session_id=session_id,
-                )
-            else:
-                logger.warning(f"⚠️  No memory session provided, creating fallback MemoryHook")
-                memory_hook = MemoryHook(
-                    memory_client=memory_client,
-                    memory_id=get_ssm_parameter("/app/healthcare/agentcore/premium_memory_id"),
-                    actor_id=actor_id,
-                    session_id=session_id,
-                )
+            # if memory_session:
+            #     logger.info(f"✅ Using provided memory session for actor_id={actor_id}")
+            #     memory_hook = MemoryHook(
+            #         memory_client=memory_client,
+            #         memory_id=CustomerSupportContext.get_memory_id_ctx() or get_ssm_parameter("/app/healthcare/memory/premium_id"),
+            #         actor_id=actor_id,
+            #         session_id=session_id,
+            #     )
+            # else:
+            #     logger.warning(f"⚠️  No memory session provided, creating fallback MemoryHook")
+            #     memory_hook = MemoryHook(
+            #         memory_client=memory_client,
+            #         memory_id=get_ssm_parameter("/app/healthcare/memory/premium_id"),
+            #         actor_id=actor_id,
+            #         session_id=session_id,
+            #     )
+            
+            # Set memory_hook to None for testing
+            memory_hook = None
+            logger.warning(f"⚠️  Memory functionality disabled for testing - agent will run without memory")
 
             # Get tenant context for healthcare multi-tenancy
             tenant_id = CustomerSupportContext.get_tenant_id_ctx() or "premium"
@@ -58,7 +63,7 @@ async def agent_task(user_message: str, session_id: str, actor_id: str, memory_s
                 role=role,
                 s3_prefix=s3_prefix,
                 tools=[],  # Removed Google tools temporarily
-                guardrail_id=get_ssm_parameter("/app/healthcare/agentcore/basic_guardrail_id"),
+                # guardrail_id=get_ssm_parameter("/app/healthcare/agentcore/basic_guardrail_id"),  # Removed for now
             )
 
             CustomerSupportContext.set_agent_ctx(agent)

@@ -24,11 +24,25 @@ class CustomerSupport:
         s3_prefix: str = "premium-tier/demo-clinic/",
         guardrail_id: str = None,
     ):
-        # Map tenant to inference profile (will be updated by configure_deployment.py)
+        # Get inference profile ARNs from SSM parameters
+        # These are application-defined profiles created by scripts/create_inference_profiles.py
+        # for cost allocation and tier-specific tracking
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+            print(f"✅ Loaded inference profiles from SSM")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to system-defined profiles")
+            # Fallback to system-defined profiles if application profiles don't exist
+            basic_profile_arn = "us.amazon.nova-micro-v1:0"
+            premium_profile_arn = "us.amazon.nova-2-lite-v1:0"
+        
+        # Map tenant to inference profile
         inference_profile_mapping = {
-            "basic": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/BASIC_PROFILE_ID",
-            "premium": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/PREMIUM_PROFILE_ID",
-            "default": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/BASIC_PROFILE_ID"
+            "basic": basic_profile_arn,
+            "premium": premium_profile_arn,
+            "default": basic_profile_arn
         }
         
         # Use inference profile based on tenant, fallback to original model
@@ -115,7 +129,7 @@ Remember: You are serving {clinic_id} with premium-tier capabilities including w
 """
         )
 
-        gateway_url = get_ssm_parameter("/app/healthcare/agentcore/gateway_url")
+        gateway_url = get_ssm_parameter("/app/healthcare/agentcore/premium_gateway_url")
         print(f"Gateway Endpoint - MCP URL: {gateway_url}")
 
         try:
@@ -155,11 +169,14 @@ Remember: You are serving {clinic_id} with premium-tier capabilities including w
 
         self.memory_hook = memory_hook
 
+        # Build hooks list - only include memory_hook if it's not None
+        hooks = [self.memory_hook] if self.memory_hook else []
+
         self.agent = Agent(
             model=self.model,
             system_prompt=self.system_prompt,
             tools=self.tools,
-            hooks=[self.memory_hook],
+            hooks=hooks,
         )
 
     def _wrap_gateway_tools_with_tenant_id(self, gateway_tools, tenant_id):

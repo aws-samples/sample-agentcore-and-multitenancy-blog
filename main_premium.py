@@ -24,7 +24,6 @@ os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
 os.environ["KNOWLEDGE_BASE_ID"] = get_ssm_parameter(
     "/app/healthcare/knowledge_base/premium_kb_id"
 )
-
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,7 +33,7 @@ app = BedrockAgentCoreApp()
 
 
 @app.entrypoint
-async def invoke(payload, agentcore_context):
+async def invoke(payload, agentcore_context=None):
     # Initialize response queue if not set
     if not CustomerSupportContext.get_response_queue_ctx():
         CustomerSupportContext.set_response_queue_ctx(StreamingQueue())
@@ -53,7 +52,7 @@ async def invoke(payload, agentcore_context):
         # Construct hierarchical identifiers
         actor_id = f"{tier}-{clinic_id}-{user_id}"
         tenant_key = f"{tier}-{clinic_id}"
-        memory_id = 'healthcare-premium-memory'
+        memory_id = get_ssm_parameter("/app/healthcare/memory/premium_id")
         s3_prefix = f"{tier}-tier/{clinic_id}/"
         role = payload.get('role', 'user')
         
@@ -91,29 +90,53 @@ async def invoke(payload, agentcore_context):
     memory_id = CustomerSupportContext.get_memory_id_ctx()
     actor_id = CustomerSupportContext.get_actor_id_ctx()
     
-    logger.info(f"💾 Initializing Memory Session Manager: memory_id={memory_id}, actor_id={actor_id}")
+    logger.info(f"💾 Memory functionality temporarily disabled for testing")
     
-    try:
-        memory_manager = MemorySessionManager(
-            memory_id=memory_id,
-            region_name=os.environ.get('AWS_REGION', 'us-east-1')
-        )
-        
-        # Create memory session with user-specific actor_id for complete isolation
+    # TEMPORARILY DISABLED: Memory initialization commented out for testing
+    # try:
+    #     memory_manager = MemorySessionManager(
+    #         memory_id=memory_id,
+    #         region_name=os.environ.get('AWS_REGION', 'us-east-1')
+    #     )
+    #     
+    #     # Create memory session with user-specific actor_id for complete isolation
+    #     # Handle case where agentcore_context might be None
+    #     if agentcore_context and hasattr(agentcore_context, 'session_id'):
+    #         session_id = agentcore_context.session_id
+    #     else:
+    #         # Generate a session ID if context is not available
+    #         import uuid
+    #         session_id = str(uuid.uuid4())
+    #         logger.warning(f"⚠️ No agentcore_context provided, generated session_id: {session_id}")
+    #     
+    #     if not session_id:
+    #         raise Exception("Context session_id is not set")
+    #     
+    #     memory_session = memory_manager.create_memory_session(
+    #         actor_id=actor_id,
+    #         session_id=session_id
+    #     )
+    #     logger.info(f"✅ Memory session created: session_id={session_id}, actor_id={actor_id}")
+    #     
+    # except Exception as e:
+    #     logger.error(f"❌ Failed to initialize memory session: {e}")
+    #     # Continue without memory if initialization fails
+    #     memory_session = None
+    #     # Still need session_id for agent_task
+    #     if agentcore_context and hasattr(agentcore_context, 'session_id'):
+    #         session_id = agentcore_context.session_id
+    #     else:
+    #         import uuid
+    #         session_id = str(uuid.uuid4())
+    
+    # Set memory_session to None and generate session_id
+    memory_session = None
+    if agentcore_context and hasattr(agentcore_context, 'session_id'):
         session_id = agentcore_context.session_id
-        if not session_id:
-            raise Exception("Context session_id is not set")
-        
-        memory_session = memory_manager.create_memory_session(
-            actor_id=actor_id,
-            session_id=session_id
-        )
-        logger.info(f"✅ Memory session created: session_id={session_id}, actor_id={actor_id}")
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to initialize memory session: {e}")
-        # Continue without memory if initialization fails
-        memory_session = None
+    else:
+        import uuid
+        session_id = str(uuid.uuid4())
+        logger.warning(f"⚠️ No agentcore_context provided, generated session_id: {session_id}")
 
     # Extract user message
     user_message = payload["prompt"]

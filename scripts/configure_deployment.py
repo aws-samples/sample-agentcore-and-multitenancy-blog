@@ -40,7 +40,8 @@ def load_ssm_parameters() -> Dict[str, str]:
         paginator = ssm.get_paginator('get_parameters_by_path')
         for page in paginator.paginate(Path='/app/healthcare', Recursive=True):
             for param in page['Parameters']:
-                key = param['Name'].split('/')[-1]  # Get the last part of the path
+                # Use full path as key for nested parameters like inference_profiles/basic_arn
+                key = param['Name'].replace('/app/healthcare/', '')
                 parameters[key] = param['Value']
     except Exception as e:
         print(f"⚠️ Warning: Could not load SSM parameters: {e}")
@@ -55,22 +56,31 @@ def update_agent_config_files(config: Dict[str, Any]):
     if basic_agent_file.exists():
         content = basic_agent_file.read_text()
         
-        # Use regex to replace any inference profile ARNs (works regardless of account ID)
-        # Pattern matches: "basic": "arn:aws:bedrock:REGION:ACCOUNT:application-inference-profile/ID"
+        # Replace the entire inference_profile_mapping dictionary with SSM-based loading
+        # This ensures the agent loads profiles dynamically from SSM at runtime
+        mapping_replacement = '''        # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+        # Map tenant to inference profile
+        inference_profile_mapping = {
+            "basic": basic_profile_arn,
+            "premium": premium_profile_arn,
+            "default": basic_profile_arn
+        }'''
+        
+        # Replace any hardcoded inference profile mappings
         content = re.sub(
-            r'"basic":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"basic": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"premium":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"premium": "{config["inference_profiles"]["premium"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"default":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"default": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
+            r'# Map tenant to inference profile.*?\n.*?inference_profile_mapping = \{[^}]+\}',
+            mapping_replacement,
+            content,
+            flags=re.DOTALL
         )
         
         basic_agent_file.write_text(content)
@@ -81,21 +91,30 @@ def update_agent_config_files(config: Dict[str, Any]):
     if premium_agent_file.exists():
         content = premium_agent_file.read_text()
         
-        # Use regex to replace any inference profile ARNs
+        # Replace the entire inference_profile_mapping dictionary with SSM-based loading
+        mapping_replacement = '''        # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+        # Map tenant to inference profile
+        inference_profile_mapping = {
+            "basic": basic_profile_arn,
+            "premium": premium_profile_arn,
+            "default": basic_profile_arn
+        }'''
+        
+        # Replace any hardcoded inference profile mappings
         content = re.sub(
-            r'"basic":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"basic": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"premium":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"premium": "{config["inference_profiles"]["premium"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"default":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"default": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
+            r'# Map tenant to inference profile.*?\n.*?inference_profile_mapping = \{[^}]+\}',
+            mapping_replacement,
+            content,
+            flags=re.DOTALL
         )
         
         premium_agent_file.write_text(content)
@@ -154,11 +173,11 @@ def main():
         },
         "inference_profiles": {
             "basic": {
-                "arn": ssm_params.get('basic_inference_profile_arn', 
+                "arn": ssm_params.get('inference_profiles/basic_arn', 
                       f"arn:aws:bedrock:{region}:{account_id}:application-inference-profile/BASIC_PROFILE_ID")
             },
             "premium": {
-                "arn": ssm_params.get('premium_inference_profile_arn',
+                "arn": ssm_params.get('inference_profiles/premium_arn',
                       f"arn:aws:bedrock:{region}:{account_id}:application-inference-profile/PREMIUM_PROFILE_ID")
             }
         },

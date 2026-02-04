@@ -33,7 +33,7 @@ app = BedrockAgentCoreApp()
 
 
 @app.entrypoint
-async def invoke(payload, agentcore_context):
+async def invoke(payload, agentcore_context=None):
     # Initialize response queue if not set
     if not CustomerSupportContext.get_response_queue_ctx():
         CustomerSupportContext.set_response_queue_ctx(StreamingQueue())
@@ -51,7 +51,7 @@ async def invoke(payload, agentcore_context):
         # Construct hierarchical identifiers
         actor_id = f"{tier}-{clinic_id}-{user_id}"
         tenant_key = f"{tier}-{clinic_id}"
-        memory_id = f"healthcare-{tier}-memory"
+        memory_id = get_ssm_parameter(f"/app/healthcare/memory/{tier}_id")
         s3_prefix = f"{tier}-tier/{clinic_id}/"
         role = payload.get('role', 'user')
         
@@ -98,7 +98,15 @@ async def invoke(payload, agentcore_context):
         )
         
         # Create memory session with user-specific actor_id for complete isolation
-        session_id = agentcore_context.session_id
+        # Handle case where agentcore_context might be None
+        if agentcore_context and hasattr(agentcore_context, 'session_id'):
+            session_id = agentcore_context.session_id
+        else:
+            # Generate a session ID if context is not available
+            import uuid
+            session_id = str(uuid.uuid4())
+            logger.warning(f"⚠️ No agentcore_context provided, generated session_id: {session_id}")
+        
         if not session_id:
             raise Exception("Context session_id is not set")
         
@@ -112,6 +120,12 @@ async def invoke(payload, agentcore_context):
         logger.error(f"❌ Failed to initialize memory session: {e}")
         # Continue without memory if initialization fails
         memory_session = None
+        # Still need session_id for agent_task
+        if agentcore_context and hasattr(agentcore_context, 'session_id'):
+            session_id = agentcore_context.session_id
+        else:
+            import uuid
+            session_id = str(uuid.uuid4())
 
     # Extract user message
     user_message = payload["prompt"]
