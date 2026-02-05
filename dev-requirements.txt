@@ -2,47 +2,47 @@
 # Generated from pyproject.toml dependencies
 
 # Core AgentCore dependencies
-bedrock-agentcore>=0.1.0
-bedrock-agentcore-starter-toolkit>=0.1.0
+bedrock-agentcore>=1.2.1
+bedrock-agentcore-starter-toolkit>=0.2.10
 
 # AWS SDK
-boto3>=1.39.7
-botocore>=1.39.7
+boto3>=1.42.42
+botocore>=1.42.42
 
 # CLI and utilities
-click>=8.2.1
+click>=8.3.1
 
 # Google APIs
-google-api-python-client>=2.176.0
-google-auth>=2.40.3
+google-api-python-client>=2.189.0
+google-auth>=2.48.0
 
 # Search and database
-opensearch-py>=3.0.0
+opensearch-py>=3.1.0
 
 # Data processing
-pandas>=2.3.1
+pandas>=2.3.3,<3.0.0
 
 # Configuration and serialization
-pyyaml>=6.0.2
+pyyaml>=6.0.3
 
 # AWS authentication
 requests-aws4auth>=1.3.1
 
 # Utilities
-retrying>=1.4.0
+retrying>=1.4.2
 
 # AI agents and tools
-strands-agents>=1.0.0
-strands-agents-tools>=0.2.0
+strands-agents>=1.24.0
+strands-agents-tools>=0.2.19
 
 # Web interface
-streamlit>=1.47.0
+streamlit>=1.54.0
 streamlit-cookies-controller>=0.0.4
 
 # Additional development dependencies
-pytest>=7.0.0
-pytest-cov>=4.0.0
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.0.0
-pre-commit>=3.0.0
+pytest>=9.0.2
+pytest-cov>=7.0.0
+black>=26.1.0
+flake8>=7.3.0
+mypy>=1.19.1
+pre-commit>=4.5.1

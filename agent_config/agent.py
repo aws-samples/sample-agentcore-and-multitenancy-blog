@@ -2,7 +2,7 @@ from .utils import get_ssm_parameter
 from agent_config.memory_hook_provider import MemoryHook
 from agent_config.tools.retrieve_clinic_documents import retrieve_clinic_documents  # Import custom tool
 from mcp.client.streamable_http import streamablehttp_client
-from strands import Agent
+from strands import Agent, tool
 from strands_tools import current_time  # Keep current_time
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
@@ -122,18 +122,31 @@ Remember: You are serving {clinic_id} only. All data access is automatically res
         except Exception as e:
             raise f"Error initializing agent: {str(e)}"
 
-        # Create wrapper for retrieve_clinic_documents with clinic_id pre-filled
-        def retrieve_with_clinic(query: str, max_results: int = 5) -> str:
-            """Wrapper that automatically provides clinic_id"""
-            return retrieve_clinic_documents(query, clinic_id, max_results)
+        # Create wrapper tool using class-based approach (Strands best practice)
+        # This properly registers the tool with the framework
+        clinic_id_captured = clinic_id  # Capture for closure
         
-        # Copy tool metadata
-        retrieve_with_clinic.__name__ = 'retrieve_clinic_documents'
-        retrieve_with_clinic.__doc__ = retrieve_clinic_documents.__doc__
+        @tool(
+            name="retrieve_clinic_documents",
+            description="Handle document-based, narrative, and conceptual queries using the unstructured knowledge base."
+        )
+        def retrieve_with_clinic(query: str, max_results: int = 5) -> str:
+            """
+            Search knowledge base for medical information and clinical documents.
+            
+            Args:
+                query: A question about clinical documents, patient information, medical procedures,
+                       or requiring document comprehension and qualitative analysis
+                max_results: Number of results to return (default: 5)
+            
+            Returns:
+                Formatted string response from the knowledge base
+            """
+            return retrieve_clinic_documents(query, clinic_id_captured, max_results)
 
         self.tools = (
             [
-                retrieve_with_clinic,  # Custom tool with clinic_id pre-filled
+                retrieve_with_clinic,  # Properly decorated tool with clinic_id pre-filled
                 current_time,
             ]
             + self.gateway_client.list_tools_sync()  # Use tools directly
