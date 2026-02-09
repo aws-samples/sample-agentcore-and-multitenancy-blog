@@ -167,7 +167,7 @@ Remember: You are serving {clinic_id} with premium-tier capabilities including w
                 retrieve_with_clinic,  # Properly decorated tool with clinic_id pre-filled
                 current_time,
             ]
-            + self.gateway_client.list_tools_sync()  # Use tools directly
+            + self.gateway_client.list_tools_sync()  # MCP tools with header propagation
             + tools
         )
 
@@ -182,29 +182,6 @@ Remember: You are serving {clinic_id} with premium-tier capabilities including w
             tools=self.tools,
             hooks=hooks,
         )
-
-    def _wrap_gateway_tools_with_tenant_id(self, gateway_tools, tenant_id):
-        """Wrap gateway tools to automatically include tenant_id in calls"""
-        wrapped_tools = []
-        
-        for tool in gateway_tools:
-            def create_wrapper(original_tool, tid):
-                def wrapper(*args, **kwargs):
-                    # Add tenant_id to kwargs
-                    kwargs['tenant_id'] = tid
-                    return original_tool(*args, **kwargs)
-                
-                # Copy tool attributes safely
-                wrapper.__name__ = getattr(original_tool, '__name__', getattr(original_tool, 'name', 'gateway_tool'))
-                wrapper.__doc__ = getattr(original_tool, '__doc__', None)
-                if hasattr(original_tool, 'input_schema'):
-                    wrapper.input_schema = original_tool.input_schema
-                
-                return wrapper
-            
-            wrapped_tools.append(create_wrapper(tool, tenant_id))
-        
-        return wrapped_tools
 
     def invoke(self, user_query: str):
         try:

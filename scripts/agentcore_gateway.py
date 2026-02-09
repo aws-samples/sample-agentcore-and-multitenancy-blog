@@ -124,8 +124,17 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
             click.echo(f"❌ Gateway did not become active, cannot create target", err=True)
             sys.exit(1)
 
-        # Create gateway target
+        # Create gateway target with header propagation
         credential_config = [{"credentialProviderType": "GATEWAY_IAM_ROLE"}]
+        
+        # Configure header propagation for tenant context
+        metadata_config = {
+            "allowedRequestHeaders": [
+                "X-Tenant-ID",
+                "X-Clinic-ID", 
+                "X-S3-Prefix"
+            ]
+        }
 
         create_target_response = gateway_client.create_gateway_target(
             gatewayIdentifier=gateway_id,
@@ -133,9 +142,11 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
             description=f"Healthcare Lambda Target - {tier.title()} Tier",
             targetConfiguration=lambda_target_config,
             credentialProviderConfigurations=credential_config,
+            metadataConfiguration=metadata_config,
         )
 
         click.echo(f"✅ Gateway target created: {create_target_response['targetId']}")
+        click.echo(f"✅ Header propagation enabled: X-Tenant-ID, X-Clinic-ID, X-S3-Prefix")
 
         gateway = {
             "id": gateway_id,

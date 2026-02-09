@@ -10,8 +10,16 @@ Data Source: Synthetic patient data generated from DESIGN/clinic-profiles.md
 import json
 import boto3
 import os
+from decimal import Decimal
 from typing import Dict, List, Optional
 from datetime import datetime
+
+
+def decimal_default(obj):
+    """JSON serializer for DynamoDB Decimal types"""
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 # Initialize DynamoDB client
 dynamodb = boto3.resource('dynamodb')
@@ -52,53 +60,78 @@ def lambda_handler(event, context):
     - List of patients with pagination info
     """
     try:
+        print(f"📋 [patient_context] Received event: {json.dumps(event, indent=2, default=str)}")
+        
         # Extract tenant context
         tenant_info = extract_tenant_info(event)
         clinic_id = tenant_info['clinic_id']
+        print(f"🏥 [patient_context] Tenant info: {json.dumps(tenant_info)}")
+        print(f"🏥 [patient_context] Using clinic_id: {clinic_id}")
         
-        # Parse request parameters
+        # Parse request parameters - check top-level event keys first (AgentCore sends params as top-level keys)
+        patient_id = event.get('patient_id')
+        list_patients = event.get('list_patients')
+        
+        # Fallback to body if not found at top level
         body = event.get('body', {})
         if isinstance(body, str):
             body = json.loads(body) if body else {}
         
+        if patient_id is None:
+            patient_id = body.get('patient_id')
+        if list_patients is None:
+            list_patients = body.get('list_patients')
+        
+        print(f"🔍 [patient_context] Parameters - patient_id: {patient_id}, list_patients: {list_patients}")
+        
         # Check if this is a list request
-        if body.get('list_patients'):
-            return handle_list_patients(clinic_id, body)
+        if list_patients:
+            print(f"📋 [patient_context] Handling list_patients request for clinic: {clinic_id}")
+            return handle_list_patients(clinic_id, {**body, **{k: v for k, v in event.items() if k not in ('headers', 'body')}})
         
         # Single patient lookup
-        patient_id = body.get('patient_id')
         if not patient_id:
+            print(f"⚠️ [patient_context] No patient_id provided")
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'patient_id is required'})
             }
         
         # Retrieve patient metadata
+        print(f"🔍 [patient_context] Looking up patient: {patient_id} in table: {table_name}")
         response = table.get_item(Key={'patient_id': patient_id})
         patient = response.get('Item')
         
         if not patient:
+            print(f"❌ [patient_context] Patient {patient_id} not found")
             return {
                 'statusCode': 404,
                 'body': json.dumps({'error': 'Patient not found'})
             }
         
+        print(f"✅ [patient_context] Found patient {patient_id}, clinic: {patient.get('clinic_id')}")
+        
         # Verify patient belongs to requesting clinic (application-level isolation)
         if patient.get('clinic_id') != clinic_id:
+            print(f"🚫 [patient_context] Access denied - patient clinic: {patient.get('clinic_id')}, requesting clinic: {clinic_id}")
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'Access denied to this patient record'})
             }
         
-        return {
+        result = {
             'statusCode': 200,
             'body': json.dumps({
                 'patient': format_patient_metadata(patient)
-            })
+            }, default=decimal_default)
         }
+        print(f"✅ [patient_context] Returning patient data for {patient_id}")
+        return result
     
     except Exception as e:
-        print(f"Error in patient_context: {str(e)}")
+        print(f"❌ [patient_context] Error: {str(e)}")
+        import traceback
+        print(f"❌ [patient_context] Traceback: {traceback.format_exc()}")
         return {
             'statusCode': 500,
             'body': json.dumps({'error': f'Internal server error: {str(e)}'})
@@ -140,7 +173,7 @@ def handle_list_patients(clinic_id: str, params: Dict) -> Dict:
         
         return {
             'statusCode': 200,
-            'body': json.dumps(result)
+            'body': json.dumps(result, default=decimal_default)
         }
     
     except Exception as e:
