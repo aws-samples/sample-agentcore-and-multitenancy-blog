@@ -1,0 +1,7 @@
+{
+  "metadataAttributes": {
+    "clinic_id": "clinic-a",
+    "tier": "basic-tier",
+    "document_type": "prescriptions"
+  }
+}
