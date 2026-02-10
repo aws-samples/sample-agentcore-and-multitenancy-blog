@@ -35,10 +35,42 @@ print_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
 
+# --- Pre-flight checks ---
+
+# Detect Python command (python3 preferred, fallback to python)
+if command -v python3 &>/dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &>/dev/null; then
+    PYTHON_CMD="python"
+else
+    print_error "Python is not installed. Please install Python 3.9+ and try again."
+    exit 1
+fi
+
+PYTHON_VERSION=$($PYTHON_CMD -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+print_info "Using Python: $PYTHON_CMD (version $PYTHON_VERSION)"
+
+# Verify AWS credentials are configured
+if ! aws sts get-caller-identity &>/dev/null; then
+    print_error "AWS credentials are not configured or have expired."
+    print_info "Please set your AWS profile before running this script:"
+    print_info "  export AWS_PROFILE=<your-profile-name>"
+    print_info "Or configure credentials via: aws configure"
+    exit 1
+fi
+
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
+AWS_IDENTITY=$(aws sts get-caller-identity --query 'Arn' --output text)
+print_info "AWS Account: $AWS_ACCOUNT_ID"
+print_info "AWS Identity: $AWS_IDENTITY"
+if [ -n "$AWS_PROFILE" ]; then
+    print_info "AWS Profile: $AWS_PROFILE"
+fi
+
 # Check if virtual environment exists
 if [ ! -d ".venv" ]; then
     print_step "Creating Python virtual environment..."
-    python -m venv .venv
+    $PYTHON_CMD -m venv .venv
 fi
 
 print_step "Activating virtual environment and installing dependencies..."

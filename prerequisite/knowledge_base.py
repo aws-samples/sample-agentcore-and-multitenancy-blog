@@ -184,7 +184,8 @@ class KnowledgeBasesForAmazonBedrock:
                 s3_policy_name,
                 kb_execution_role_name,
             )
-            print(time.sleep(10))
+            print("Waiting for IAM policies to propagate...")
+            time.sleep(10)
             print(
                 "========================================================================================"
             )
@@ -203,6 +204,8 @@ class KnowledgeBasesForAmazonBedrock:
                 "========================================================================================"
             )
             print("Step 5 - Creating Knowledge Base")
+            print("Waiting for S3 Vectors policy to propagate...")
+            time.sleep(30)
             knowledge_base, data_source = self.create_knowledge_base(
                 vector_bucket_arn,
                 index_arn,
