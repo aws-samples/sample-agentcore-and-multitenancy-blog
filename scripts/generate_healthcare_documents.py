@@ -75,14 +75,16 @@ PREMIUM_CLINICS = {
 }
 
 def check_documents_exist():
-    """Check if healthcare documents already exist"""
+    """Check if healthcare documents and their metadata sidecar files already exist"""
     basic_path = Path('prerequisite/basic-documents')
     premium_path = Path('prerequisite/premium-documents')
     
-    basic_exists = basic_path.exists() and any(basic_path.rglob('*.txt'))
-    premium_exists = premium_path.exists() and any(premium_path.rglob('*.txt'))
+    basic_has_docs = basic_path.exists() and any(basic_path.rglob('*.txt'))
+    premium_has_docs = premium_path.exists() and any(premium_path.rglob('*.txt'))
+    basic_has_metadata = basic_path.exists() and any(basic_path.rglob('*.metadata.json'))
+    premium_has_metadata = premium_path.exists() and any(premium_path.rglob('*.metadata.json'))
     
-    return basic_exists and premium_exists
+    return basic_has_docs and premium_has_docs and basic_has_metadata and premium_has_metadata
 
 def generate_clinical_document(document_type, clinic_specialty, clinic_id, bedrock_client):
     """Generate a synthetic clinical document using Claude Sonnet 4.5"""
@@ -195,7 +197,11 @@ def generate_documents_for_clinic(clinic_id, tier, specialty, document_types, co
     return documents
 
 def save_documents_locally(documents, base_path):
-    """Save generated documents to local filesystem"""
+    """Save generated documents and Bedrock KB metadata sidecar files to local filesystem.
+    
+    Each .txt document gets a companion .txt.metadata.json file that Bedrock Knowledge Base
+    uses during ingestion to index filterable metadata attributes (clinic_id, tier, document_type).
+    """
     
     for doc in documents:
         doc_dir = Path(base_path) / doc['tier'] / doc['clinic_id'] / doc['document_type']
@@ -204,6 +210,18 @@ def save_documents_locally(documents, base_path):
         doc_path = doc_dir / doc['filename']
         with open(doc_path, 'w') as f:
             f.write(doc['content'])
+        
+        # Create Bedrock KB metadata sidecar file
+        metadata_path = doc_dir / f"{doc['filename']}.metadata.json"
+        metadata = {
+            "metadataAttributes": {
+                "clinic_id": doc['clinic_id'],
+                "tier": doc['tier'],
+                "document_type": doc['document_type']
+            }
+        }
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
 
 def main():
     print("🏥 Healthcare Document Generation")

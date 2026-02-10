@@ -89,54 +89,49 @@ async def invoke(payload, agentcore_context=None):
     # Initialize Memory Session Manager with tier-specific memory (premium)
     memory_id = CustomerSupportContext.get_memory_id_ctx()
     actor_id = CustomerSupportContext.get_actor_id_ctx()
+    region = os.environ.get('AWS_REGION', 'us-east-1')
     
-    logger.info(f"💾 Memory functionality temporarily disabled for testing")
+    logger.info(f"💾 Initializing Premium Memory Session Manager:")
+    logger.info(f"   memory_id={memory_id}")
+    logger.info(f"   actor_id={actor_id}")
+    logger.info(f"   region={region}")
+    logger.info(f"   memory_id type={type(memory_id).__name__}, length={len(memory_id) if memory_id else 0}")
     
-    # TEMPORARILY DISABLED: Memory initialization commented out for testing
-    # try:
-    #     memory_manager = MemorySessionManager(
-    #         memory_id=memory_id,
-    #         region_name=os.environ.get('AWS_REGION', 'us-east-1')
-    #     )
-    #     
-    #     # Create memory session with user-specific actor_id for complete isolation
-    #     # Handle case where agentcore_context might be None
-    #     if agentcore_context and hasattr(agentcore_context, 'session_id'):
-    #         session_id = agentcore_context.session_id
-    #     else:
-    #         # Generate a session ID if context is not available
-    #         import uuid
-    #         session_id = str(uuid.uuid4())
-    #         logger.warning(f"⚠️ No agentcore_context provided, generated session_id: {session_id}")
-    #     
-    #     if not session_id:
-    #         raise Exception("Context session_id is not set")
-    #     
-    #     memory_session = memory_manager.create_memory_session(
-    #         actor_id=actor_id,
-    #         session_id=session_id
-    #     )
-    #     logger.info(f"✅ Memory session created: session_id={session_id}, actor_id={actor_id}")
-    #     
-    # except Exception as e:
-    #     logger.error(f"❌ Failed to initialize memory session: {e}")
-    #     # Continue without memory if initialization fails
-    #     memory_session = None
-    #     # Still need session_id for agent_task
-    #     if agentcore_context and hasattr(agentcore_context, 'session_id'):
-    #         session_id = agentcore_context.session_id
-    #     else:
-    #         import uuid
-    #         session_id = str(uuid.uuid4())
-    
-    # Set memory_session to None and generate session_id
-    memory_session = None
-    if agentcore_context and hasattr(agentcore_context, 'session_id'):
-        session_id = agentcore_context.session_id
-    else:
-        import uuid
-        session_id = str(uuid.uuid4())
-        logger.warning(f"⚠️ No agentcore_context provided, generated session_id: {session_id}")
+    try:
+        memory_manager = MemorySessionManager(
+            memory_id=memory_id,
+            region_name=region
+        )
+        logger.info(f"✅ MemorySessionManager created successfully")
+        
+        # Create memory session with user-specific actor_id for complete isolation
+        if agentcore_context and hasattr(agentcore_context, 'session_id'):
+            session_id = agentcore_context.session_id
+            logger.info(f"   session_id from agentcore_context: {session_id}")
+        else:
+            import uuid
+            session_id = str(uuid.uuid4())
+            logger.warning(f"⚠️ No agentcore_context provided, generated session_id: {session_id}")
+        
+        if not session_id:
+            raise Exception("Context session_id is not set")
+        
+        memory_session = memory_manager.create_memory_session(
+            actor_id=actor_id,
+            session_id=session_id
+        )
+        logger.info(f"✅ Premium memory session created: session_id={session_id}, actor_id={actor_id}, memory_id={memory_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize premium memory session: {e}", exc_info=True)
+        logger.error(f"   Failing memory_id={memory_id}, actor_id={actor_id}")
+        # Continue without memory — agent will run without conversation history
+        memory_session = None
+        if agentcore_context and hasattr(agentcore_context, 'session_id'):
+            session_id = agentcore_context.session_id
+        else:
+            import uuid
+            session_id = str(uuid.uuid4())
 
     # Extract user message
     user_message = payload["prompt"]

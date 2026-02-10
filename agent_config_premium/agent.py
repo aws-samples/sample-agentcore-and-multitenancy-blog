@@ -1,3 +1,6 @@
+import os
+import logging
+
 from .utils import get_ssm_parameter
 from agent_config_premium.memory_hook_provider import MemoryHook
 from agent_config_premium.tools.retrieve_clinic_documents import retrieve_clinic_documents  # Import custom tool
@@ -7,6 +10,29 @@ from strands_tools import current_time  # Keep current_time
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 from typing import List
+
+logger = logging.getLogger(__name__)
+
+
+def _load_tavily_search():
+    """Load Tavily search tool if API key is available in SSM.
+    
+    Returns the tavily_search tool function if key is found, None otherwise.
+    Web search is gracefully disabled when no API key is configured.
+    """
+    try:
+        api_key = get_ssm_parameter("/app/healthcare/tavily/api_key")
+        if api_key:
+            os.environ["TAVILY_API_KEY"] = api_key
+            from strands_tools.tavily import tavily_search
+            logger.info("✅ Tavily web search enabled (API key loaded from SSM)")
+            return tavily_search
+        else:
+            logger.warning("⚠️ Tavily API key is empty in SSM — web search disabled")
+            return None
+    except Exception as e:
+        logger.warning(f"⚠️ Tavily API key not found in SSM — web search disabled: {e}")
+        return None
 
 
 class CustomerSupport:
@@ -58,11 +84,16 @@ class CustomerSupport:
             }
         
         self.model = BedrockModel(**model_config)
+        
+        # Load Tavily web search (premium feature — gracefully disabled if no API key)
+        self.tavily_tool = _load_tavily_search()
+        web_search_enabled = self.tavily_tool is not None
+        
         self.system_prompt = (
             system_prompt
             if system_prompt
             else f"""
-You are an advanced clinical document assistant for a healthcare clinic with premium analytics capabilities and web search access.
+You are an advanced clinical document assistant for a healthcare clinic with premium analytics capabilities{' and web search access' if web_search_enabled else ''}.
 
 YOUR ASSIGNED CONTEXT:
 - Clinic: {clinic_id}
@@ -82,20 +113,23 @@ AVAILABLE TOOLS:
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
   * Defaults to your clinic if no clinic_id specified
 - current_time: Get current date and time
-- nova_grounding: Search external medical research and clinical guidelines (Premium feature)
+{'''- tavily_search: Search the web for current medical research, guidelines, and clinical information (Premium feature)
+  * Use search_depth="advanced" for comprehensive results
+  * Use topic="general" for medical queries
+  * Returns results with URLs and content snippets''' if web_search_enabled else ''}
 
-WEB SEARCH CAPABILITY (Premium Feature):
-You have access to web search for medical research from trusted sources including:
-- NIH (nih.gov)
-- CDC (cdc.gov)
-- WHO (who.int)
-- PubMed (pubmed.ncbi.nlm.nih.gov)
-- Medical journals and .edu institutions
+{'WEB SEARCH CAPABILITY (Premium Feature):' if web_search_enabled else ''}
+{'You have access to web search via tavily_search for medical research from trusted sources including:' if web_search_enabled else ''}
+{'- NIH (nih.gov)' if web_search_enabled else ''}
+{'- CDC (cdc.gov)' if web_search_enabled else ''}
+{'- WHO (who.int)' if web_search_enabled else ''}
+{'- PubMed (pubmed.ncbi.nlm.nih.gov)' if web_search_enabled else ''}
+{'- Medical journals and .edu institutions' if web_search_enabled else ''}
 
 When answering questions:
 1. First check patient_context for patient background
 2. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information
-3. If additional context is needed, use web search (nova_grounding) for current medical guidelines
+{'3. If additional context is needed, use tavily_search for current medical guidelines' if web_search_enabled else '3. If additional context is needed beyond clinic documents, let the user know'}
 4. Always cite sources with URLs for web-sourced information
 5. Clearly distinguish between clinic documents and external sources
 
@@ -104,19 +138,19 @@ CRITICAL SECURITY RULES:
 2. All tools automatically filter to your clinic - you cannot access other clinics' data
 3. Patient data is protected - only accessible within your clinic scope
 4. Document searches are restricted to: {s3_prefix}
-5. Web search results should be from reputable medical sources only
+{'5. Web search results should be from reputable medical sources only' if web_search_enabled else ''}
 
 RESPONSE GUIDELINES:
 - Provide comprehensive, clinically relevant analysis
-- Always cite sources (patient records, documents, knowledge base, web)
-- For web-sourced information, include URLs and source domains
+- Always cite sources (patient records, documents, knowledge base{', web' if web_search_enabled else ''})
+{'- For web-sourced information, include URLs and source domains' if web_search_enabled else ''}
 - Maintain patient confidentiality at all times
 - Use patient_context before discussing specific patients
 - Use clinic_config to understand available services and providers
 - If you don't have necessary information, ask the user for clarification
 - Focus on actionable clinical insights with supporting evidence
 
-Remember: You are serving {clinic_id} with premium-tier capabilities including web search. All data access is automatically restricted to this clinic.
+Remember: You are serving {clinic_id} with premium-tier capabilities{' including web search' if web_search_enabled else ''}. All data access is automatically restricted to this clinic.
 """
         )
 
@@ -162,11 +196,17 @@ Remember: You are serving {clinic_id} with premium-tier capabilities including w
             """
             return retrieve_clinic_documents(query, clinic_id_captured, max_results)
 
+        # Build tools list — conditionally include tavily_search if API key is available
+        base_tools = [
+            retrieve_with_clinic,  # Properly decorated tool with clinic_id pre-filled
+            current_time,
+        ]
+        
+        if self.tavily_tool:
+            base_tools.append(self.tavily_tool)
+        
         self.tools = (
-            [
-                retrieve_with_clinic,  # Properly decorated tool with clinic_id pre-filled
-                current_time,
-            ]
+            base_tools
             + self.gateway_client.list_tools_sync()  # MCP tools with header propagation
             + tools
         )

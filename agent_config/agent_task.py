@@ -1,16 +1,28 @@
+import os
+import logging
+
 from .context import CustomerSupportContext
 from .memory_hook_provider import MemoryHook
 from .utils import get_ssm_parameter
 from agent_config.agent import CustomerSupport  # Your custom agent class
 from agent_config.tools.google import get_calendar_events_today, create_calendar_event
 from bedrock_agentcore.memory import MemoryClient
-import logging
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-memory_client = MemoryClient()
+# Defer MemoryClient creation to ensure AWS_REGION is set by main.py first
+_memory_client = None
+
+
+def _get_memory_client():
+    global _memory_client
+    if _memory_client is None:
+        region = os.environ.get("AWS_REGION", "us-east-1")
+        logger.info(f"💾 Creating MemoryClient with region={region}")
+        _memory_client = MemoryClient(region_name=region)
+    return _memory_client
 
 
 async def agent_task(user_message: str, session_id: str, actor_id: str, memory_session=None):
@@ -23,23 +35,28 @@ async def agent_task(user_message: str, session_id: str, actor_id: str, memory_s
         raise RuntimeError("Gateway Access token is none")
     try:
         if agent is None:
-            # Use provided memory_session or create new MemoryHook
-            if memory_session:
-                logger.info(f"✅ Using provided memory session for actor_id={actor_id}")
+            # Initialize MemoryHook for basic tier conversation history
+            try:
+                if memory_session:
+                    logger.info(f"✅ Using provided memory session for actor_id={actor_id}")
+                    resolved_memory_id = CustomerSupportContext.get_memory_id_ctx() or get_ssm_parameter("/app/healthcare/memory/basic_id")
+                else:
+                    logger.warning(f"⚠️  No memory session provided, creating fallback MemoryHook")
+                    resolved_memory_id = get_ssm_parameter("/app/healthcare/memory/basic_id")
+                
+                logger.info(f"💾 Basic MemoryHook init: memory_id={resolved_memory_id}, actor_id={actor_id}, session_id={session_id}")
+                
                 memory_hook = MemoryHook(
-                    memory_client=memory_client,
-                    memory_id=CustomerSupportContext.get_memory_id_ctx() or get_ssm_parameter("/app/healthcare/memory/basic_id"),
+                    memory_client=_get_memory_client(),
+                    memory_id=resolved_memory_id,
                     actor_id=actor_id,
                     session_id=session_id,
                 )
-            else:
-                logger.warning(f"⚠️  No memory session provided, creating fallback MemoryHook")
-                memory_hook = MemoryHook(
-                    memory_client=memory_client,
-                    memory_id=get_ssm_parameter("/app/healthcare/memory/basic_id"),
-                    actor_id=actor_id,
-                    session_id=session_id,
-                )
+                logger.info(f"✅ Basic MemoryHook created successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to create basic MemoryHook: {e}", exc_info=True)
+                logger.error(f"   Falling back to no memory — agent will run without conversation history")
+                memory_hook = None
 
             # Get tenant context for healthcare multi-tenancy
             tenant_id = CustomerSupportContext.get_tenant_id_ctx() or "basic"

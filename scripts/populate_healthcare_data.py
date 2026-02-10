@@ -57,9 +57,11 @@ def populate_patient_metadata():
     table = dynamodb.Table(table_name)
     
     # Define patient data based on clinic profiles
+    # NOTE: All assigned_provider values match Cognito users created in create_test_users.py
     # Basic Tier Clinics
     patients = [
-        # Clinic A: Family Practice (3-4 patients)
+        # Clinic A: Family Practice (4 patients)
+        # Providers: Dr. Sarah Smith (Cognito user), Nurse Jennifer Lee (Cognito user)
         {
             'patient_id': 'P10001',
             'clinic_id': 'clinic-a',
@@ -102,8 +104,23 @@ def populate_patient_metadata():
             'insurance_provider': 'Medicare',
             'emergency_contact': 'Mary Johnson (555-0103)'
         },
+        {
+            'patient_id': 'P10004',
+            'clinic_id': 'clinic-a',
+            'age': 29,
+            'gender': 'Female',
+            'conditions': ['anxiety', 'hypothyroidism'],
+            'allergies': [],
+            'medications': ['levothyroxine', 'sertraline'],
+            'last_visit': '2025-01-08',
+            'last_visit_reason': 'Medication review',
+            'assigned_provider': 'Nurse Jennifer Lee',
+            'insurance_provider': 'Blue Shield',
+            'emergency_contact': 'Spouse (555-0104)'
+        },
         
-        # Clinic B: Urgent Care (3-4 patients)
+        # Clinic B: Urgent Care (3 patients)
+        # Provider: Dr. Michael Chen (Cognito user)
         {
             'patient_id': 'P20001',
             'clinic_id': 'clinic-b',
@@ -128,7 +145,7 @@ def populate_patient_metadata():
             'medications': ['cetirizine'],
             'last_visit': '2025-01-04',
             'last_visit_reason': 'Laceration repair',
-            'assigned_provider': 'PA Jessica Martinez',
+            'assigned_provider': 'Dr. Michael Chen',
             'insurance_provider': 'Cigna',
             'emergency_contact': 'Lisa Chen (555-0202)'
         },
@@ -147,7 +164,8 @@ def populate_patient_metadata():
             'emergency_contact': 'Parent (555-0203)'
         },
         
-        # Clinic C: Pediatrics (3-4 patients)
+        # Clinic C: Pediatrics (3 patients)
+        # Provider: Dr. Emily Rodriguez (Cognito user)
         {
             'patient_id': 'P30001',
             'clinic_id': 'clinic-c',
@@ -172,7 +190,7 @@ def populate_patient_metadata():
             'medications': [],
             'last_visit': '2024-12-22',
             'last_visit_reason': 'Vaccination',
-            'assigned_provider': 'NP David Kim',
+            'assigned_provider': 'Dr. Emily Rodriguez',
             'insurance_provider': 'Aetna',
             'emergency_contact': 'Parents (555-0302)'
         },
@@ -191,52 +209,13 @@ def populate_patient_metadata():
             'emergency_contact': 'Parents (555-0303)'
         },
         
-        # Clinic D: Internal Medicine (3-4 patients)
-        {
-            'patient_id': 'P40001',
-            'clinic_id': 'clinic-d',
-            'age': 58,
-            'gender': 'Male',
-            'conditions': ['type-2-diabetes', 'hypertension', 'obesity'],
-            'allergies': [],
-            'medications': ['metformin', 'lisinopril', 'atorvastatin'],
-            'last_visit': '2024-12-12',
-            'last_visit_reason': 'Diabetes management',
-            'assigned_provider': 'Dr. Robert Johnson',
-            'insurance_provider': 'Medicare',
-            'emergency_contact': 'Spouse (555-0401)'
-        },
-        {
-            'patient_id': 'P40002',
-            'clinic_id': 'clinic-d',
-            'age': 71,
-            'gender': 'Female',
-            'conditions': ['hypertension', 'COPD', 'osteoporosis'],
-            'allergies': ['codeine'],
-            'medications': ['amlodipine', 'tiotropium', 'alendronate'],
-            'last_visit': '2024-12-19',
-            'last_visit_reason': 'COPD follow-up',
-            'assigned_provider': 'Dr. Robert Johnson',
-            'insurance_provider': 'Medicare',
-            'emergency_contact': 'Daughter (555-0402)'
-        },
-        {
-            'patient_id': 'P40003',
-            'clinic_id': 'clinic-d',
-            'age': 52,
-            'gender': 'Female',
-            'conditions': ['hypothyroidism', 'hypertension'],
-            'allergies': [],
-            'medications': ['levothyroxine', 'losartan'],
-            'last_visit': '2025-01-02',
-            'last_visit_reason': 'Annual physical',
-            'assigned_provider': 'Nurse Lisa Brown',
-            'insurance_provider': 'Blue Shield',
-            'emergency_contact': 'Spouse (555-0403)'
-        },
+        # Clinic D: Internal Medicine (0 patients)
+        # NOTE: No Cognito users exist for this clinic, so no patients assigned
+        # This clinic can be used for future expansion
         
         # Premium Tier Clinics
-        # Hospital A: Multi-Specialty (4-5 patients)
+        # Hospital A: Multi-Specialty (4 patients)
+        # Providers: Dr. Amanda Foster (Cognito user), Dr. James Wilson (Cognito user)
         {
             'patient_id': 'P50001',
             'clinic_id': 'hospital-a',
@@ -294,7 +273,8 @@ def populate_patient_metadata():
             'emergency_contact': 'Son (555-0504)'
         },
         
-        # Clinic E: Cardiology (3-4 patients)
+        # Clinic E: Cardiology (3 patients)
+        # Provider: Dr. Thomas Anderson (Cognito user)
         {
             'patient_id': 'P60001',
             'clinic_id': 'clinic-e',
@@ -305,7 +285,7 @@ def populate_patient_metadata():
             'medications': ['carvedilol', 'lisinopril', 'furosemide', 'metformin'],
             'last_visit': '2024-12-27',
             'last_visit_reason': 'Heart failure management',
-            'assigned_provider': 'Dr. Priya Patel',
+            'assigned_provider': 'Dr. Thomas Anderson',
             'insurance_provider': 'Blue Cross PPO',
             'emergency_contact': 'Spouse (555-0601)'
         },
@@ -333,12 +313,13 @@ def populate_patient_metadata():
             'medications': ['apixaban', 'metoprolol', 'losartan'],
             'last_visit': '2024-12-29',
             'last_visit_reason': 'Holter monitor review',
-            'assigned_provider': 'Dr. Priya Patel',
+            'assigned_provider': 'Dr. Thomas Anderson',
             'insurance_provider': 'Aetna PPO',
             'emergency_contact': 'Spouse (555-0603)'
         },
         
-        # Clinic F: Oncology (3-4 patients)
+        # Clinic F: Oncology (3 patients)
+        # Provider: Dr. Rachel Green (Cognito user)
         {
             'patient_id': 'P70001',
             'clinic_id': 'clinic-f',
@@ -377,68 +358,14 @@ def populate_patient_metadata():
             'medications': ['bicalutamide', 'leuprolide'],
             'last_visit': '2024-12-30',
             'last_visit_reason': 'Radiation planning',
-            'assigned_provider': 'Dr. Mark Davis',
+            'assigned_provider': 'Dr. Rachel Green',
             'insurance_provider': 'United Healthcare PPO',
             'emergency_contact': 'Spouse (555-0703)'
         },
         
-        # Hospital B: Academic Medical Center (4-5 patients)
-        {
-            'patient_id': 'P80001',
-            'clinic_id': 'hospital-b',
-            'age': 38,
-            'gender': 'Female',
-            'conditions': ['sepsis-resolved', 'pneumonia'],
-            'allergies': [],
-            'medications': ['antibiotics-IV', 'oxygen-therapy'],
-            'last_visit': '2025-01-06',
-            'last_visit_reason': 'ICU admission',
-            'assigned_provider': 'Dr. Elizabeth Martinez',
-            'insurance_provider': 'Blue Shield PPO',
-            'emergency_contact': 'Spouse (555-0801)'
-        },
-        {
-            'patient_id': 'P80002',
-            'clinic_id': 'hospital-b',
-            'age': 72,
-            'gender': 'Male',
-            'conditions': ['post-surgical-complications', 'diabetes', 'hypertension'],
-            'allergies': ['penicillin'],
-            'medications': ['ceftriaxone', 'insulin', 'amlodipine'],
-            'last_visit': '2025-01-05',
-            'last_visit_reason': 'Post-operative care',
-            'assigned_provider': 'Dr. Kevin Nguyen',
-            'insurance_provider': 'Medicare',
-            'emergency_contact': 'Son (555-0802)'
-        },
-        {
-            'patient_id': 'P80003',
-            'clinic_id': 'hospital-b',
-            'age': 29,
-            'gender': 'Male',
-            'conditions': ['traumatic-brain-injury'],
-            'allergies': [],
-            'medications': ['levetiracetam', 'pain-management'],
-            'last_visit': '2025-01-04',
-            'last_visit_reason': 'Neurosurgery follow-up',
-            'assigned_provider': 'Dr. Elizabeth Martinez',
-            'insurance_provider': 'Aetna PPO',
-            'emergency_contact': 'Parents (555-0803)'
-        },
-        {
-            'patient_id': 'P80004',
-            'clinic_id': 'hospital-b',
-            'age': 56,
-            'gender': 'Female',
-            'conditions': ['acute-myocardial-infarction', 'hypertension', 'high-cholesterol'],
-            'allergies': [],
-            'medications': ['aspirin', 'clopidogrel', 'atorvastatin', 'metoprolol'],
-            'last_visit': '2025-01-03',
-            'last_visit_reason': 'Cardiac catheterization',
-            'assigned_provider': 'Dr. Sarah Thompson',
-            'insurance_provider': 'United Healthcare PPO',
-            'emergency_contact': 'Spouse (555-0804)'
-        }
+        # Hospital B: Academic Medical Center (0 patients)
+        # NOTE: No Cognito users exist for this hospital, so no patients assigned
+        # This hospital can be used for future expansion
     ]
     
     # Convert to DynamoDB format
@@ -472,6 +399,7 @@ def populate_clinic_config():
     # Define clinic configurations based on DESIGN/clinic-profiles.md
     clinics = [
         # Basic Tier
+        # NOTE: Only providers with Cognito accounts are listed
         {
             'clinic_id': 'clinic-a',
             'clinic_name': 'Family Practice Medical Center',
@@ -487,7 +415,7 @@ def populate_clinic_config():
                 'vital-signs'
             ],
             'operating_hours': '8am-5pm',
-            'providers': ['Dr. Sarah Smith', 'Nurse Jennifer Lee', 'Admin Maria Garcia'],
+            'providers': ['Dr. Sarah Smith', 'Nurse Jennifer Lee'],
             's3_prefix': 'basic-tier/clinic-a/'
         },
         {
@@ -505,7 +433,7 @@ def populate_clinic_config():
                 'discharge-instructions'
             ],
             'operating_hours': '10am-9pm',
-            'providers': ['Dr. Michael Chen', 'PA Jessica Martinez'],
+            'providers': ['Dr. Michael Chen'],
             's3_prefix': 'basic-tier/clinic-b/'
         },
         {
@@ -523,7 +451,7 @@ def populate_clinic_config():
                 'parent-education'
             ],
             'operating_hours': '9am-5pm',
-            'providers': ['Dr. Emily Rodriguez', 'NP David Kim'],
+            'providers': ['Dr. Emily Rodriguez'],
             's3_prefix': 'basic-tier/clinic-c/'
         },
         {
@@ -541,11 +469,12 @@ def populate_clinic_config():
                 'specialist-referrals'
             ],
             'operating_hours': '8am-12pm',
-            'providers': ['Dr. Robert Johnson', 'Nurse Lisa Brown'],
+            'providers': [],
             's3_prefix': 'basic-tier/clinic-d/'
         },
         
         # Premium Tier
+        # NOTE: Only providers with Cognito accounts are listed
         {
             'clinic_id': 'hospital-a',
             'clinic_name': 'Metropolitan Multi-Specialty Medical Center',
@@ -562,7 +491,7 @@ def populate_clinic_config():
                 'research-data'
             ],
             'operating_hours': '7am-6pm',
-            'providers': ['Dr. Amanda Foster', 'Dr. James Wilson', 'Dr. Lisa Chen'],
+            'providers': ['Dr. Amanda Foster', 'Dr. James Wilson'],
             's3_prefix': 'premium-tier/hospital-a/'
         },
         {
@@ -581,7 +510,7 @@ def populate_clinic_config():
                 'heart-failure-management'
             ],
             'operating_hours': '7am-5pm',
-            'providers': ['Dr. Thomas Anderson', 'Dr. Priya Patel'],
+            'providers': ['Dr. Thomas Anderson'],
             's3_prefix': 'premium-tier/clinic-e/'
         },
         {
@@ -600,7 +529,7 @@ def populate_clinic_config():
                 'genomic-testing'
             ],
             'operating_hours': '8am-5pm',
-            'providers': ['Dr. Rachel Green', 'Dr. Mark Davis'],
+            'providers': ['Dr. Rachel Green'],
             's3_prefix': 'premium-tier/clinic-f/'
         },
         {
@@ -621,7 +550,7 @@ def populate_clinic_config():
                 'pathology-reports'
             ],
             'operating_hours': '6am-8pm',
-            'providers': ['Dr. Elizabeth Martinez', 'Dr. Kevin Nguyen', 'Dr. Sarah Thompson'],
+            'providers': [],
             's3_prefix': 'premium-tier/hospital-b/'
         }
     ]
