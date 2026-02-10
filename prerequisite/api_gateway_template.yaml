@@ -199,26 +199,9 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref BasicUsagePlan
 
-  # SSM Parameters for API Keys
-  PremiumApiKeyParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /app/healthcare/agentcore/premium_api_key
-      Type: String
-      Value: !Ref PremiumApiKey
-      Description: Premium tier API key for API Gateway
-      Tags:
-        Application: Healthcare
-
-  BasicApiKeyParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /app/healthcare/agentcore/basic_api_key
-      Type: String
-      Value: !Ref BasicApiKey
-      Description: Basic tier API key for API Gateway
-      Tags:
-        Application: Healthcare
+  # NOTE: API Key SSM parameters are created by scripts/fix_api_key_ssm.sh
+  # after stack deployment. CloudFormation's !Ref on ApiKey returns the
+  # resource ID, not the actual secret key value needed for x-api-key header.
 
   # SSM Parameter for API Gateway URL
   ApiGatewayUrlParameter:
@@ -237,9 +220,9 @@ Outputs:
     Value: !Sub 'https://${AgentCoreApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
     Export:
       Name: !Sub '${AWS::StackName}-ApiGatewayUrl'
-  PremiumApiKey:
-    Description: Premium API Key
+  PremiumApiKeyId:
+    Description: Premium API Key Resource ID (use get-api-key --include-value for actual key)
     Value: !Ref PremiumApiKey
-  BasicApiKey:
-    Description: Basic API Key  
+  BasicApiKeyId:
+    Description: Basic API Key Resource ID (use get-api-key --include-value for actual key)
     Value: !Ref BasicApiKey

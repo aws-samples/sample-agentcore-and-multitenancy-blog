@@ -109,6 +109,12 @@ echo "🔧 Starting deployment of API Gateway stack..."
 if [ -f "$API_GATEWAY_ZIP_FILE" ]; then
   deploy_stack "$API_GATEWAY_STACK_NAME" "$API_GATEWAY_TEMPLATE_FILE" --parameter-overrides LambdaCodeBucket="$FULL_BUCKET_NAME" LambdaCodeKey="$API_GATEWAY_S3_KEY"
   api_gateway_exit_code=$?
+
+  if [ $api_gateway_exit_code -eq 0 ]; then
+    echo "🔑 Fixing API Key SSM parameters (CloudFormation stores key ID, not actual value)..."
+    chmod +x scripts/fix_api_key_ssm.sh
+    ./scripts/fix_api_key_ssm.sh "$API_GATEWAY_STACK_NAME"
+  fi
 else
   echo "⚠️  Skipping API Gateway stack deployment (Lambda code not found)"
   api_gateway_exit_code=0
