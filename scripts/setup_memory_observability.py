@@ -407,10 +407,8 @@ def enable_all():
     click.echo(f"{'='*60}")
     
     click.echo("\n💡 Next steps:")
-    click.echo("   1. Set OpenTelemetry baggage in main.py and main_premium.py")
-    click.echo("   2. Deploy agents with updated code")
-    click.echo("   3. Generate test traffic to populate logs")
-    click.echo("   4. Query CloudWatch Logs Insights for per-clinic costs")
+    click.echo("   1. Generate test traffic to populate logs")
+    click.echo("   2. Query CloudWatch Logs Insights for per-clinic costs")
 
 
 @cli.command()
