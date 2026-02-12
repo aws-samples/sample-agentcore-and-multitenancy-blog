@@ -107,10 +107,10 @@ def main():
                 basic_profile_arn
             )
         
-        # Create premium tier inference profile (Nova 2 Lite with Web Grounding)
+        # Create premium tier inference profile (Claude Sonnet 4.5)
         # Use cross-region inference profile ARN as copyFrom source
         print("\n📊 Creating Premium Tier profile...")
-        premium_inference_profile_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/us.amazon.nova-2-lite-v1:0"
+        premium_inference_profile_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
         premium_profile_arn = create_inference_profile(
             bedrock_client,
             profile_name="healthcare-premium-profile",
@@ -128,7 +128,7 @@ def main():
         
         print("\n✅ Inference profile creation completed!")
         print(f"   Basic: Nova Micro (cost-effective)")
-        print(f"   Premium: Nova 2 Lite (web grounding enabled)")
+        print(f"   Premium: Claude Sonnet 4.5 (advanced reasoning)")
         
         # Update configuration
         print("\n🔧 Updating deployment configuration...")

@@ -36,7 +36,17 @@ class CustomerSupport:
             print(f"   Falling back to system-defined profiles")
             # Fallback to system-defined profiles if application profiles don't exist
             basic_profile_arn = "us.amazon.nova-micro-v1:0"
-            premium_profile_arn = "us.amazon.nova-2-lite-v1:0"
+            premium_profile_arn = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
         
         # Map tenant to inference profile
         inference_profile_mapping = {
