@@ -23,7 +23,7 @@ This project showcases advanced multi-tenancy patterns in AI agent systems for h
 
 ### Premium Tier - Specialty Care Organizations
 - **All Basic Features**: Full access to document search, summarization, and extraction
-- **Web Search**: Tavily web search
+- **Web Search**: Web search for current medical research and guidelines
 - **Higher Limits**: 2 req/sec, 20 daily requests (demo limits)
 
 **Supported Organizations**: Hospital A (Multi-specialty), Clinic E (Cardiology), Clinic F (Oncology), Hospital B (Academic Medical Center)

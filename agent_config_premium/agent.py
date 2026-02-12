@@ -14,24 +14,82 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 
-def _load_tavily_search():
-    """Load Tavily search tool if API key is available in SSM.
+def _create_websearch_tool():
+    """Create a DuckDuckGo-based web search tool using requests + HTML parsing.
     
-    Returns the tavily_search tool function if key is found, None otherwise.
-    Web search is gracefully disabled when no API key is configured.
+    Uses the DuckDuckGo HTML endpoint directly — no external SDK or API key needed.
+    Returns the web_search tool function, or None if creation fails.
+    The agent continues to work without web search if it fails.
     """
+    import re
+    import requests
+    from html import unescape
+
+    def _ddg_search(query: str, max_results: int = 3) -> list:
+        """Query DuckDuckGo HTML endpoint and parse results."""
+        resp = requests.post(
+            "https://html.duckduckgo.com/html/",
+            data={"q": query},
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        html = resp.text
+
+        results = []
+        # Each result block lives inside <div class="result ...">
+        for block in re.finditer(
+            r'<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)</a>.*?'
+            r'<a[^>]+class="result__snippet"[^>]*>(.*?)</a>',
+            html,
+            re.DOTALL,
+        ):
+            raw_url, raw_title, raw_snippet = block.group(1), block.group(2), block.group(3)
+            # DuckDuckGo wraps URLs in a redirect; extract the actual URL
+            url_match = re.search(r'uddg=([^&]+)', raw_url)
+            url = requests.utils.unquote(url_match.group(1)) if url_match else raw_url
+            title = unescape(re.sub(r'<[^>]+>', '', raw_title)).strip()
+            snippet = unescape(re.sub(r'<[^>]+>', '', raw_snippet)).strip()
+            results.append({"title": title, "href": url, "body": snippet})
+            if len(results) >= max_results:
+                break
+        return results
+
     try:
-        api_key = get_ssm_parameter("/app/healthcare/tavily/api_key")
-        if api_key:
-            os.environ["TAVILY_API_KEY"] = api_key
-            from strands_tools.tavily import tavily_search
-            logger.info("✅ Tavily web search enabled (API key loaded from SSM)")
-            return tavily_search
-        else:
-            logger.warning("⚠️ Tavily API key is empty in SSM — web search disabled")
-            return None
+        @tool(
+            name="web_search",
+            description="Search the web for current medical research, guidelines, drug information, and clinical best practices."
+        )
+        def web_search(keywords: str) -> str:
+            """
+            Search the web using DuckDuckGo for medical and clinical information.
+
+            Args:
+                keywords: Search query for medical research, guidelines, or clinical information.
+
+            Returns:
+                Formatted string with top 3 search results including titles, URLs, and snippets.
+            """
+            try:
+                results = _ddg_search(keywords, max_results=3)
+                if not results:
+                    return "No web search results found for the given query."
+                formatted = []
+                for r in results:
+                    formatted.append(
+                        f"Title: {r.get('title', 'N/A')}\n"
+                        f"URL: {r.get('href', 'N/A')}\n"
+                        f"Snippet: {r.get('body', 'N/A')}"
+                    )
+                return "\n\n---\n\n".join(formatted)
+            except Exception as e:
+                logger.warning(f"⚠️ Web search failed for query '{keywords}': {e}")
+                return f"Web search is temporarily unavailable: {e}"
+
+        logger.info("✅ DuckDuckGo web search tool created successfully (requests-based)")
+        return web_search
     except Exception as e:
-        logger.warning(f"⚠️ Tavily API key not found in SSM — web search disabled: {e}")
+        logger.warning(f"⚠️ Failed to create web search tool: {e}")
         return None
 
 
@@ -95,9 +153,9 @@ class CustomerSupport:
         
         self.model = BedrockModel(**model_config)
         
-        # Load Tavily web search (premium feature — gracefully disabled if no API key)
-        self.tavily_tool = _load_tavily_search()
-        web_search_enabled = self.tavily_tool is not None
+        # Load DuckDuckGo web search (premium feature — no API key needed)
+        self.websearch_tool = _create_websearch_tool()
+        web_search_enabled = self.websearch_tool is not None
         
         self.system_prompt = (
             system_prompt
@@ -123,13 +181,12 @@ AVAILABLE TOOLS:
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
   * Defaults to your clinic if no clinic_id specified
 - current_time: Get current date and time
-{'''- tavily_search: Search the web for current medical research, guidelines, and clinical information (Premium feature)
-  * Use search_depth="advanced" for comprehensive results
-  * Use topic="general" for medical queries
-  * Returns results with URLs and content snippets''' if web_search_enabled else ''}
+{'''- web_search: Search the web for current medical research, guidelines, and clinical information (Premium feature)
+  * Returns top 3 results with titles, URLs, and content snippets
+  * Use for current medical guidelines and research''' if web_search_enabled else ''}
 
 {'WEB SEARCH CAPABILITY (Premium Feature):' if web_search_enabled else ''}
-{'You have access to web search via tavily_search for medical research from trusted sources including:' if web_search_enabled else ''}
+{'You have access to web search via web_search for medical research from trusted sources including:' if web_search_enabled else ''}
 {'- NIH (nih.gov)' if web_search_enabled else ''}
 {'- CDC (cdc.gov)' if web_search_enabled else ''}
 {'- WHO (who.int)' if web_search_enabled else ''}
@@ -139,7 +196,7 @@ AVAILABLE TOOLS:
 When answering questions:
 1. First check patient_context for patient background
 2. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information
-{'3. If additional context is needed, use tavily_search for current medical guidelines' if web_search_enabled else '3. If additional context is needed beyond clinic documents, let the user know'}
+{'3. If additional context is needed, use web_search for current medical guidelines' if web_search_enabled else '3. If additional context is needed beyond clinic documents, let the user know'}
 4. Always cite sources with URLs for web-sourced information
 5. Clearly distinguish between clinic documents and external sources
 
@@ -206,14 +263,14 @@ Remember: You are serving {clinic_id} with premium-tier capabilities{' including
             """
             return retrieve_clinic_documents(query, clinic_id_captured, max_results)
 
-        # Build tools list — conditionally include tavily_search if API key is available
+        # Build tools list — conditionally include web_search if available
         base_tools = [
             retrieve_with_clinic,  # Properly decorated tool with clinic_id pre-filled
             current_time,
         ]
         
-        if self.tavily_tool:
-            base_tools.append(self.tavily_tool)
+        if self.websearch_tool:
+            base_tools.append(self.websearch_tool)
         
         self.tools = (
             base_tools

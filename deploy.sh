@@ -87,30 +87,6 @@ python scripts/populate_healthcare_data.py
 print_step "Creating Bedrock inference profiles..."
 python scripts/create_inference_profiles.py
 
-# --- Optional: Tavily API Key for Premium Web Search ---
-print_step "Checking Tavily API key for premium web search..."
-EXISTING_TAVILY_KEY=$(aws ssm get-parameter --name /app/healthcare/tavily/api_key --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-
-if [ -z "$EXISTING_TAVILY_KEY" ] || [ "$EXISTING_TAVILY_KEY" = "None" ]; then
-    echo ""
-    print_warning "No Tavily API key found in SSM."
-    print_info "Tavily web search is a premium-tier feature. Without it, the premium agent will work but without web search."
-    print_info "Sign up for a free API key at: https://app.tavily.com"
-    echo ""
-    read -p "Enter your Tavily API key (or press Enter to skip): " TAVILY_API_KEY
-    if [ -n "$TAVILY_API_KEY" ]; then
-        aws ssm put-parameter \
-            --name /app/healthcare/tavily/api_key \
-            --value "$TAVILY_API_KEY" \
-            --type SecureString \
-            --overwrite 2>/dev/null
-        print_info "✅ Tavily API key stored in SSM (SecureString)"
-    else
-        print_warning "Skipping Tavily setup — premium web search will be disabled"
-    fi
-else
-    print_info "✅ Tavily API key already configured in SSM"
-fi
 
 print_info "Deployment type: ${DEPLOYMENT_TYPE}"
 if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
