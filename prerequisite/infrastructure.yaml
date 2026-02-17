@@ -176,6 +176,12 @@ Resources:
                   - lambda:InvokeFunction
                 Resource:
                   - !GetAtt CustomerSupportLambda.Arn
+              - Sid: PolicyEngineAccess
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:GetPolicyEngine
+                Resource:
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*
 
   # Healthcare Tables
   PatientMetadataTable:

@@ -20,6 +20,10 @@
                 "last_evaluated_key": {
                     "type": "object",
                     "description": "Pagination token from previous response to get next page. Only used when list_patients=true"
+                },
+                "request_hour": {
+                    "type": "integer",
+                    "description": "Current hour of the day (0-23) in the clinic's local timezone. Required for business hours policy enforcement. Use the current_time tool to determine this value."
                 }
             },
             "required": []
