@@ -5,7 +5,7 @@ from .context import CustomerSupportContext
 from .memory_hook_provider import MemoryHook
 from .utils import get_ssm_parameter
 from agent_config.agent import CustomerSupport  # Your custom agent class
-from agent_config.tools.google import get_calendar_events_today, create_calendar_event
+# from agent_config.tools.google import get_calendar_events_today, create_calendar_event  # Commented out — requires Google credentials provider SSM parameter
 from bedrock_agentcore.memory import MemoryClient
 
 # Logging setup
@@ -75,7 +75,8 @@ async def agent_task(user_message: str, session_id: str, actor_id: str, memory_s
                 user_id=user_id,
                 role=role,
                 s3_prefix=s3_prefix,
-                tools=[get_calendar_events_today, create_calendar_event],
+                tools=[],  # Google tools commented out — requires credentials provider setup
+                # tools=[get_calendar_events_today, create_calendar_event],
                 # guardrail_id=get_ssm_parameter("/app/healthcare/agentcore/basic_guardrail_id"),  # Removed for now
             )
 
