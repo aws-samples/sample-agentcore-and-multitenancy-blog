@@ -180,6 +180,77 @@ def render_document_scope_indicator(clinic_id: str, tier: str):
         unsafe_allow_html=True
     )
 
+def render_policy_status_banner(tier: str):
+    """
+    Display policy enforcement status for premium tier users.
+    Shows business hours restriction on patient data access.
+
+    Args:
+        tier: User's tier (basic or premium)
+    """
+    if tier != "premium":
+        return
+
+    from datetime import datetime, timezone, timedelta
+
+    # Use US Eastern as a reasonable clinic-local default
+    eastern = timezone(timedelta(hours=-5))
+    now = datetime.now(eastern)
+    current_hour = now.hour
+    is_business_hours = 8 <= current_hour < 18
+    time_str = now.strftime("%-I:%M %p ET")
+
+    if is_business_hours:
+        # Calculate minutes until 6pm
+        closing = now.replace(hour=18, minute=0, second=0, microsecond=0)
+        remaining = closing - now
+        hours_left, remainder = divmod(int(remaining.total_seconds()), 3600)
+        mins_left = remainder // 60
+        remaining_str = f"{hours_left}h {mins_left}m" if hours_left else f"{mins_left}m"
+
+        st.markdown(
+            f"""
+            <div style="background: linear-gradient(135deg, #1a3a2a 0%, #0f2a1a 100%);
+                        padding: 10px 15px; border-radius: 5px;
+                        border-left: 3px solid #48bb78; margin-bottom: 15px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+                <small style="color: #c6f6d5;">
+                    🛡️ <strong>Policy Status:</strong> Patient data access
+                    <strong style="color: #68d391;">ACTIVE</strong>
+                    &nbsp;·&nbsp; {time_str} &nbsp;·&nbsp; {remaining_str} remaining until 6:00 PM
+                    <br>
+                    <em style="color: #9ae6b4;">Business hours policy: patient records available 8:00 AM – 6:00 PM</em>
+                </small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        if current_hour < 8:
+            next_open = "8:00 AM today"
+        else:
+            next_open = "8:00 AM tomorrow"
+
+        st.markdown(
+            f"""
+            <div style="background: linear-gradient(135deg, #3a1a1a 0%, #2a0f0f 100%);
+                        padding: 10px 15px; border-radius: 5px;
+                        border-left: 3px solid #fc8181; margin-bottom: 15px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+                <small style="color: #fed7d7;">
+                    🛡️ <strong>Policy Status:</strong> Patient data access
+                    <strong style="color: #fc8181;">RESTRICTED</strong>
+                    &nbsp;·&nbsp; {time_str} &nbsp;·&nbsp; Resumes {next_open}
+                    <br>
+                    <em style="color: #feb2b2;">Business hours policy: patient records are only available 8:00 AM – 6:00 PM.
+                    Document search and clinic configuration remain available.</em>
+                </small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
 
 def render_sidebar_user_info(user_claims: Dict[str, Any], auth_manager):
     """
@@ -200,6 +271,24 @@ def render_sidebar_user_info(user_claims: Dict[str, Any], auth_manager):
     
     # Tier features
     render_tier_features_sidebar(user_claims.get('tier', 'basic'))
+    
+    # Policy status in sidebar (premium only)
+    if user_claims.get('tier') == 'premium':
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### 🛡️ Access Policies")
+        
+        from datetime import datetime, timezone, timedelta
+        eastern = timezone(timedelta(hours=-5))
+        current_hour = datetime.now(eastern).hour
+        is_business_hours = 8 <= current_hour < 18
+        
+        if is_business_hours:
+            st.sidebar.markdown("🟢 Patient data: **Available**")
+        else:
+            st.sidebar.markdown("🔴 Patient data: **Restricted**")
+            st.sidebar.caption("Business hours: 8 AM – 6 PM")
+        st.sidebar.markdown("🟢 Clinic config: **Available**")
+        st.sidebar.markdown("🟢 Document search: **Available**")
     
     st.sidebar.markdown("---")
     

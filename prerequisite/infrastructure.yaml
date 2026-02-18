@@ -182,6 +182,14 @@ Resources:
                   - bedrock-agentcore:GetPolicyEngine
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*
+              - Sid: PolicyEngineAuthorization
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:AuthorizeAction
+                  - bedrock-agentcore:PartiallyAuthorizeActions
+                Resource:
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
 
   # Healthcare Tables
   PatientMetadataTable:

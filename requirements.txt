@@ -28,3 +28,7 @@ pydantic
 
 # HTTP requests
 requests
+
+# Web interface
+streamlit>=1.54.0
+streamlit-cookies-controller>=0.0.4

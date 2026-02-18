@@ -7,6 +7,7 @@ from .ui_components import (
     render_document_chat_interface,
     render_prompt_suggestions,
     render_document_scope_indicator,
+    render_policy_status_banner,
     render_sidebar_user_info,
 )
 
@@ -74,6 +75,9 @@ def render_authenticated_interface(
         user_claims.get('clinic_id', 'unknown'),
         user_claims.get('tier', 'basic')
     )
+    
+    # Policy enforcement status (premium tier only)
+    render_policy_status_banner(user_claims.get('tier', 'basic'))
     
     # Initialize conversation if needed
     if not st.session_state.get("messages"):

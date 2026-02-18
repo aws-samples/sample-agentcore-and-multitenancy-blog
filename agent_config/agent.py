@@ -48,6 +48,26 @@ class CustomerSupport:
             basic_profile_arn = bedrock_model_id
             premium_profile_arn = bedrock_model_id
         
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
         # Map tenant to inference profile
         inference_profile_mapping = {
             "basic": basic_profile_arn,
@@ -154,12 +174,92 @@ Remember: You are serving {clinic_id} only. All data access is automatically res
             """
             return retrieve_clinic_documents(query, clinic_id_captured, max_results)
 
+        # Static gateway tool wrappers — bypass list_tools_sync() which gets
+        # filtered by the policy engine in ENFORCE mode. Register tools statically
+        # and let the policy engine enforce at tools/call time with actual arguments.
+        gateway_client_ref = self.gateway_client
+        gateway_target = "HealthcareLambda-Basic"
+
+        @tool(
+            name="patient_context",
+            description=(
+                "Retrieve structured patient metadata including demographics, medical conditions, "
+                "allergies, medications, and visit history. Automatically filtered to the requesting "
+                "clinic for security."
+            ),
+        )
+        def patient_context(
+            patient_id: str = None,
+            list_patients: bool = False,
+            limit: int = 20,
+            request_hour: int = None,
+        ) -> str:
+            """Look up patient metadata with clinic isolation.
+
+            Args:
+                patient_id: Unique patient identifier (e.g., P12345).
+                list_patients: If true, returns paginated list of all patients for the clinic.
+                limit: Number of patients to return in list (max 100). Only used when list_patients=true.
+                request_hour: Current hour 0-23 for policy enforcement.
+
+            Returns:
+                Patient metadata or error message.
+            """
+            args = {}
+            if patient_id is not None:
+                args["patient_id"] = patient_id
+            if list_patients:
+                args["list_patients"] = list_patients
+                args["limit"] = limit
+            if request_hour is not None:
+                args["request_hour"] = request_hour
+            try:
+                result = gateway_client_ref.call_tool_sync(
+                    tool_use_id="patient_context_call",
+                    name=f"{gateway_target}___patient_context",
+                    arguments=args,
+                )
+                return str(result.content)
+            except Exception as e:
+                return f"Error accessing patient data: {e}"
+
+        @tool(
+            name="clinic_config",
+            description=(
+                "Retrieve clinic-specific configuration including specialty, available services, "
+                "operating hours, and provider list."
+            ),
+        )
+        def clinic_config(clinic_id_param: str = None) -> str:
+            """Get clinic configuration and capabilities.
+
+            Args:
+                clinic_id_param: Specific clinic identifier. Defaults to requesting user's clinic.
+
+            Returns:
+                Clinic configuration data.
+            """
+            args = {}
+            if clinic_id_param is not None:
+                args["clinic_id"] = clinic_id_param
+            try:
+                result = gateway_client_ref.call_tool_sync(
+                    tool_use_id="clinic_config_call",
+                    name=f"{gateway_target}___clinic_config",
+                    arguments=args,
+                )
+                return str(result.content)
+            except Exception as e:
+                return f"Error accessing clinic configuration: {e}"
+
+        self.policy_restricted_tools = set()
+
         self.tools = (
             [
-                retrieve_with_clinic,  # Properly decorated tool with clinic_id pre-filled
+                retrieve_with_clinic,
                 current_time,
             ]
-            + self.gateway_client.list_tools_sync()  # MCP tools with header propagation
+            + [patient_context, clinic_config]
             + tools
         )
 

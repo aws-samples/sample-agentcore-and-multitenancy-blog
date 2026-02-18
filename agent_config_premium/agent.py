@@ -132,6 +132,26 @@ class CustomerSupport:
             basic_profile_arn = bedrock_model_id
             premium_profile_arn = bedrock_model_id
         
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
         # Map tenant to inference profile
         inference_profile_mapping = {
             "basic": basic_profile_arn,
@@ -276,9 +296,99 @@ Remember: You are serving {clinic_id} with premium-tier capabilities{' including
         if self.websearch_tool:
             base_tools.append(self.websearch_tool)
         
+        # Static gateway tool wrappers — bypass list_tools_sync() which gets
+        # filtered by the policy engine in ENFORCE mode (default-deny strips
+        # tools with conditional permits during listing since there's no input).
+        # Instead, register tools statically and let the policy engine enforce
+        # at tools/call time with actual arguments.
+        gateway_client_ref = self.gateway_client
+        gateway_target = "HealthcareLambda-Premium"
+
+        @tool(
+            name="patient_context",
+            description=(
+                "Retrieve structured patient metadata including demographics, medical conditions, "
+                "allergies, medications, and visit history. Automatically filtered to the requesting "
+                "clinic for security. IMPORTANT: You MUST include request_hour (0-23) from current_time. "
+                "Access is only permitted between 8am-6pm by business hours policy."
+            ),
+        )
+        def patient_context(
+            patient_id: str = None,
+            list_patients: bool = False,
+            limit: int = 20,
+            request_hour: int = None,
+        ) -> str:
+            """Look up patient metadata with clinic isolation and business hours enforcement.
+
+            Args:
+                patient_id: Unique patient identifier (e.g., P12345).
+                list_patients: If true, returns paginated list of all patients for the clinic.
+                limit: Number of patients to return in list (max 100). Only used when list_patients=true.
+                request_hour: Current hour 0-23. Required for business hours policy. Get from current_time.
+
+            Returns:
+                Patient metadata or policy denial message.
+            """
+            args = {}
+            if patient_id is not None:
+                args["patient_id"] = patient_id
+            if list_patients:
+                args["list_patients"] = list_patients
+                args["limit"] = limit
+            if request_hour is not None:
+                args["request_hour"] = request_hour
+            try:
+                result = gateway_client_ref.call_tool_sync(
+                    tool_use_id="patient_context_call",
+                    name=f"{gateway_target}___patient_context",
+                    arguments=args,
+                )
+                return str(result.content)
+            except Exception as e:
+                error_msg = str(e)
+                if "denied" in error_msg.lower() or "policy" in error_msg.lower():
+                    return (
+                        "🛡️ Access denied by business hours policy. "
+                        "Patient data is only available between 8:00 AM and 6:00 PM. "
+                        "Please try again during business hours."
+                    )
+                return f"Error accessing patient data: {error_msg}"
+
+        @tool(
+            name="clinic_config",
+            description=(
+                "Retrieve clinic-specific configuration including specialty, available services, "
+                "operating hours, and provider list. Use this to understand clinic capabilities."
+            ),
+        )
+        def clinic_config(clinic_id_param: str = None) -> str:
+            """Get clinic configuration and capabilities.
+
+            Args:
+                clinic_id_param: Specific clinic identifier. Defaults to requesting user's clinic.
+
+            Returns:
+                Clinic configuration data.
+            """
+            args = {}
+            if clinic_id_param is not None:
+                args["clinic_id"] = clinic_id_param
+            try:
+                result = gateway_client_ref.call_tool_sync(
+                    tool_use_id="clinic_config_call",
+                    name=f"{gateway_target}___clinic_config",
+                    arguments=args,
+                )
+                return str(result.content)
+            except Exception as e:
+                return f"Error accessing clinic configuration: {e}"
+
+        self.policy_restricted_tools = set()  # No longer detected at list time
+
         self.tools = (
             base_tools
-            + self.gateway_client.list_tools_sync()  # MCP tools with header propagation
+            + [patient_context, clinic_config]
             + tools
         )
 

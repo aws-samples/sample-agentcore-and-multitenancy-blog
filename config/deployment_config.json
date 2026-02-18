@@ -1,38 +1,38 @@
 {
   "aws": {
-    "account_id": "345667997821",
+    "account_id": "867470678740",
     "region": "us-east-1"
   },
   "inference_profiles": {
     "basic": {
-      "arn": "arn:aws:bedrock:us-east-1:345667997821:application-inference-profile/BASIC_PROFILE_ID"
+      "arn": "arn:aws:bedrock:us-east-1:867470678740:application-inference-profile/fxmk6f114170"
     },
     "premium": {
-      "arn": "arn:aws:bedrock:us-east-1:345667997821:application-inference-profile/PREMIUM_PROFILE_ID"
+      "arn": "arn:aws:bedrock:us-east-1:867470678740:application-inference-profile/kqvcaovf0jek"
     }
   },
   "cognito": {
     "user_pool_id": "COGNITO_USER_POOL_ID",
-    "client_id": "71dvaqhfvo1srna6sd8e55onjl",
-    "discovery_url": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_bo5fvclJc/.well-known/openid-configuration"
+    "client_id": "COGNITO_CLIENT_ID",
+    "discovery_url": "https://cognito-idp.us-east-1.amazonaws.com/COGNITO_USER_POOL_ID/.well-known/openid-configuration"
   },
   "agents": {
     "basic": {
       "agent_id": "healthcare-basic-AGENT_ID",
-      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:345667997821:runtime/healthcare-basic-AGENT_ID"
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:867470678740:runtime/healthcare-basic-AGENT_ID"
     },
     "premium": {
       "agent_id": "healthcare-premium-AGENT_ID",
-      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:345667997821:runtime/healthcare-premium-AGENT_ID"
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:867470678740:runtime/healthcare-premium-AGENT_ID"
     }
   },
   "iam": {
-    "execution_role": "arn:aws:iam::345667997821:role/HealthcareStackInfra-RuntimeAgentCoreRole-V396McTDSliH",
-    "codebuild_role": "arn:aws:iam::345667997821:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1"
+    "execution_role": "arn:aws:iam::867470678740:role/HealthcareStackInfra-RuntimeAgentCoreRole",
+    "codebuild_role": "arn:aws:iam::867470678740:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1"
   },
   "ecr": {
-    "basic_repository": "345667997821.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-healthcare-basic",
-    "premium_repository": "345667997821.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-healthcare-premium"
+    "basic_repository": "867470678740.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-healthcare-basic",
+    "premium_repository": "867470678740.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-healthcare-premium"
   },
   "knowledge_bases": {
     "basic": {
