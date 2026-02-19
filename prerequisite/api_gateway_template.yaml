@@ -96,31 +96,6 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AgentCoreApiGateway}/*/*'
 
-  # Usage Plans for Tenant Throttling
-  BasicTenantUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    Properties:
-      UsagePlanName: basic-tenant-plan
-      Description: Basic tenant with 100 requests per minute
-      Throttle:
-        RateLimit: 100
-        BurstLimit: 200
-      ApiStages:
-        - ApiId: !Ref AgentCoreApiGateway
-          Stage: !Ref ApiGatewayStage
-
-  PremiumTenantUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    Properties:
-      UsagePlanName: premium-tenant-plan
-      Description: Premium tenant with 1000 requests per minute
-      Throttle:
-        RateLimit: 1000
-        BurstLimit: 2000
-      ApiStages:
-        - ApiId: !Ref AgentCoreApiGateway
-          Stage: !Ref ApiGatewayStage
-
   # API Gateway Deployment
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
