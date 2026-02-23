@@ -19,20 +19,16 @@ This project showcases advanced multi-tenancy patterns in AI agent systems for h
 - **Document Summarization**: Summarize patient records and clinical notes (Nova Micro)
 - **Rate Limits**: 0.5 req/sec, 5 daily requests (demo limits)
 
-**Supported Clinics**: Clinic A (Family Practice), Clinic B (Urgent Care), Clinic C (Pediatrics), Clinic D (Internal Medicine)
-
 ### Premium Tier - Specialty Care Organizations
 - **All Basic Features**: Full access to document search, summarization, and extraction
 - **Web Search**: Web search for current medical research and guidelines
 - **Higher Limits**: 2 req/sec, 20 daily requests (demo limits)
 
-**Supported Organizations**: Hospital A (Multi-specialty), Clinic E (Cardiology), Clinic F (Oncology), Hospital B (Academic Medical Center)
-
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **AWS Account** with Bedrock access enabled (Nova Micro, Nova 2 Lite)
+- **AWS Account** with Bedrock access enabled 
 - **AWS CLI** configured with appropriate permissions
 - **Python 3.8+** and pip
 
@@ -55,6 +51,13 @@ streamlit run app.py --server.port 8501
 ```
 
 Access the demo at `http://localhost:8501`
+
+### Cleanup
+
+```bash
+chmod +x scripts/cleanup.sh
+./scripts/cleanup.sh
+```
 
 ## 🏛️ Technical Architecture
 
@@ -85,45 +88,6 @@ clinic/{actorId}/preferences
 ```
 
 
-## 🛠️ Development
-
-### Project Structure
-
-```
-agentcore-multitenancy/
-├── main.py                     # Basic tier entrypoint
-├── main_premium.py             # Premium tier entrypoint
-├── agent_config/               # Basic tier configuration
-│   ├── agent.py                # Agent implementation
-│   ├── context.py              # Context management with clinic support
-│   ├── memory_hook_provider.py # Memory integration
-│   └── tools/                  # Basic tier tools
-├── agent_config_premium/       # Premium tier configuration
-│   ├── agent.py                # Premium agent with web grounding
-│   ├── context.py              # Premium context management
-│   ├── memory_hook_provider.py # Premium memory integration
-│   └── tools/                  # Premium tier tools
-├── scripts/
-│   ├── agentcore_memory.py     # Memory resource management
-│   ├── generate_healthcare_documents.py  # Synthetic data generation
-│   └── prereq.sh               # Infrastructure setup
-├── DESIGN/                     # Architecture documentation
-│   ├── healthcare-multitenancy-architecture.md
-│   ├── memory-architecture.md
-│   ├── cost-tracking-capability.md
-│   └── technical-architecture.md
-└── prerequisite/               # Infrastructure components
-    ├── lambda/                 # Backend Lambda functions
-    └── policies/               # Knowledge base content
-```
-
-### Cleanup
-
-```bash
-chmod +x scripts/cleanup.sh
-./scripts/cleanup.sh
-```
-
 ## 📊 Memory Cost Tracking with CloudWatch Logs Insights
 
 AgentCore Memory automatically emits structured logs for every memory operation. These logs contain tenant-specific namespace information that enables per-clinic cost tracking without any additional instrumentation.
@@ -136,22 +100,6 @@ AgentCore Memory automatically emits structured logs for every memory operation.
 | Premium | `/aws/vendedlogs/bedrock-agentcore/memory/APPLICATION_LOGS/<premium-memory-resource-id>` |
 
 Log streams are named `BedrockAgentCoreMemory_ApplicationLogs`.
-
-### How It Works
-
-Each memory event log contains a `namespace` field with the format:
-
-```
-clinic/{tier}-{clinic_id}-{user_id}/{strategy}/{session_id}
-```
-
-For example:
-
-```
-clinic/premium-hospital-a-04684408-00d1-7087-e9c6-e033aff7f0ee/summaries/15ad6261-e427-41fe-8eca-7371036739dd
-```
-
-This namespace is derived from the `actor_id` set in the agent code, which combines tier, clinic, and user identifiers for complete memory isolation.
 
 ### CloudWatch Logs Insights Queries
 
@@ -202,18 +150,6 @@ fields @timestamp, namespace, body.log, severityText
 | Memory retrieval (read)| ~$0.000004 per call    |
 | Long-term storage      | ~$0.10 per GB/month    |
 
-### Tips
-
-- **Time range matters**: Ensure the Logs Insights time picker covers the period when your agents were active. The default "last 1 hour" may miss older events.
-- **Cross-tier comparison**: Run the same query against both basic and premium log groups to compare costs across tiers.
-- **Regex breakdown**: The UUID pattern `[0-9a-f]{8}-[0-9a-f]{4}-...` separates the clinic name (e.g., `hospital-a`) from the user ID, handling multi-hyphen clinic names correctly.
-
-## 📚 Documentation
-
-- **[Healthcare Architecture](DESIGN/healthcare-multitenancy-architecture.md)**: Goals, gaps, and development roadmap
-- **[Memory Architecture](DESIGN/memory-architecture.md)**: Memory isolation strategy and implementation
-- **[Cost Tracking](DESIGN/cost-tracking-capability.md)**: Per-clinic cost attribution approach
-- **[Technical Architecture](DESIGN/technical-architecture.md)**: Feature enhancements and S3 structure
 
 ## 🤝 Contributing
 
