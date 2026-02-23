@@ -12,12 +12,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         print(f"Received event: {json.dumps(event)}")
         
-        # Extract tenant ID from JWT token or headers
-        tenant_id = extract_tenant_id(event)
-        print(f"Tenant ID: {tenant_id}")
+        # Extract tenant info (tenant_id, clinic_id, and user_id) from JWT token or headers
+        tenant_info = extract_tenant_info(event)
+        tenant_id = tenant_info['tenant_id']
+        clinic_id = tenant_info['clinic_id']
+        user_id = tenant_info['user_id']
+        print(f"Tenant ID: {tenant_id}, Clinic ID: {clinic_id}, User ID: {user_id}")
         
-        # Get AgentCore endpoint details
-        proxy_path = event['pathParameters']['proxy']
+        # Get AgentCore endpoint details from path
+        proxy_path = event.get('pathParameters', {}).get('proxy', '')
         print(f"Proxy path (encoded): {proxy_path}")
         
         # URL decode the proxy path first
@@ -26,16 +29,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         # Extract agent_arn from proxy path (format: agent_arn/invocations)
         original_agent_arn = decoded_proxy_path.replace('/invocations', '')
-        print(f"Original Agent ARN: {original_agent_arn}")
+        print(f"Agent ARN from request: {original_agent_arn}")
         
-        # Route to appropriate agent based on tenant_id
-        if tenant_id == "premium":
-            # Replace with premium agent ARN
-            agent_arn = "arn:aws:bedrock-agentcore:us-east-1:962309198534:runtime/customersupport_premium-whZNC75vlw"
-            print(f"Routing premium tenant to: {agent_arn}")
-        else:
-            agent_arn = original_agent_arn
-            print(f"Routing basic tenant to: {agent_arn}")
+        # Use the agent ARN from the request path
+        # The UI/client is responsible for calling the correct agent based on tenant
+        agent_arn = original_agent_arn
         
         session_id = event['headers'].get('X-Amzn-Bedrock-AgentCore-Runtime-Session-Id')
         bearer_token = event['headers'].get('Authorization', '').replace('Bearer ', '')
@@ -43,16 +41,17 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         print(f"Session ID: {session_id}")
         print(f"Bearer token present: {bool(bearer_token)}")
         
-        # Parse the request body and add tenant_id
+        # Parse the request body and add tenant info
         try:
             body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
         except json.JSONDecodeError:
             body = {}
 
-        # Add tenant_id from headers to the payload
-        tenant_id = event.get('headers', {}).get('X-Tenant-ID', 'basic')
-        body['tenant_id'] = tenant_id  # Add tenant_id to payload
-        print(f"Adding tenant_id to payload: {tenant_id}")
+        # Add tenant_id, clinic_id, and user_id to the payload forwarded to AgentCore
+        body['tenant_id'] = tenant_id
+        body['clinic_id'] = clinic_id
+        body['user_id'] = user_id
+        print(f"Adding to payload - tenant_id: {tenant_id}, clinic_id: {clinic_id}, user_id: {user_id}")
         
         # Forward request to AgentCore
         response = forward_to_agentcore(
@@ -68,7 +67,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Content-Type': 'text/plain',
                 'Access-Control-Allow-Origin': '*',
-                'X-Tenant-ID': tenant_id
+                'X-Tenant-ID': tenant_id,
+                'X-Clinic-ID': clinic_id,
+                'X-User-ID': user_id
             },
             'body': response,
             'isBase64Encoded': False
@@ -83,18 +84,53 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'body': json.dumps({'error': str(e)})
         }
 
-def extract_tenant_id(event: Dict[str, Any]) -> str:
-    """Extract tenant ID from request"""
-    # Option 1: From JWT claims
-    request_context = event.get('requestContext', {})
-    authorizer = request_context.get('authorizer', {})
-    claims = authorizer.get('claims', {})
+def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
+    """Extract tenant information from JWT token in Authorization header"""
+    import jwt
     
-    if 'custom:tenant_id' in claims:
-        return claims['custom:tenant_id']
+    tenant_info = {
+        'tenant_id': 'basic',  # default tier
+        'clinic_id': 'demo-clinic',  # default clinic
+        'user_id': 'demo-user'  # default user
+    }
     
-    # Option 2: From headers
-    return event['headers'].get('X-Tenant-ID', 'default')
+    # Get Authorization header
+    auth_header = event.get('headers', {}).get('Authorization', '')
+    if not auth_header:
+        print("Warning: No Authorization header found, using defaults")
+        return tenant_info
+    
+    # Extract Bearer token
+    bearer_token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
+    
+    try:
+        # Decode JWT token without verification (already validated by AgentCore)
+        decoded = jwt.decode(bearer_token, options={"verify_signature": False})
+        
+        # Extract tenant_id (tier: basic/premium)
+        if 'custom:tenant_id' in decoded:
+            tenant_info['tenant_id'] = decoded['custom:tenant_id']
+        
+        # Extract clinic_id from JWT custom attribute
+        if 'custom:clinic_id' in decoded:
+            tenant_info['clinic_id'] = decoded['custom:clinic_id']
+        
+        # Extract user_id from cognito:username or sub
+        if 'cognito:username' in decoded:
+            tenant_info['user_id'] = decoded['cognito:username']
+        elif 'sub' in decoded:
+            tenant_info['user_id'] = decoded['sub']
+        
+        print(f"Extracted from JWT - tenant_id: {tenant_info['tenant_id']}, clinic_id: {tenant_info['clinic_id']}, user_id: {tenant_info['user_id']}")
+        
+    except Exception as e:
+        print(f"Warning: Could not decode JWT token: {e}, using defaults")
+    
+    # Fallback to headers if JWT decode failed
+    if tenant_info['tenant_id'] == 'basic' and 'X-Tenant-ID' in event.get('headers', {}):
+        tenant_info['tenant_id'] = event['headers']['X-Tenant-ID']
+    
+    return tenant_info
 
 def forward_to_agentcore(agent_arn: str, payload: str, session_id: str, 
                         bearer_token: str, qualifier: str) -> str:

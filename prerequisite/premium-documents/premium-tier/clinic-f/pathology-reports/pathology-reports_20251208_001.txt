@@ -1,0 +1,53 @@
+# PATHOLOGY REPORT
+
+**CLINIC F ONCOLOGY CENTER**
+Department of Pathology & Laboratory Medicine
+2847 Medical Plaza Drive | Phone: (555) 418-9200 | Fax: (555) 418-9201
+
+---
+
+**PATIENT INFORMATION**
+Name: Morrison, Elena K.
+DOB: 03/15/1968
+MRN: CFO-889234
+Gender: Female
+Ordering Physician: Dr. Raymond Chen, MD
+
+**SPECIMEN INFORMATION**
+Date Collected: January 18, 2025
+Date Received: January 18, 2025
+Date Reported: January 21, 2025
+Specimen Type: Right breast core needle biopsy
+
+**CLINICAL HISTORY**
+58-year-old female with suspicious 2.3 cm mass in right breast upper outer quadrant detected on screening mammography. Family history of breast cancer (maternal aunt).
+
+---
+
+**GROSS DESCRIPTION**
+Received in formalin labeled with patient name are four cores of tan-pink tissue measuring 1.5 cm in aggregate length and 0.1 cm in diameter. Entirely submitted in cassette A1.
+
+**MICROSCOPIC DESCRIPTION**
+Sections demonstrate infiltrating ductal carcinoma, moderately differentiated (Grade 2/3). The tumor shows solid nests and trabecular patterns with moderate nuclear pleomorphism and mitotic activity (12 mitoses per 10 HPF). No lymphovascular invasion identified in sampled tissue. Adjacent breast tissue shows fibrocystic changes and focal usual ductal hyperplasia.
+
+**IMMUNOHISTOCHEMISTRY**
+- Estrogen Receptor (ER): Positive (90% nuclear staining, strong intensity)
+- Progesterone Receptor (PR): Positive (75% nuclear staining, moderate intensity)
+- HER2/neu: Negative (1+ by IHC)
+- Ki-67 proliferation index: 28%
+
+**DIAGNOSIS**
+RIGHT BREAST, CORE NEEDLE BIOPSY:
+- INVASIVE DUCTAL CARCINOMA, GRADE 2/3
+- Hormone receptor positive, HER2 negative
+- Nottingham Histologic Score: 7/9
+
+**COMMENT**
+Findings discussed with Dr. Chen. Recommend surgical consultation for definitive treatment planning and sentinel lymph node evaluation.
+
+---
+
+**Electronically signed by:**
+Dr. Patricia Wolanski, MD
+Board Certified Anatomic & Clinical Pathology
+Date: January 21, 2025, 14:32

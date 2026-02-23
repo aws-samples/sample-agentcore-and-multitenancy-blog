@@ -1,0 +1,63 @@
+# HOLTER MONITOR REPORT
+
+**CLINIC E CARDIOLOGY SPECIALISTS**
+2847 Medical Plaza Drive, Suite 320
+Phone: (555) 782-4100 | Fax: (555) 782-4101
+
+---
+
+**PATIENT INFORMATION**
+Name: Martinez, Robert J.
+DOB: 06/15/1968 (Age: 56)
+MRN: CE-894762
+Study Date: 01/18/2025 to 01/19/2025
+
+**REFERRING PHYSICIAN:** Dr. Sandra Patel, MD
+**INTERPRETING PHYSICIAN:** Dr. Michael Chen, MD, FACC
+
+---
+
+**INDICATION:** Palpitations and presyncope episodes. Rule out arrhythmia.
+
+**RECORDING DURATION:** 24 hours, 18 minutes
+**ANALYZABLE TIME:** 23 hours, 42 minutes (97% analyzable)
+
+---
+
+## FINDINGS:
+
+**RHYTHM:** Predominantly normal sinus rhythm
+
+**HEART RATE:**
+- Mean: 76 bpm
+- Maximum: 142 bpm (during exercise, 14:23)
+- Minimum: 52 bpm (during sleep, 03:17)
+
+**ECTOPY:**
+- Premature Atrial Contractions (PACs): 287 total (12/hour average)
+- Premature Ventricular Contractions (PVCs): 1,843 total (78/hour average)
+- PVC burden: 2.1% of total beats
+- Morphology: Unifocal, occasional couplets (6 episodes)
+- No ventricular tachycardia detected
+
+**PAUSES:** One sinus pause of 2.3 seconds at 02:48 during sleep
+
+**ST SEGMENT ANALYSIS:** No significant ST-segment deviation noted
+
+**PATIENT SYMPTOMS:** Patient activated event marker 3 times reporting palpitations. Correlation showed sinus tachycardia (108-115 bpm) with frequent PACs during two events; third event showed PVC couplet.
+
+---
+
+## IMPRESSION:
+
+1. Normal sinus rhythm with appropriate chronotropic response
+2. Frequent unifocal PVCs (2.1% burden) with occasional couplets
+3. Frequent PACs
+4. Single prolonged sinus pause during sleep (2.3 seconds) - likely physiologic
+5. Symptom-rhythm correlation: Palpitations associated with ectopic activity
+
+**RECOMMENDATIONS:** Consider echocardiogram to assess structural heart disease. Beta-blocker therapy may be considered if symptoms persist. Follow-up in clinic.
+
+---
+
+*Electronically signed by Dr. Michael Chen, MD | 01/20/2025 10:32 AM*

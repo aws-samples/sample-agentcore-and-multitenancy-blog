@@ -1,0 +1,53 @@
+# CLINIC C PEDIATRIC ASSOCIATES
+**Growth & Development Chart**
+
+---
+
+**Patient Information:**  
+Name: Emma Rodriguez (Synthetic)  
+DOB: 03/15/2019 | Age: 4 years 9 months  
+MRN: 8847291 | Sex: Female  
+Visit Date: 12/18/2023
+
+---
+
+## ANTHROPOMETRIC MEASUREMENTS
+
+| Parameter | Current | Previous (6mo) | Percentile | Status |
+|-----------|---------|----------------|------------|---------|
+| Weight | 18.2 kg (40.1 lbs) | 17.1 kg | 65th | Normal |
+| Height | 107.5 cm (42.3 in) | 104.2 cm | 60th | Normal |
+| BMI | 15.7 kg/m² | 15.8 kg/m² | 55th | Normal |
+| Head Circumference | 50.1 cm | 49.8 cm | 50th | Normal |
+
+---
+
+## GROWTH VELOCITY
+
+- **Height velocity:** 3.3 cm over 6 months (6.6 cm/year) - Appropriate for age
+- **Weight velocity:** 1.1 kg over 6 months (2.2 kg/year) - Appropriate for age
+- **Growth pattern:** Tracking consistently along established percentile curves
+
+---
+
+## DEVELOPMENTAL MILESTONES
+
+**Gross Motor:** Hops on one foot, throws ball overhand ✓  
+**Fine Motor:** Copies simple shapes, uses scissors ✓  
+**Language:** Speaks in 5-6 word sentences, tells stories ✓  
+**Social-Emotional:** Plays cooperatively, follows multi-step directions ✓
+
+---
+
+## CLINICAL NOTES
+
+Patient demonstrates age-appropriate growth with consistent tracking along 60th-65th percentiles. No evidence of growth faltering or acceleration. Nutritional intake adequate per parental report (1200-1400 kcal/day). Physical examination unremarkable. All developmental milestones met for chronological age.
+
+**Plan:** Continue routine well-child care. Next growth assessment at 5-year visit (March 2024). Encouraged balanced diet with emphasis on calcium and vitamin D intake. Discussed appropriate physical activity (60 min/day).
+
+---
+
+**Provider:** Dr. Sarah Chen, MD, FAAP  
+**Electronically signed:** 12/18/2023 14:32  
+
+*This is a synthetic document for demonstration purposes only*

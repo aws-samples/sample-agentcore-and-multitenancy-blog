@@ -1,0 +1,66 @@
+# HOLTER MONITOR REPORT
+
+**CLINIC E CARDIOLOGY SPECIALISTS**
+
+1247 Medical Center Parkway, Suite 310
+Phone: (555) 782-4100 | Fax: (555) 782-4101
+
+---
+
+**PATIENT INFORMATION**
+Name: Mitchell R. Hartwell (Synthetic)
+DOB: 03/15/1968 | Age: 56 | Sex: Male
+MRN: ECE-789432
+Study Date: 01/18/2025 to 01/19/2025
+
+**REFERRING PHYSICIAN:** Dr. Sarah Chen, MD
+
+**INDICATION:** Palpitations, episodic dizziness, evaluation for arrhythmia
+
+---
+
+**MONITORING PERIOD:** 24 hours, 23 minutes
+**TOTAL RECORDED TIME:** 24:23:00
+**ANALYZABLE TIME:** 23:47:00 (97.5%)
+
+---
+
+**FINDINGS:**
+
+**Heart Rate Analysis:**
+- Minimum HR: 48 bpm (03:22 AM, during sleep)
+- Maximum HR: 142 bpm (02:15 PM, patient climbing stairs per diary)
+- Average HR: 74 bpm
+
+**Rhythm:**
+- Predominant rhythm: Normal sinus rhythm
+- Frequent premature atrial contractions (PACs): 1,847 total (76/hour)
+- Isolated premature ventricular contractions (PVCs): 312 total (13/hour)
+- One 4-beat run of supraventricular tachycardia at 11:42 AM, rate 168 bpm, duration 2.3 seconds
+- No sustained ventricular tachycardia
+- No atrial fibrillation or flutter detected
+
+**ST Segment Analysis:**
+- No significant ST segment deviation
+- No acute ischemic changes identified
+
+**Patient Diary Correlation:**
+- Patient reported palpitations at 11:40 AM, correlating with documented SVT episode
+- Reported dizziness at 06:30 PM without significant arrhythmia noted
+
+---
+
+**IMPRESSION:**
+1. Frequent premature atrial contractions with brief non-sustained SVT
+2. Benign isolated PVCs
+3. No evidence of atrial fibrillation or ventricular tachycardia
+4. Symptom-rhythm correlation positive for palpitations
+
+**RECOMMENDATION:** 
+Consider echocardiogram if not recently performed. Clinical correlation recommended. Beta-blocker therapy may be considered if symptoms persist.
+
+---
+
+**Interpreted by:** Dr. Robert Martinez, MD, FACC
+**Date:** 01/20/2025
+**Electronically signed**

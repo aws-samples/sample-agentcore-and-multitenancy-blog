@@ -1,0 +1,57 @@
+**CLINIC C PEDIATRIC ASSOCIATES**
+
+**SICK VISIT NOTE**
+
+---
+
+**Patient Name:** Emma Rodriguez  
+**DOB:** 03/15/2017 (Age: 6 years)  
+**Date of Visit:** January 18, 2024  
+**Time:** 10:30 AM  
+**MRN:** 458392-C  
+**Provider:** Dr. Michael Chen, MD
+
+---
+
+**CHIEF COMPLAINT:** Fever, cough, and ear pain for 3 days
+
+**HISTORY OF PRESENT ILLNESS:**  
+Patient is a 6-year-old female presenting with 3-day history of fever (max temp 101.8°F), productive cough, and right ear pain that began yesterday. Mother reports decreased appetite and difficulty sleeping due to ear discomfort. No vomiting or diarrhea. Patient attends kindergarten where several classmates have been ill. Up to date on immunizations.
+
+**MEDICATIONS:** None currently
+
+**ALLERGIES:** NKDA
+
+**VITAL SIGNS:**  
+- Temp: 100.9°F  
+- HR: 98 bpm  
+- RR: 22/min  
+- BP: 95/60 mmHg  
+- O2 Sat: 98% RA  
+- Weight: 22 kg (50th percentile)
+
+**PHYSICAL EXAMINATION:**  
+- **General:** Alert, mild respiratory distress, no acute distress  
+- **HEENT:** Right TM erythematous and bulging with decreased mobility. Left TM clear. Nasal congestion with clear rhinorrhea. Oropharynx mildly erythematous without exudate.  
+- **Lungs:** Scattered rhonchi bilaterally, no wheezing, good air entry  
+- **Heart:** RRR, no murmurs  
+- **Neck:** No lymphadenopathy
+
+**ASSESSMENT:**  
+1. Acute otitis media, right ear
+2. Acute viral upper respiratory infection
+
+**PLAN:**  
+1. Amoxicillin 400mg/5mL suspension, 8mL PO BID x 10 days for AOM
+2. Acetaminophen 240mg PO Q6H PRN fever/pain
+3. Increase fluid intake, rest
+4. Return precautions discussed: worsening symptoms, fever >3 days, difficulty breathing
+5. Follow-up in 2-3 days if not improving or PRN
+6. May return to school when fever-free for 24 hours without medication
+
+---
+
+**Electronically signed by:**  
+Dr. Michael Chen, MD  
+Clinic C Pediatric Associates  
+January 18, 2024, 10:52 AM

@@ -1,0 +1,62 @@
+# Clinic D Internal Medicine
+**Annual Physical Examination**
+
+---
+
+**Patient Name:** Robert J. Mitchell  
+**DOB:** 03/15/1968 (Age: 56)  
+**MRN:** CDM-789234  
+**Date of Visit:** January 18, 2025  
+**Provider:** Dr. Sarah Chen, MD
+
+---
+
+**CHIEF COMPLAINT:**  
+Annual wellness examination
+
+**VITAL SIGNS:**  
+BP: 138/86 mmHg | HR: 74 bpm | Temp: 98.4°F | Resp: 16/min  
+Height: 5'10" | Weight: 192 lbs | BMI: 27.5
+
+**HISTORY OF PRESENT ILLNESS:**  
+56-year-old male presents for routine annual physical. Reports generally good health. Denies chest pain, shortness of breath, or significant changes in health status. Exercises 2-3 times weekly. Diet includes moderate carbohydrate intake. Occasional alcohol use, no tobacco.
+
+**PAST MEDICAL HISTORY:**  
+- Hypertension (diagnosed 2019)
+- Hyperlipidemia
+- Seasonal allergies
+
+**CURRENT MEDICATIONS:**  
+- Lisinopril 10mg daily
+- Atorvastatin 20mg daily
+- Cetirizine 10mg PRN
+
+**PHYSICAL EXAMINATION:**  
+- General: Well-appearing, alert and oriented x3
+- HEENT: PERRLA, TMs clear bilaterally, oropharynx without erythema
+- Cardiovascular: Regular rate and rhythm, no murmurs/rubs/gallops
+- Respiratory: Clear to auscultation bilaterally, no wheezes or crackles
+- Abdomen: Soft, non-tender, non-distended, normal bowel sounds
+- Extremities: No edema, pulses 2+ bilaterally
+- Skin: No concerning lesions noted
+
+**LABORATORY RESULTS (fasting):**  
+- Total Cholesterol: 198 mg/dL
+- LDL: 118 mg/dL
+- HDL: 52 mg/dL
+- Triglycerides: 140 mg/dL
+- Glucose: 102 mg/dL
+- HbA1c: 5.8%
+- TSH: 2.4 mIU/L
+
+**ASSESSMENT & PLAN:**  
+1. **Hypertension** - BP slightly elevated; continue current Lisinopril, recheck in 3 months
+2. **Hyperlipidemia** - Well-controlled on current regimen
+3. **Prediabetes** - HbA1c borderline; recommend dietary modification, weight loss
+4. **Health maintenance** - Colonoscopy due; orders placed. Updated immunizations.
+
+**FOLLOW-UP:** 3 months or PRN
+
+---
+
+*Electronically signed by Dr. Sarah Chen, MD on 01/18/2025*

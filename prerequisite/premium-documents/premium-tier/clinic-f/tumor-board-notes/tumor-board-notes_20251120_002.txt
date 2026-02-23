@@ -1,0 +1,56 @@
+# CLINIC F ONCOLOGY CENTER
+## MULTIDISCIPLINARY TUMOR BOARD NOTES
+
+**Date:** March 15, 2024  
+**Time:** 14:00 - 16:30  
+**Location:** Conference Room B
+
+---
+
+**PATIENT IDENTIFIER:** TB-2024-0847  
+**Age/Sex:** 67-year-old Male  
+**Presentation Date:** March 8, 2024
+
+---
+
+**ATTENDING PHYSICIANS:**
+- Dr. Patricia Morales (Medical Oncology)
+- Dr. James Chen (Radiation Oncology)
+- Dr. Sarah Williams (Surgical Oncology)
+- Dr. Michael Foster (Radiology)
+- Dr. Rebecca Holmes (Pathology)
+
+---
+
+**CLINICAL HISTORY:**  
+Patient presented with progressive dysphagia, 15-pound weight loss over 3 months, and intermittent chest discomfort. Esophagogastroduodenoscopy performed February 28, 2024.
+
+**PATHOLOGY:**  
+Moderately differentiated adenocarcinoma of the distal esophagus, 4.5 cm in length. Immunohistochemistry: HER2 negative (IHC 1+). PD-L1 CPS score: 8.
+
+**IMAGING:**  
+PET/CT (March 5, 2024): FDG-avid mass at gastroesophageal junction (SUVmax 12.3), two suspicious perigastric lymph nodes (largest 1.8 cm). No distant metastases identified. Staging: cT3N1M0.
+
+**MOLECULAR TESTING:**  
+Next-generation sequencing panel pending. MSI status: MSS (microsatellite stable).
+
+---
+
+**TUMOR BOARD DISCUSSION:**
+
+The case was presented and reviewed by the multidisciplinary team. Consensus reached for neoadjuvant chemoradiotherapy approach given locally advanced disease.
+
+**RECOMMENDATIONS:**
+1. Neoadjuvant therapy: FOLFOX chemotherapy (5-fluorouracil, leucovorin, oxaliplatin) with concurrent radiation (50.4 Gy in 28 fractions)
+2. Nutritional support: Place feeding jejunostomy tube prior to treatment initiation
+3. Repeat staging PET/CT 6-8 weeks post-neoadjuvant therapy
+4. Surgical evaluation for Ivor Lewis esophagectomy if adequate response demonstrated
+5. Cardiopulmonary clearance prior to surgery given smoking history (40 pack-years)
+
+**FOLLOW-UP:**  
+Re-present to tumor board post-neoadjuvant therapy for surgical candidacy assessment.
+
+---
+
+**Documented by:** Dr. Patricia Morales  
+**Date:** March 15, 2024

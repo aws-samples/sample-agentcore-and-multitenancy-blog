@@ -1,8 +1,9 @@
 from .utils import get_ssm_parameter
 from agent_config.memory_hook_provider import MemoryHook
+from agent_config.tools.retrieve_clinic_documents import retrieve_clinic_documents  # Import custom tool
 from mcp.client.streamable_http import streamablehttp_client
-from strands import Agent
-from strands_tools import current_time, retrieve
+from strands import Agent, tool
+from strands_tools import current_time  # Keep current_time
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 from typing import List
@@ -17,13 +18,61 @@ class CustomerSupport:
         system_prompt: str = None,
         tools: List[callable] = None,
         tenant_id: str = "basic",
+        clinic_id: str = "demo-clinic",
+        user_id: str = "demo-user",
+        role: str = "user",
+        s3_prefix: str = "basic-tier/demo-clinic/",
         guardrail_id: str = None,
     ):
+        # Get inference profile ARNs from SSM parameters
+        # These are application-defined profiles created by scripts/create_inference_profiles.py
+        # for cost allocation and tier-specific tracking
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+            print(f"✅ Loaded inference profiles from SSM")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to system-defined profiles")
+            # Fallback to system-defined profiles if application profiles don't exist
+            basic_profile_arn = "us.amazon.nova-micro-v1:0"
+            premium_profile_arn = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+                # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
         # Map tenant to inference profile
         inference_profile_mapping = {
-            "basic": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5",
-            "premium": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/pxttfsxmxl5o",
-            "default": "arn:aws:bedrock:us-east-1:962309198534:application-inference-profile/g5oiel8xmjz5"
+            "basic": basic_profile_arn,
+            "premium": premium_profile_arn,
+            "default": basic_profile_arn
         }
         
         # Use inference profile based on tenant, fallback to original model
@@ -42,33 +91,48 @@ class CustomerSupport:
         self.system_prompt = (
             system_prompt
             if system_prompt
-            else """
-    You are a helpful customer support agent ready to assist customers with their inquiries and service needs for a gaming console company.
-    
-    AVAILABLE TOOLS:
-    - LambdaUsingSDK___get_customer_profile: Retrieve customer profile including communication preferences, date of birth, name, email, notes, etc
-    - LambdaUsingSDK___check_warranty: Get comprehensive warranty information based on the produce serial number
-    - retrieve: Search general gaming console company knowledge base
-    - current_time: Get current date and time
-    
-    IMPORTANT: 
-    - Only use the tools listed above
-    - Always use the exact tool names with the LambdaUsingSDK___ prefix
+            else f"""
+You are a helpful clinical document assistant for a healthcare clinic.
 
-    If requested by the user, you can help customer with:
-    - Check product warranty
-    - Provide warranty support guidelines
-    - Debug product issue using the knowledge base
-    
-    Output Format:
-    - You MUST provide concise output, fewers words the better
-    - You MUST hide your internal thinking 
-    - If you do not have the necessary information to process a request, politely ask the customer for the required details
-    - Always maintain a professional and helpful tone when assisting customers
-    """
+YOUR ASSIGNED CONTEXT:
+- Clinic: {clinic_id}
+- Tier: {tenant_id}
+- User: {user_id} (Role: {role})
+- Document Scope: {s3_prefix}
+
+AVAILABLE TOOLS:
+- retrieve_clinic_documents: Search knowledge base for medical information and clinical documents
+  * Automatically filtered to your clinic: {clinic_id}
+  * Searches documents under your clinic's scope: {s3_prefix}
+  * Returns relevant documents with context from the knowledge base
+- patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications, visit history)
+  * Use patient_id for single patient lookup
+  * Use list_patients=true to get all patients for the clinic
+  * Automatically filtered to your clinic for security
+- clinic_config: Get clinic configuration (specialty, services, hours, providers)
+  * Defaults to your clinic if no clinic_id specified
+- current_time: Get current date and time
+
+CRITICAL SECURITY RULES:
+1. You can ONLY access data for clinic: {clinic_id}
+2. All tools automatically filter to your clinic - you cannot access other clinics' data
+3. Patient data is protected - only accessible within your clinic scope
+4. Document searches are restricted to: {s3_prefix}
+
+RESPONSE GUIDELINES:
+- Provide concise, clinically relevant information
+- Always cite sources (patient records, documents, knowledge base)
+- Maintain patient confidentiality - never share PHI inappropriately
+- Use patient_context before discussing specific patients
+- Use clinic_config to understand available services and providers
+- If you don't have necessary information, ask the user for clarification
+- Focus on actionable clinical insights
+
+Remember: You are serving {clinic_id} only. All data access is automatically restricted to this clinic.
+"""
         )
 
-        gateway_url = get_ssm_parameter("/app/customersupport/agentcore/gateway_url")
+        gateway_url = get_ssm_parameter("/app/healthcare/agentcore/basic_gateway_url")
         print(f"Gateway Endpoint - MCP URL: {gateway_url}")
 
         try:
@@ -77,7 +141,9 @@ class CustomerSupport:
                     gateway_url,
                     headers={
                         "Authorization": f"Bearer {bearer_token}",
-                        "X-Tenant-ID": tenant_id  # Add tenant_id to headers
+                        "X-Tenant-ID": tenant_id,
+                        "X-Clinic-ID": clinic_id,
+                        "X-S3-Prefix": s3_prefix
                     },
                 )
             )
@@ -86,12 +152,114 @@ class CustomerSupport:
         except Exception as e:
             raise f"Error initializing agent: {str(e)}"
 
+        # Create wrapper tool using class-based approach (Strands best practice)
+        # This properly registers the tool with the framework
+        clinic_id_captured = clinic_id  # Capture for closure
+        
+        @tool(
+            name="retrieve_clinic_documents",
+            description="Handle document-based, narrative, and conceptual queries using the unstructured knowledge base."
+        )
+        def retrieve_with_clinic(query: str, max_results: int = 5) -> str:
+            """
+            Search knowledge base for medical information and clinical documents.
+            
+            Args:
+                query: A question about clinical documents, patient information, medical procedures,
+                       or requiring document comprehension and qualitative analysis
+                max_results: Number of results to return (default: 5)
+            
+            Returns:
+                Formatted string response from the knowledge base
+            """
+            return retrieve_clinic_documents(query, clinic_id_captured, max_results)
+
+        # Static gateway tool wrappers — bypass list_tools_sync() which gets
+        # filtered by the policy engine in ENFORCE mode. Register tools statically
+        # and let the policy engine enforce at tools/call time with actual arguments.
+        gateway_client_ref = self.gateway_client
+        gateway_target = "HealthcareLambda-Basic"
+
+        @tool(
+            name="patient_context",
+            description=(
+                "Retrieve structured patient metadata including demographics, medical conditions, "
+                "allergies, medications, and visit history. Automatically filtered to the requesting "
+                "clinic for security."
+            ),
+        )
+        def patient_context(
+            patient_id: str = None,
+            list_patients: bool = False,
+            limit: int = 20,
+            request_hour: int = None,
+        ) -> str:
+            """Look up patient metadata with clinic isolation.
+
+            Args:
+                patient_id: Unique patient identifier (e.g., P12345).
+                list_patients: If true, returns paginated list of all patients for the clinic.
+                limit: Number of patients to return in list (max 100). Only used when list_patients=true.
+                request_hour: Current hour 0-23 for policy enforcement.
+
+            Returns:
+                Patient metadata or error message.
+            """
+            args = {}
+            if patient_id is not None:
+                args["patient_id"] = patient_id
+            if list_patients:
+                args["list_patients"] = list_patients
+                args["limit"] = limit
+            if request_hour is not None:
+                args["request_hour"] = request_hour
+            try:
+                result = gateway_client_ref.call_tool_sync(
+                    tool_use_id="patient_context_call",
+                    name=f"{gateway_target}___patient_context",
+                    arguments=args,
+                )
+                return str(result.content)
+            except Exception as e:
+                return f"Error accessing patient data: {e}"
+
+        @tool(
+            name="clinic_config",
+            description=(
+                "Retrieve clinic-specific configuration including specialty, available services, "
+                "operating hours, and provider list."
+            ),
+        )
+        def clinic_config(clinic_id_param: str = None) -> str:
+            """Get clinic configuration and capabilities.
+
+            Args:
+                clinic_id_param: Specific clinic identifier. Defaults to requesting user's clinic.
+
+            Returns:
+                Clinic configuration data.
+            """
+            args = {}
+            if clinic_id_param is not None:
+                args["clinic_id"] = clinic_id_param
+            try:
+                result = gateway_client_ref.call_tool_sync(
+                    tool_use_id="clinic_config_call",
+                    name=f"{gateway_target}___clinic_config",
+                    arguments=args,
+                )
+                return str(result.content)
+            except Exception as e:
+                return f"Error accessing clinic configuration: {e}"
+
+        self.policy_restricted_tools = set()
+
         self.tools = (
             [
-                retrieve,
+                retrieve_with_clinic,
                 current_time,
             ]
-            + self.gateway_client.list_tools_sync()  # Use tools directly
+            + [patient_context, clinic_config]
             + tools
         )
 
@@ -103,29 +271,6 @@ class CustomerSupport:
             tools=self.tools,
             hooks=[self.memory_hook],
         )
-
-    def _wrap_gateway_tools_with_tenant_id(self, gateway_tools, tenant_id):
-        """Wrap gateway tools to automatically include tenant_id in calls"""
-        wrapped_tools = []
-        
-        for tool in gateway_tools:
-            def create_wrapper(original_tool, tid):
-                def wrapper(*args, **kwargs):
-                    # Add tenant_id to kwargs
-                    kwargs['tenant_id'] = tid
-                    return original_tool(*args, **kwargs)
-                
-                # Copy tool attributes safely
-                wrapper.__name__ = getattr(original_tool, '__name__', getattr(original_tool, 'name', 'gateway_tool'))
-                wrapper.__doc__ = getattr(original_tool, '__doc__', None)
-                if hasattr(original_tool, 'input_schema'):
-                    wrapper.input_schema = original_tool.input_schema
-                
-                return wrapper
-            
-            wrapped_tools.append(create_wrapper(tool, tenant_id))
-        
-        return wrapped_tools
 
     def invoke(self, user_query: str):
         try:

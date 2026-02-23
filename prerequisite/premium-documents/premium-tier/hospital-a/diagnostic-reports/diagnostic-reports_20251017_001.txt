@@ -1,0 +1,64 @@
+# Hospital A Multi-Specialty Medical Center
+
+**DIAGNOSTIC RADIOLOGY REPORT**
+
+---
+
+**Patient Name:** Marcus R. Thornwell  
+**Patient ID:** HSA-847293  
+**Date of Birth:** 06/14/1968  
+**Gender:** Male  
+**Date of Exam:** March 15, 2024  
+**Referring Physician:** Dr. Samantha Chen, Internal Medicine  
+
+---
+
+**EXAMINATION:** CT Abdomen and Pelvis with IV Contrast
+
+**CLINICAL INDICATION:** Chronic right lower quadrant pain, rule out appendicitis or other acute pathology.
+
+**TECHNIQUE:** Contiguous axial images of the abdomen and pelvis were obtained following administration of 100mL Omnipaque 350 IV contrast. Oral contrast was administered 90 minutes prior to scanning.
+
+---
+
+**FINDINGS:**
+
+**LIVER:** Normal size and contour. No focal lesions identified. Portal vein is patent.
+
+**GALLBLADDER:** No evidence of cholelithiasis or wall thickening.
+
+**PANCREAS:** Unremarkable in appearance without masses or ductal dilatation.
+
+**SPLEEN:** Normal size measuring 10.2 cm in length.
+
+**KIDNEYS:** Both kidneys enhance symmetrically. No hydronephrosis or nephrolithiasis.
+
+**APPENDIX:** The appendix measures 9 mm in diameter with mild periappendiceal fat stranding. No appendicolith visualized. Findings suggest early acute appendicitis.
+
+**BOWEL:** No obstruction or significant bowel wall thickening.
+
+**LYMPH NODES:** No pathologically enlarged mesenteric or retroperitoneal lymph nodes.
+
+**PELVIS:** Bladder is normal. No free fluid or pelvic masses.
+
+---
+
+**IMPRESSION:**
+
+1. **Early acute appendicitis** with periappendiceal inflammatory changes. Surgical consultation recommended.
+2. No evidence of abscess formation or perforation at this time.
+3. Otherwise unremarkable abdominal and pelvic CT.
+
+---
+
+**Electronically signed by:**  
+**Dr. Robert M. Patterson, MD**  
+Board Certified Radiologist  
+Hospital A Multi-Specialty Medical Center  
+License #: RAD-84729-CA  
+
+Report Date: March 15, 2024, 16:45 PST
+
+---
+
+*This report has been reviewed and finalized.*

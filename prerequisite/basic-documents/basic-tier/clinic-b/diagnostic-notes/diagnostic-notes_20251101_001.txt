@@ -1,0 +1,48 @@
+**CLINIC B URGENT CARE CENTER**
+**URGENT CARE DIAGNOSTIC NOTE**
+
+---
+
+**Patient Name:** Marcus Thompson  
+**DOB:** 08/14/1987  
+**Date of Visit:** January 15, 2025  
+**Time:** 14:30  
+**Provider:** Dr. Rachel Kim, MD  
+
+---
+
+**CHIEF COMPLAINT:**  
+"I've had a terrible sore throat for three days and now I have a fever."
+
+**HISTORY OF PRESENT ILLNESS:**  
+37-year-old male presents with 3-day history of progressive sore throat, odynophagia, and subjective fever (reported 101.5°F at home this morning). Patient reports difficulty swallowing solids, denies cough or rhinorrhea. No recent sick contacts. Attempted OTC ibuprofen with minimal relief. No prior history of recurrent pharyngitis.
+
+**PHYSICAL EXAMINATION:**  
+- Temp: 101.2°F, BP: 128/82, HR: 88, RR: 16, SpO2: 98% on RA
+- General: Alert, appears mildly uncomfortable
+- HEENT: Bilateral tonsillar enlargement (3+) with white exudates, palatal petechiae present, tender anterior cervical lymphadenopathy bilaterally
+- Lungs: Clear to auscultation bilaterally
+- No rash observed
+
+**DIFFERENTIAL DIAGNOSIS:**  
+1. Acute bacterial pharyngitis (Group A Streptococcus) - most likely
+2. Infectious mononucleosis
+3. Viral pharyngitis
+
+**DIAGNOSTIC REASONING:**  
+Modified Centor Score: 4 (tonsillar exudates, tender anterior adenopathy, fever, absence of cough) suggests high probability of streptococcal pharyngitis. Rapid strep test performed: **POSITIVE**.
+
+**TREATMENT PLAN:**  
+1. Amoxicillin 500mg PO TID x 10 days
+2. Acetaminophen 650mg q6h PRN fever/pain
+3. Encourage warm salt water gargles and adequate hydration
+4. Return precautions discussed: worsening dysphagia, drooling, respiratory distress
+5. May return to work/normal activities after 24 hours on antibiotics if afebrile
+6. Follow-up with PCP if symptoms persist beyond 5 days
+
+**DISPOSITION:** Discharged home in stable condition
+
+---
+
+**Electronically signed by:** Dr. Rachel Kim, MD  
+**Date/Time:** 01/15/2025 15:05

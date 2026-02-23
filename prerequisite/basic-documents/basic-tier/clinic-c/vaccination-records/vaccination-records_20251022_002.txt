@@ -1,0 +1,49 @@
+# VACCINATION RECORD
+
+**CLINIC C PEDIATRIC ASSOCIATES**
+4892 Wellness Boulevard, Suite 220
+Springfield, IL 62704
+Phone: (217) 555-0198 | Fax: (217) 555-0199
+
+---
+
+**PATIENT INFORMATION**
+
+Name: Emma Rose Mitchell  
+Date of Birth: 03/15/2021  
+Medical Record #: CCP-78921  
+Parent/Guardian: Sarah Mitchell  
+Record Date: 11/18/2024
+
+---
+
+**IMMUNIZATION HISTORY**
+
+| Vaccine | Date Given | Dose | Lot Number | Site | Administrator |
+|---------|-----------|------|------------|------|---------------|
+| Hepatitis B (HepB) | 03/15/2021 | #1 | HB4729X | RVL | Dr. J. Peterson |
+| Hepatitis B (HepB) | 05/10/2021 | #2 | HB5012Y | LVL | RN K. Martinez |
+| DTaP | 05/10/2021 | #1 | DT8834A | LT | RN K. Martinez |
+| Hib | 05/10/2021 | #1 | HI2947C | RT | RN K. Martinez |
+| IPV (Polio) | 05/10/2021 | #1 | PV6621B | RVL | RN K. Martinez |
+| PCV13 | 05/10/2021 | #1 | PC3381D | LT | RN K. Martinez |
+| DTaP | 07/15/2021 | #2 | DT9105F | RT | RN L. Thompson |
+| Hib | 07/15/2021 | #2 | HI3214E | LT | RN L. Thompson |
+| IPV (Polio) | 07/15/2021 | #2 | PV6889G | RVL | RN L. Thompson |
+| PCV13 | 07/15/2021 | #2 | PC3612H | RT | RN L. Thompson |
+| Influenza | 10/22/2023 | Annual | FL8821M | LD | RN K. Martinez |
+| MMR | 03/28/2022 | #1 | MM4756K | LA | Dr. J. Peterson |
+| Varicella | 03/28/2022 | #1 | VR2893L | RA | Dr. J. Peterson |
+
+**Site Abbreviations:** RVL=Right Vastus Lateralis, LVL=Left Vastus Lateralis, RT=Right Thigh, LT=Left Thigh, LD=Left Deltoid, LA=Left Arm, RA=Right Arm
+
+**NOTES:**
+- All vaccines administered without adverse reactions
+- Parent education provided regarding post-vaccination care
+- Next scheduled immunizations due: 03/2025 (4-year wellness visit)
+- Immunization record submitted to state registry per protocol
+
+---
+
+*Reviewed by: Dr. Jennifer Peterson, MD, FAAP*  
+*Date: 11/18/2024*

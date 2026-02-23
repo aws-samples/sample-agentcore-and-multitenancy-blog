@@ -1,0 +1,49 @@
+```
+**Hospital B Academic Medical Center**
+Department of Gastroenterology
+Endoscopy Suite - Procedure Note
+
+====================================================================
+
+PATIENT: Morrison, Gerald T.
+MRN: 8847362
+DOB: 03/15/1968
+Date of Procedure: January 23, 2025
+Time: 09:45 AM
+
+PROCEDURE PERFORMED: Esophagogastroduodenoscopy (EGD) with biopsy
+
+ATTENDING PHYSICIAN: Dr. Rachel K. Patel, MD
+FELLOW: Dr. James Chen, MD
+ANESTHESIA: Monitored anesthesia care (MAC) - Dr. Steven Hughes, MD
+
+INDICATION: 
+56-year-old male with persistent dyspepsia, intermittent epigastric pain, and history of H. pylori infection (treated 2022). Recent alarm symptoms including unintentional 8-pound weight loss over 3 months. Evaluation for peptic ulcer disease versus malignancy.
+
+MEDICATIONS ADMINISTERED:
+- Fentanyl 100 mcg IV
+- Midazolam 4 mg IV
+- Propofol 120 mg IV (total)
+
+PROCEDURE DETAILS:
+After informed consent and time-out verification, the Olympus GIF-HQ190 gastroscope was introduced per os under direct visualization. The esophagus demonstrated normal mucosa without Barrett's changes. The Z-line was identified at 38 cm.
+
+The stomach was examined in retroflexed and forward views. Moderate erythema noted in the antrum with a 1.2 cm shallow ulcer along the lesser curvature. No active bleeding visualized. Four-quadrant biopsies obtained from ulcer margin and antral mucosa for H&P and CLO testing.
+
+The duodenal bulb and second portion appeared unremarkable with normal villous architecture.
+
+FINDINGS:
+1. Gastric ulcer, lesser curvature, 1.2 cm (Forrest III)
+2. Antral gastritis, moderate
+3. Otherwise normal EGD to second duodenum
+
+SPECIMENS: Gastric biopsies x6 to pathology
+
+ASSESSMENT/PLAN:
+Pantoprazole 40 mg PO BID for 8 weeks. Await pathology and CLO results. Repeat EGD in 8-10 weeks to document healing. Patient tolerated procedure well without complications.
+
+_______________________________
+Rachel K. Patel, MD
+Gastroenterology
+Hospital B Academic Medical Center
+```

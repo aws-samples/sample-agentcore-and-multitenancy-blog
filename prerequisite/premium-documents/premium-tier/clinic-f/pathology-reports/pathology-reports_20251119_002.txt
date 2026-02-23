@@ -1,0 +1,54 @@
+# PATHOLOGY REPORT
+
+**CLINIC F ONCOLOGY CENTER**
+Department of Pathology & Laboratory Medicine
+2847 Medical Plaza Drive | Phone: (555) 742-9100 | Fax: (555) 742-9101
+
+---
+
+**PATIENT INFORMATION**
+Name: Morrison, Patricia L.
+DOB: 03/15/1968
+MRN: CF089234
+Accession #: S23-08847
+Date Collected: 11/28/2023
+Date Reported: 12/01/2023
+
+**PHYSICIAN:** Dr. Kenneth Ashworth, MD
+**PATHOLOGIST:** Dr. Rachel Chen, MD, FCAP
+
+---
+
+**SPECIMEN**
+Right breast, core needle biopsy (ultrasound-guided)
+
+**CLINICAL HISTORY**
+58-year-old female with palpable mass, right breast upper outer quadrant. Mammography demonstrates 2.3 cm irregular density with associated microcalcifications. Family history of breast cancer (maternal aunt).
+
+**GROSS DESCRIPTION**
+Received fresh in formalin, labeled with patient name and "right breast," are four cores of tan-pink tissue measuring 1.5 cm in aggregate length and 0.1 cm in diameter. Entirely submitted in cassette A1.
+
+**MICROSCOPIC DESCRIPTION**
+Sections demonstrate invasive ductal carcinoma, moderately differentiated (Grade 2). The tumor shows infiltrating nests and cords of malignant epithelial cells with moderate nuclear pleomorphism, occasional mitotic figures (8 per 10 HPF), and minimal tubule formation (<10%).
+
+Adjacent breast tissue shows ductal carcinoma in situ (DCIS), solid and cribriform patterns, nuclear grade 2, representing approximately 15% of the specimen.
+
+**IMMUNOHISTOCHEMISTRY:**
+- Estrogen Receptor: Positive (90% nuclear staining, strong intensity)
+- Progesterone Receptor: Positive (75% nuclear staining, moderate intensity)
+- HER2: Equivocal (2+), reflex FISH pending
+- Ki-67: 22%
+
+**DIAGNOSIS**
+RIGHT BREAST, CORE NEEDLE BIOPSY:
+- INVASIVE DUCTAL CARCINOMA, GRADE 2 (Nottingham Score 6/9)
+- DUCTAL CARCINOMA IN SITU, INTERMEDIATE GRADE
+- HORMONE RECEPTOR POSITIVE
+- HER2 STATUS PENDING
+
+**COMMENT:** Surgical excision recommended for definitive staging and margin assessment.
+
+---
+
+*Electronically signed by Dr. Rachel Chen, MD*
+*Date: 12/01/2023 14:32*

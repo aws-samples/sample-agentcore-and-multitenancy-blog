@@ -1,0 +1,56 @@
+# CLINIC D INTERNAL MEDICINE
+## Laboratory Results Report
+
+**Patient ID:** CDM-2024-8847  
+**Date of Service:** January 15, 2024  
+**Ordering Physician:** Dr. Sarah Mitchell, MD  
+**Collection Time:** 08:15 AM (Fasting)
+
+---
+
+### COMPLETE METABOLIC PANEL (CMP)
+
+| Test Name | Result | Reference Range | Flag |
+|-----------|--------|-----------------|------|
+| Glucose | 96 mg/dL | 70-100 mg/dL | Normal |
+| BUN | 18 mg/dL | 7-20 mg/dL | Normal |
+| Creatinine | 1.0 mg/dL | 0.6-1.2 mg/dL | Normal |
+| eGFR | 89 mL/min/1.73m² | >60 mL/min/1.73m² | Normal |
+| Sodium | 141 mmol/L | 136-145 mmol/L | Normal |
+| Potassium | 4.2 mmol/L | 3.5-5.1 mmol/L | Normal |
+| Chloride | 103 mmol/L | 98-107 mmol/L | Normal |
+| CO2 | 26 mmol/L | 23-29 mmol/L | Normal |
+| Calcium | 9.4 mg/dL | 8.5-10.5 mg/dL | Normal |
+| Total Protein | 7.1 g/dL | 6.0-8.3 g/dL | Normal |
+| Albumin | 4.3 g/dL | 3.5-5.0 g/dL | Normal |
+| Total Bilirubin | 0.8 mg/dL | 0.2-1.2 mg/dL | Normal |
+| ALT | 28 U/L | 7-56 U/L | Normal |
+| AST | 24 U/L | 10-40 U/L | Normal |
+| Alkaline Phosphatase | 72 U/L | 44-147 U/L | Normal |
+
+### LIPID PANEL
+
+| Test Name | Result | Reference Range | Flag |
+|-----------|--------|-----------------|------|
+| Total Cholesterol | 215 mg/dL | <200 mg/dL | **HIGH** |
+| HDL Cholesterol | 58 mg/dL | >40 mg/dL | Normal |
+| LDL Cholesterol | 138 mg/dL | <100 mg/dL | **HIGH** |
+| Triglycerides | 95 mg/dL | <150 mg/dL | Normal |
+| TC/HDL Ratio | 3.7 | <5.0 | Normal |
+
+### COMPLETE BLOOD COUNT (CBC)
+
+| Test Name | Result | Reference Range | Flag |
+|-----------|--------|-----------------|------|
+| WBC | 6.8 K/μL | 4.5-11.0 K/μL | Normal |
+| RBC | 4.75 M/μL | 4.20-5.80 M/μL | Normal |
+| Hemoglobin | 14.2 g/dL | 12.0-16.0 g/dL | Normal |
+| Hematocrit | 42.1% | 36.0-46.0% | Normal |
+| Platelets | 248 K/μL | 150-400 K/μL | Normal |
+
+---
+
+**INTERPRETATION:** Metabolic and hematologic parameters within normal limits. Lipid panel shows borderline elevated total and LDL cholesterol. Recommend lifestyle modifications and follow-up in 3 months.
+
+**Reviewed by:** Dr. Sarah Mitchell, MD  
+**Report Date:** January 15, 2024

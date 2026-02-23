@@ -36,11 +36,12 @@ def load_ssm_parameters() -> Dict[str, str]:
     parameters = {}
     
     try:
-        # Get all parameters with the customersupport prefix
+        # Get all parameters with the healthcare prefix
         paginator = ssm.get_paginator('get_parameters_by_path')
-        for page in paginator.paginate(Path='/app/customersupport', Recursive=True):
+        for page in paginator.paginate(Path='/app/healthcare', Recursive=True):
             for param in page['Parameters']:
-                key = param['Name'].split('/')[-1]  # Get the last part of the path
+                # Use full path as key for nested parameters like inference_profiles/basic_arn
+                key = param['Name'].replace('/app/healthcare/', '')
                 parameters[key] = param['Value']
     except Exception as e:
         print(f"⚠️ Warning: Could not load SSM parameters: {e}")
@@ -55,22 +56,31 @@ def update_agent_config_files(config: Dict[str, Any]):
     if basic_agent_file.exists():
         content = basic_agent_file.read_text()
         
-        # Use regex to replace any inference profile ARNs (works regardless of account ID)
-        # Pattern matches: "basic": "arn:aws:bedrock:REGION:ACCOUNT:application-inference-profile/ID"
+        # Replace the entire inference_profile_mapping dictionary with SSM-based loading
+        # This ensures the agent loads profiles dynamically from SSM at runtime
+        mapping_replacement = '''        # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+        # Map tenant to inference profile
+        inference_profile_mapping = {
+            "basic": basic_profile_arn,
+            "premium": premium_profile_arn,
+            "default": basic_profile_arn
+        }'''
+        
+        # Replace any hardcoded inference profile mappings
         content = re.sub(
-            r'"basic":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"basic": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"premium":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"premium": "{config["inference_profiles"]["premium"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"default":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"default": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
+            r'# Map tenant to inference profile.*?\n.*?inference_profile_mapping = \{[^}]+\}',
+            mapping_replacement,
+            content,
+            flags=re.DOTALL
         )
         
         basic_agent_file.write_text(content)
@@ -81,123 +91,69 @@ def update_agent_config_files(config: Dict[str, Any]):
     if premium_agent_file.exists():
         content = premium_agent_file.read_text()
         
-        # Use regex to replace any inference profile ARNs
+        # Replace the entire inference_profile_mapping dictionary with SSM-based loading
+        mapping_replacement = '''        # Get inference profile ARNs from SSM parameters
+        try:
+            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
+            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
+            print(f"   Falling back to default model: {bedrock_model_id}")
+            basic_profile_arn = bedrock_model_id
+            premium_profile_arn = bedrock_model_id
+        
+        # Map tenant to inference profile
+        inference_profile_mapping = {
+            "basic": basic_profile_arn,
+            "premium": premium_profile_arn,
+            "default": basic_profile_arn
+        }'''
+        
+        # Replace any hardcoded inference profile mappings
         content = re.sub(
-            r'"basic":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"basic": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"premium":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"premium": "{config["inference_profiles"]["premium"]["arn"]}',
-            content
-        )
-        content = re.sub(
-            r'"default":\s*"arn:aws:bedrock:[^:]+:\d+:application-inference-profile/[^"]+',
-            f'"default": "{config["inference_profiles"]["basic"]["arn"]}',
-            content
+            r'# Map tenant to inference profile.*?\n.*?inference_profile_mapping = \{[^}]+\}',
+            mapping_replacement,
+            content,
+            flags=re.DOTALL
         )
         
         premium_agent_file.write_text(content)
         print("✅ Updated premium agent configuration")
 
-def generate_agentcore_yaml(config: Dict[str, Any]):
-    """Generate .bedrock_agentcore.yaml with dynamic values"""
+def generate_agentcore_yaml(config: Dict[str, Any], deployment_type: str = "direct_code_deploy"):
+    """Generate .bedrock_agentcore.yaml with dynamic values
     
-    template = {
-        "default_agent": "customersupport",
-        "agents": {
-            "customersupport": {
-                "name": "customersupport",
-                "entrypoint": "main.py",
-                "platform": "linux/arm64",
-                "container_runtime": "finch",
-                "aws": {
-                    "execution_role": config['iam']['execution_role'],
-                    "execution_role_auto_create": True,
-                    "account": config['aws']['account_id'],
-                    "region": config['aws']['region'],
-                    "ecr_repository": config['ecr']['basic_repository'],
-                    "ecr_auto_create": False,
-                    "network_configuration": {
-                        "network_mode": "PUBLIC"
-                    },
-                    "protocol_configuration": {
-                        "server_protocol": "HTTP"
-                    },
-                    "observability": {
-                        "enabled": True
-                    }
-                },
-                "bedrock_agentcore": {
-                    "agent_id": config['agents']['basic']['agent_id'],
-                    "agent_arn": config['agents']['basic']['agent_arn'],
-                    "agent_session_id": None
-                },
-                "codebuild": {
-                    "project_name": f"bedrock-agentcore-customersupport-builder",
-                    "execution_role": config['iam']['codebuild_role'],
-                    "source_bucket": f"bedrock-agentcore-codebuild-sources-{config['aws']['account_id']}-{config['aws']['region']}"
-                },
-                "authorizer_configuration": {
-                    "customJWTAuthorizer": {
-                        "discoveryUrl": config['cognito']['discovery_url'],
-                        "allowedClients": [config['cognito']['client_id']]
-                    }
-                },
-                "oauth_configuration": None
-            },
-            "customersupport_premium": {
-                "name": "customersupport_premium",
-                "entrypoint": "main_premium.py",
-                "platform": "linux/arm64",
-                "container_runtime": "finch",
-                "aws": {
-                    "execution_role": config['iam']['execution_role'],
-                    "execution_role_auto_create": True,
-                    "account": config['aws']['account_id'],
-                    "region": config['aws']['region'],
-                    "ecr_repository": config['ecr']['premium_repository'],
-                    "ecr_auto_create": False,
-                    "network_configuration": {
-                        "network_mode": "PUBLIC"
-                    },
-                    "protocol_configuration": {
-                        "server_protocol": "HTTP"
-                    },
-                    "observability": {
-                        "enabled": True
-                    }
-                },
-                "bedrock_agentcore": {
-                    "agent_id": config['agents']['premium']['agent_id'],
-                    "agent_arn": config['agents']['premium']['agent_arn'],
-                    "agent_session_id": None
-                },
-                "codebuild": {
-                    "project_name": f"bedrock-agentcore-customersupport_premium-builder",
-                    "execution_role": config['iam']['codebuild_role'],
-                    "source_bucket": f"bedrock-agentcore-codebuild-sources-{config['aws']['account_id']}-{config['aws']['region']}"
-                },
-                "authorizer_configuration": {
-                    "customJWTAuthorizer": {
-                        "discoveryUrl": config['cognito']['discovery_url'],
-                        "allowedClients": [config['cognito']['client_id']]
-                    }
-                },
-                "oauth_configuration": None
-            }
-        }
-    }
+    Args:
+        config: Configuration dictionary
+        deployment_type: Either "direct_code_deploy" or "container" (default: direct_code_deploy)
     
-    with open('.bedrock_agentcore.yaml', 'w') as f:
-        yaml.dump(template, f, default_flow_style=False)
+    Note: This function is now DEPRECATED for agent configuration.
+    Use 'agentcore configure' CLI command instead, which will create the yaml file.
+    This function is kept only for reference and backward compatibility.
+    """
     
-    print("✅ Generated .bedrock_agentcore.yaml with account-specific values")
+    print(f"⚠️  Skipping .bedrock_agentcore.yaml generation")
+    print(f"   The 'agentcore configure' command will create this file with correct settings")
+    print(f"   Deployment type will be: {deployment_type}")
+    
+    # Don't generate the file - let agentcore configure do it
+    return
 
 def main():
     """Main configuration function"""
     print("🔧 Configuring deployment for your AWS account...")
+    
+    # Check for deployment type argument
+    deployment_type = "direct_code_deploy"  # Default to direct_code_deploy
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ["container", "direct_code_deploy"]:
+            deployment_type = sys.argv[1]
+        else:
+            print(f"⚠️ Invalid deployment type: {sys.argv[1]}")
+            print("Usage: python configure_deployment.py [container|direct_code_deploy]")
+            print("Defaulting to: direct_code_deploy")
+    
+    print(f"📦 Deployment Type: {deployment_type}")
     
     # Get AWS account information
     account_id = get_aws_account_id()
@@ -217,11 +173,11 @@ def main():
         },
         "inference_profiles": {
             "basic": {
-                "arn": ssm_params.get('basic_inference_profile_arn', 
+                "arn": ssm_params.get('inference_profiles/basic_arn', 
                       f"arn:aws:bedrock:{region}:{account_id}:application-inference-profile/BASIC_PROFILE_ID")
             },
             "premium": {
-                "arn": ssm_params.get('premium_inference_profile_arn',
+                "arn": ssm_params.get('inference_profiles/premium_arn',
                       f"arn:aws:bedrock:{region}:{account_id}:application-inference-profile/PREMIUM_PROFILE_ID")
             }
         },
@@ -233,25 +189,25 @@ def main():
         },
         "agents": {
             "basic": {
-                "agent_id": ssm_params.get('basic_agent_id', 'customersupport-AGENT_ID'),
+                "agent_id": ssm_params.get('basic_agent_id', 'healthcare-basic-AGENT_ID'),
                 "agent_arn": ssm_params.get('basic_agent_arn', 
-                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/customersupport-AGENT_ID")
+                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/healthcare-basic-AGENT_ID")
             },
             "premium": {
-                "agent_id": ssm_params.get('premium_agent_id', 'customersupport_premium-AGENT_ID'),
+                "agent_id": ssm_params.get('premium_agent_id', 'healthcare-premium-AGENT_ID'),
                 "agent_arn": ssm_params.get('premium_agent_arn',
-                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/customersupport_premium-AGENT_ID")
+                           f"arn:aws:bedrock-agentcore:{region}:{account_id}:runtime/healthcare-premium-AGENT_ID")
             }
         },
         "iam": {
             "execution_role": ssm_params.get('runtime_iam_role', 
-                            f"arn:aws:iam::{account_id}:role/CustomerSupportStackInfra-RuntimeAgentCoreRole"),
+                            f"arn:aws:iam::{account_id}:role/HealthcareStackInfra-RuntimeAgentCoreRole"),
             "codebuild_role": ssm_params.get('codebuild_iam_role',
                             f"arn:aws:iam::{account_id}:role/AmazonBedrockAgentCoreSDKCodeBuild-{region}")
         },
         "ecr": {
-            "basic_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-customersupport",
-            "premium_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-customersupport_premium"
+            "basic_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-healthcare-basic",
+            "premium_repository": f"{account_id}.dkr.ecr.{region}.amazonaws.com/bedrock-agentcore-healthcare-premium"
         },
         "knowledge_bases": {
             "basic": {
@@ -270,7 +226,7 @@ def main():
     
     # Update configuration files
     update_agent_config_files(config)
-    generate_agentcore_yaml(config)
+    generate_agentcore_yaml(config, deployment_type)
     
     print("✅ Configuration completed!")
     print("📁 Configuration saved to: config/deployment_config.json")

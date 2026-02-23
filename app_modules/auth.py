@@ -14,10 +14,10 @@ from scripts.utils import get_ssm_parameter
 class AuthManager:
     def __init__(self):
         self.cognito_domain = get_ssm_parameter(
-            "/app/customersupport/agentcore/cognito_domain"
+            "/app/healthcare/agentcore/cognito_domain"
         ).replace("https://", "")
         self.client_id = get_ssm_parameter(
-            "/app/customersupport/agentcore/web_client_id"
+            "/app/healthcare/agentcore/web_client_id"
         )
         self.redirect_uri = "http://localhost:8501/"
         self.scopes = "email openid profile"
@@ -144,3 +144,36 @@ class AuthManager:
         if tokens:
             return jwt.decode(tokens["id_token"], options={"verify_signature": False})
         return None
+
+    def get_enhanced_user_claims(self):
+        """Extract enhanced user claims including clinic information for healthcare context."""
+        claims = self.get_user_claims()
+        if not claims:
+            return None
+        
+        # Extract healthcare-specific attributes
+        enhanced_claims = {
+            'email': claims.get('email', 'Unknown'),
+            'username': claims.get('cognito:username', 'Unknown'),
+            'tier': claims.get('custom:tenant_id', 'basic'),
+            'clinic_id': claims.get('custom:clinic_id', 'unknown-clinic'),
+            'role': claims.get('custom:role', 'user'),
+        }
+        
+        # Add display-friendly clinic name
+        clinic_names = {
+            'clinic-a': 'Family Practice Medical Center',
+            'clinic-b': 'QuickCare Urgent Care',
+            'clinic-c': 'Bright Beginnings Pediatrics',
+            'clinic-d': 'Wellness Internal Medicine',
+            'hospital-a': 'Metropolitan Multi-Specialty Medical Center',
+            'clinic-e': 'Advanced Cardiology Associates',
+            'clinic-f': 'Comprehensive Cancer Care Center',
+            'hospital-b': 'University Academic Medical Center',
+        }
+        enhanced_claims['clinic_name'] = clinic_names.get(
+            enhanced_claims['clinic_id'], 
+            enhanced_claims['clinic_id'].replace('-', ' ').title()
+        )
+        
+        return enhanced_claims

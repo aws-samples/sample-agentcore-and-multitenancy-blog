@@ -1,0 +1,57 @@
+# HOSPITAL B ACADEMIC MEDICAL CENTER
+## Academic Medical Center
+### Department of Internal Medicine
+
+**TEACHING CASE STUDY**
+
+---
+
+**Case Number:** 2024-IM-1847  
+**Date:** March 15, 2024  
+**Attending Physician:** Dr. Sarah Mitchell, MD, FACP  
+**Medical Student:** James Chen, MS-III
+
+---
+
+## PATIENT PRESENTATION
+
+**Patient:** Mr. Robert Thompson (Synthetic ID: HB-892456)  
+**Age:** 67 years  
+**Sex:** Male
+
+## CHIEF COMPLAINT
+Progressive dyspnea on exertion and bilateral lower extremity edema for 3 weeks.
+
+## HISTORY OF PRESENT ILLNESS
+Mr. Thompson presents with a 3-week history of worsening shortness of breath, initially with moderate exertion, now occurring with minimal activity. He reports orthopnea requiring 3 pillows and paroxysmal nocturnal dyspnea twice in the past week. Associated symptoms include bilateral ankle swelling, 15-pound weight gain, and decreased urine output.
+
+## PAST MEDICAL HISTORY
+- Hypertension (15 years)
+- Type 2 Diabetes Mellitus
+- Coronary artery disease s/p MI (2019)
+- Hyperlipidemia
+
+## PHYSICAL EXAMINATION
+- **Vitals:** BP 148/92, HR 98, RR 22, SpO2 91% on room air, Temp 37.1°C
+- **Cardiovascular:** S3 gallop present, JVP elevated at 12 cm
+- **Respiratory:** Bilateral basilar crackles
+- **Extremities:** 3+ pitting edema to mid-shin bilaterally
+
+## DIAGNOSTIC FINDINGS
+- **BNP:** 1,847 pg/mL (elevated)
+- **Chest X-ray:** Cardiomegaly, bilateral pleural effusions, pulmonary vascular congestion
+- **Echocardiogram:** LVEF 30%, moderate left ventricular dilation, global hypokinesis
+
+## DIAGNOSIS
+Acute decompensated heart failure with reduced ejection fraction (HFrEF), NYHA Class III.
+
+## TEACHING POINTS
+1. Recognition of congestive heart failure clinical presentation
+2. Appropriate use of BNP in diagnosis
+3. Classification of heart failure (HFpEF vs. HFrEF)
+4. Initial management: diuresis, ACE inhibitors, beta-blockers
+5. Long-term risk stratification and guideline-directed medical therapy
+
+---
+
+*This is a synthetic case created for educational purposes.*

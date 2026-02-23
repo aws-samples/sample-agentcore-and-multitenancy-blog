@@ -1,0 +1,51 @@
+# Hospital B Academic Medical Center
+## Department of Radiology & Imaging Sciences
+
+---
+
+**PATIENT INFORMATION**
+- Name: Martinez, Elena R.
+- MRN: 8847293-B
+- DOB: 08/15/1967 (56 years)
+- Exam Date: March 14, 2024
+- Ordering Physician: Dr. Jonathan Patel, Internal Medicine
+
+---
+
+**EXAMINATION:** CT Chest with Intravenous Contrast
+
+**CLINICAL INDICATION:** Persistent cough, weight loss, history of 35-pack-year smoking. Rule out malignancy.
+
+**TECHNIQUE:** Multidetector helical CT of the chest performed with 100mL Omnipaque 350 IV contrast. 3mm slice thickness reconstructions in axial, coronal, and sagittal planes.
+
+**COMPARISON:** Chest radiograph dated January 8, 2024
+
+**FINDINGS:**
+
+*Lungs & Airways:* A 2.8 x 2.3 cm spiculated mass is identified in the right upper lobe posterior segment with moderate FDG avidity. No additional pulmonary nodules detected. Mild centrilobular emphysematous changes throughout both lungs, more prominent in upper lobes. Airways patent without endobronchial lesions.
+
+*Mediastinum:* Enlarged right paratracheal lymph node measuring 1.4 cm (short axis). Additional subcarinal lymphadenopathy, largest node 1.2 cm. No pericardial effusion. Heart size normal.
+
+*Pleura:* No pleural effusion or pneumothorax.
+
+*Chest Wall & Osseous Structures:* No lytic or blastic lesions. Mild degenerative changes thoracic spine.
+
+*Upper Abdomen:* Limited views demonstrate normal liver, spleen, and adrenal glands.
+
+**IMPRESSION:**
+1. Right upper lobe spiculated mass (2.8 cm) highly suspicious for primary bronchogenic carcinoma with regional lymphadenopathy (Stage IIA-IIB, pending tissue diagnosis)
+2. Moderate centrilobular emphysema
+3. Mediastinal lymphadenopathy warrants further evaluation
+
+**RECOMMENDATIONS:**
+- PET/CT for complete staging
+- Pulmonology referral for bronchoscopy with endobronchial ultrasound-guided biopsy
+- Consider multidisciplinary tumor board review
+
+---
+
+**Electronically signed by:**
+**Sarah Kim-Chen, MD, FACR**
+Attending Radiologist, Thoracic Imaging
+Hospital B Academic Medical Center
+March 14, 2024 15:42 EST

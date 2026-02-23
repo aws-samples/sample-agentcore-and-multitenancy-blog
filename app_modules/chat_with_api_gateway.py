@@ -20,26 +20,39 @@ def remove_thinking_tags(text):
 
 
 class ChatManager:
-    def __init__(self, agent_name: str = "default", api_gateway_url: str = None):
+    def __init__(self, api_gateway_url: str = None):
         self.auth_url_matching = ".amazonaws.com/identities/oauth2/authorize"
-        self.agent_name = agent_name
         self.api_gateway_url = api_gateway_url or self._get_api_gateway_url()
         self._init_session_state()
 
     def _get_api_gateway_url(self) -> str:
-        """Get API Gateway URL from environment or config"""
-        return "https://xtyyaiwkib.execute-api.us-east-1.amazonaws.com/prod"
+        """Get API Gateway URL from SSM parameter"""
+        try:
+            import boto3
+            ssm = boto3.client('ssm', region_name='us-east-1')
+            url = ssm.get_parameter(Name='/app/healthcare/agentcore/api_gateway_url')['Parameter']['Value']
+            return url
+        except Exception as e:
+            print(f"Warning: Could not get API Gateway URL from SSM: {e}")
+            # Fallback to CloudFormation output
+            try:
+                cfn = boto3.client('cloudformation', region_name='us-east-1')
+                stacks = cfn.describe_stacks(StackName='HealthcareStackApiGateway')
+                outputs = stacks['Stacks'][0]['Outputs']
+                for output in outputs:
+                    if output['OutputKey'] == 'ApiGatewayUrl':
+                        return output['OutputValue']
+            except Exception as e2:
+                print(f"Warning: Could not get API Gateway URL from CloudFormation: {e2}")
+                raise Exception("Could not determine API Gateway URL. Please set /app/healthcare/agentcore/api_gateway_url SSM parameter")
 
     def _init_session_state(self):
         """Initialize session state variables"""
         if "session_id" not in st.session_state:
             st.session_state["session_id"] = str(uuid.uuid4())
 
-        if "agent_arn" not in st.session_state:
-            runtime_config = read_config(".bedrock_agentcore.yaml")
-            st.session_state["agent_arn"] = runtime_config["agents"][self.agent_name][
-                "bedrock_agentcore"
-            ]["agent_arn"]
+        # Agent ARN will be set dynamically based on user tier
+        # Don't initialize it here anymore
 
         if "region" not in st.session_state:
             st.session_state["region"] = get_aws_region()
@@ -49,6 +62,22 @@ class ChatManager:
 
         if "pending_assistant" not in st.session_state:
             st.session_state["pending_assistant"] = False
+    
+    def set_agent_for_user(self, user_tier: str):
+        """Set the agent ARN based on user tier"""
+        runtime_config = read_config(".bedrock_agentcore.yaml")
+        
+        # Map tier to agent name
+        tier_to_agent = {
+            "basic": "healthcare_basic",
+            "premium": "healthcare_premium"
+        }
+        
+        agent_name = tier_to_agent.get(user_tier, "healthcare_basic")
+        
+        # Set agent ARN in session state
+        st.session_state["agent_arn"] = runtime_config["agents"][agent_name]["bedrock_agentcore"]["agent_arn"]
+        st.session_state["agent_name"] = agent_name
 
     def invoke_endpoint(
         self,
@@ -63,12 +92,26 @@ class ChatManager:
         escaped_arn = urllib.parse.quote(agent_arn, safe="")
         url = f"{self.api_gateway_url}/runtimes/{escaped_arn}/invocations"
 
-        # Map tenant to API key for throttling
-        api_key_mapping = {
-            "premium": "XhdzLgEC1Q5p1rfN5ETe91BcWwizCURo1InwaDbw",  # Premium API key value
-            "basic": "Vanb9c26QF1Ixz5mZJiEC4ZBWaNitZlsatM5p6DR",   # Basic API key value
-            "default": "Vanb9c26QF1Ixz5mZJiEC4ZBWaNitZlsatM5p6DR"  # Default to basic
-        }
+        # Map tenant to API key for throttling - fetch from SSM
+        try:
+            import boto3
+            ssm = boto3.client('ssm', region_name='us-east-1')
+            basic_key = ssm.get_parameter(Name='/app/healthcare/agentcore/basic_api_key')['Parameter']['Value']
+            premium_key = ssm.get_parameter(Name='/app/healthcare/agentcore/premium_api_key')['Parameter']['Value']
+            
+            api_key_mapping = {
+                "premium": premium_key,
+                "basic": basic_key,
+                "default": basic_key
+            }
+        except Exception as e:
+            print(f"Warning: Could not get API keys from SSM: {e}")
+            # Fallback to hardcoded (will likely fail)
+            api_key_mapping = {
+                "premium": "INVALID_KEY",
+                "basic": "INVALID_KEY",
+                "default": "INVALID_KEY"
+            }
         
         api_key = api_key_mapping.get(tenant_id, "swqp2a46ph")
 
@@ -79,6 +122,22 @@ class ChatManager:
             "X-Tenant-ID": tenant_id,
             "X-API-Key": api_key,  # Add API key for throttling
         }
+
+        # Debug: Decode and print token claims (first 50 chars only for security)
+        try:
+            import jwt
+            decoded = jwt.decode(bearer_token, options={"verify_signature": False})
+            print(f"DEBUG: Token issuer: {decoded.get('iss', 'NOT FOUND')}")
+            print(f"DEBUG: Token client_id: {decoded.get('client_id', 'NOT FOUND')}")
+            print(f"DEBUG: Token aud: {decoded.get('aud', 'NOT FOUND')}")
+            print(f"DEBUG: Token use: {decoded.get('token_use', 'NOT FOUND')}")
+            
+            # Check if this is an access token (which won't work with JWT authorizer)
+            if decoded.get('token_use') == 'access':
+                print("WARNING: Using access_token - AgentCore JWT authorizer expects id_token!")
+                print("         Access tokens don't have 'aud' claim, only 'client_id'")
+        except Exception as e:
+            print(f"DEBUG: Could not decode token: {e}")
 
         try:
             body = json.loads(payload) if isinstance(payload, str) else payload

@@ -1,0 +1,60 @@
+# CARDIAC CATHETERIZATION REPORT
+
+**CLINIC E CARDIOLOGY SPECIALISTS**
+2847 Medical Center Parkway, Suite 320
+Phone: (555) 782-4100 | Fax: (555) 782-4101
+
+---
+
+**PATIENT NAME:** Marcus Thompson  
+**MRN:** CE-892456  
+**DOB:** 03/15/1968  
+**DATE OF PROCEDURE:** January 18, 2025  
+**ATTENDING PHYSICIAN:** Dr. Sarah Chen, MD, FACC  
+**ASSISTING PHYSICIAN:** Dr. James Martinez, MD
+
+---
+
+## PROCEDURE PERFORMED:
+Left heart catheterization with selective coronary angiography and left ventriculography
+
+## INDICATION:
+63-year-old male with exertional chest pain, positive stress test showing inferior wall ischemia, and family history of premature coronary artery disease.
+
+## ACCESS:
+Right femoral artery via modified Seldinger technique using 6-French sheath
+
+## HEMODYNAMICS:
+- Aortic pressure: 142/78 mmHg
+- LVEDP: 16 mmHg
+- Heart rate: 72 bpm
+
+## FINDINGS:
+
+**Left Main Coronary Artery:** Patent, no significant disease
+
+**Left Anterior Descending:** Mild luminal irregularities in proximal segment, 30% stenosis mid-vessel, TIMI-3 flow
+
+**Left Circumflex:** Non-dominant vessel, patent with minimal disease
+
+**Right Coronary Artery:** Dominant vessel with 85% focal stenosis in mid-segment with haziness suggesting possible thrombus. TIMI-2 flow distally.
+
+**Left Ventriculogram:** Ejection fraction 52%, mild inferior hypokinesis, no mitral regurgitation
+
+## IMPRESSION:
+Significant single-vessel coronary artery disease with high-grade stenosis of mid-RCA consistent with patient's symptoms and stress test findings.
+
+## PLAN:
+Discussed findings with patient and family. Recommend percutaneous coronary intervention with drug-eluting stent placement to mid-RCA. Patient agrees and procedure scheduled for January 22, 2025. Medical therapy optimized with dual antiplatelet therapy initiated.
+
+## COMPLICATIONS:
+None
+
+---
+
+**Electronically signed by:**  
+**Dr. Sarah Chen, MD, FACC**  
+Date/Time: 01/18/2025 14:35
+
+---
+*Report generated: 01/18/2025*

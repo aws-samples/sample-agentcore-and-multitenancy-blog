@@ -6,7 +6,8 @@ from typing import Dict, Any
 
 
 def get_ssm_parameter(name: str, with_decryption: bool = True) -> str:
-    ssm = boto3.client("ssm")
+    region = os.environ.get("AWS_REGION", "us-east-1")
+    ssm = boto3.client("ssm", region_name=region)
 
     response = ssm.get_parameter(Name=name, WithDecryption=with_decryption)
 
@@ -16,7 +17,8 @@ def get_ssm_parameter(name: str, with_decryption: bool = True) -> str:
 def put_ssm_parameter(
     name: str, value: str, parameter_type: str = "String", with_encryption: bool = False
 ) -> None:
-    ssm = boto3.client("ssm")
+    region = os.environ.get("AWS_REGION", "us-east-1")
+    ssm = boto3.client("ssm", region_name=region)
 
     put_params = {
         "Name": name,
@@ -32,7 +34,8 @@ def put_ssm_parameter(
 
 
 def delete_ssm_parameter(name: str) -> None:
-    ssm = boto3.client("ssm")
+    region = os.environ.get("AWS_REGION", "us-east-1")
+    ssm = boto3.client("ssm", region_name=region)
     try:
         ssm.delete_parameter(Name=name)
     except ssm.exceptions.ParameterNotFound:
@@ -53,15 +56,17 @@ def get_aws_region() -> str:
 
 
 def get_aws_account_id() -> str:
-    sts = boto3.client("sts")
+    region = os.environ.get("AWS_REGION", "us-east-1")
+    sts = boto3.client("sts", region_name=region)
     return sts.get_caller_identity()["Account"]
 
 
 def get_cognito_client_secret() -> str:
-    client = boto3.client("cognito-idp")
+    region = os.environ.get("AWS_REGION", "us-east-1")
+    client = boto3.client("cognito-idp", region_name=region)
     response = client.describe_user_pool_client(
-        UserPoolId=get_ssm_parameter("/app/customersupport/agentcore/userpool_id"),
-        ClientId=get_ssm_parameter("/app/customersupport/agentcore/machine_client_id"),
+        UserPoolId=get_ssm_parameter("/app/healthcare/agentcore/userpool_id"),
+        ClientId=get_ssm_parameter("/app/healthcare/agentcore/machine_client_id"),
     )
     return response["UserPoolClient"]["ClientSecret"]
 

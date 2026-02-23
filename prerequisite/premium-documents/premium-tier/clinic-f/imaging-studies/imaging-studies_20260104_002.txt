@@ -1,0 +1,48 @@
+# Clinic F Oncology Center
+## DIAGNOSTIC IMAGING REPORT
+
+**Patient Name:** Martinez, Elena R.  
+**MRN:** 847629301  
+**DOB:** 08/15/1967  
+**Sex:** Female  
+**Exam Date:** January 18, 2025  
+**Ordering Physician:** Dr. Samuel Chen, MD - Medical Oncology
+
+---
+
+## EXAMINATION: PET/CT Whole Body with Contrast
+
+**CLINICAL INDICATION:** Restaging of stage IIIB non-small cell lung cancer (NSCLC) following completion of four cycles of carboplatin/pemetrexed chemotherapy.
+
+**COMPARISON:** Previous PET/CT dated October 22, 2024
+
+**TECHNIQUE:** Whole body FDG PET/CT performed 62 minutes following intravenous administration of 12.3 mCi F-18 fluorodeoxyglucose. Diagnostic CT with IV contrast.
+
+**FINDINGS:**
+
+**Chest:** The previously noted 4.2 cm right upper lobe mass has decreased to 2.8 cm with markedly reduced metabolic activity (SUVmax 3.2, previously 9.8). No new pulmonary nodules identified. Right hilar lymphadenopathy has resolved.
+
+**Mediastinum:** Previously hypermetabolic subcarinal lymph node (1.8 cm) now measures 0.9 cm with background metabolic activity (SUVmax 1.8). No significant adenopathy in other mediastinal stations.
+
+**Abdomen/Pelvis:** Liver, spleen, pancreas, kidneys, and adrenal glands demonstrate normal size and attenuation. No focal hepatic lesions. No pathologic adenopathy.
+
+**Skeletal:** No suspicious osseous lesions or abnormal skeletal uptake identified.
+
+**IMPRESSION:**
+
+1. **Marked interval improvement** in primary right upper lobe NSCLC with significant reduction in size and metabolic activity, consistent with excellent partial metabolic response to chemotherapy.
+
+2. **Resolution of regional nodal metastases** with normalization of previously involved subcarinal and hilar lymph nodes.
+
+3. **No evidence of distant metastatic disease.**
+
+**RECOMMENDATION:** Findings suggest favorable response to current treatment regimen. Continued oncologic management as clinically indicated.
+
+---
+
+**Electronically signed by:**  
+**Dr. Patricia Williamson, MD**  
+Board Certified Radiologist - Nuclear Medicine  
+Date/Time: 01/18/2025 16:42
+
+Report Status: Final

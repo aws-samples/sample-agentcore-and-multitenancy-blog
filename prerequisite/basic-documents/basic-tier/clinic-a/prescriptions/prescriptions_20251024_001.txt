@@ -1,0 +1,59 @@
+# Clinic A Family Practice
+
+**PRESCRIPTION RECORD**
+
+---
+
+**Date:** March 15, 2024
+
+**Patient Information:**
+- **Name:** Jennifer L. Morrison
+- **Date of Birth:** 07/22/1978
+- **Medical Record #:** CAF-892456
+- **Address:** 1247 Oakwood Drive, Springfield, IL 62704
+- **Phone:** (217) 555-0342
+
+---
+
+**Prescriber Information:**
+- **Physician:** Dr. Michael Chen, MD
+- **NPI:** 1234567890
+- **Phone:** (217) 555-0100
+- **Fax:** (217) 555-0101
+
+---
+
+**PRESCRIPTION DETAILS**
+
+**Rx 1:**
+- **Medication:** Lisinopril 10mg tablets
+- **Dosage:** Take one (1) tablet by mouth once daily
+- **Quantity:** 90 tablets
+- **Refills:** 3
+- **Indication:** Hypertension
+
+**Rx 2:**
+- **Medication:** Metformin HCl 500mg tablets
+- **Dosage:** Take one (1) tablet by mouth twice daily with meals
+- **Quantity:** 180 tablets
+- **Refills:** 3
+- **Indication:** Type 2 Diabetes Mellitus
+
+**Rx 3:**
+- **Medication:** Atorvastatin 20mg tablets
+- **Dosage:** Take one (1) tablet by mouth once daily at bedtime
+- **Quantity:** 90 tablets
+- **Refills:** 3
+- **Indication:** Hyperlipidemia
+
+---
+
+**Special Instructions:** Patient counseled on medication adherence, potential side effects, and importance of regular follow-up appointments. Next appointment scheduled for June 15, 2024, for medication review and lab work.
+
+**Prescriber Signature:** _M. Chen, MD_
+
+**Date Signed:** March 15, 2024
+
+---
+
+*This prescription is valid for one year from the date of issue.*

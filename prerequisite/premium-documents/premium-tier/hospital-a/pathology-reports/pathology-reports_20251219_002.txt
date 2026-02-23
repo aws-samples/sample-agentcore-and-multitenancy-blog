@@ -1,0 +1,51 @@
+# Hospital A Multi-Specialty Medical Center
+
+## DEPARTMENT OF PATHOLOGY
+
+**SURGICAL PATHOLOGY REPORT**
+
+---
+
+**PATIENT INFORMATION**  
+Name: Garcia, Maria T.  
+MRN: 84729361  
+DOB: 08/15/1967  
+Gender: Female  
+Location: Outpatient Surgery Center  
+
+**SPECIMEN INFORMATION**  
+Accession Number: S23-14892  
+Date Collected: 11/28/2023  
+Date Received: 11/28/2023  
+Date Reported: 11/30/2023  
+Requesting Physician: Dr. Jennifer Morrison, General Surgery  
+
+---
+
+**SPECIMEN SUBMITTED:**  
+Gallbladder, cholecystectomy
+
+**CLINICAL HISTORY:**  
+58-year-old female with recurrent right upper quadrant pain and ultrasonographic evidence of cholelithiasis. No jaundice noted.
+
+**GROSS DESCRIPTION:**  
+Received fresh, labeled with patient's name and medical record number, is an intact gallbladder measuring 9.0 x 3.5 x 2.8 cm. The serosal surface is smooth and glistening with mild subserosal congestion. The wall thickness ranges from 0.2 to 0.4 cm. Upon opening, the mucosa is green-brown and velvety. Multiple yellow-tan calculi are present, ranging from 0.5 to 1.8 cm in diameter. The cystic duct is patent. Representative sections submitted in cassettes A1-A3.
+
+**MICROSCOPIC DESCRIPTION:**  
+Sections demonstrate gallbladder mucosa with chronic cholecystitis characterized by lymphoplasmacytic infiltration of the lamina propria and muscular hypertrophy. Focal Rokitansky-Aschoff sinus formation is identified. No acute inflammation is present. The epithelium shows preserved columnar morphology without dysplasia. The serosa shows mild chronic inflammation. No malignancy is identified.
+
+**DIAGNOSIS:**  
+**Gallbladder, cholecystectomy:**
+- Chronic cholecystitis with cholelithiasis
+- Focal Rokitansky-Aschoff sinus formation
+- No dysplasia or malignancy identified
+
+---
+
+**Electronically signed by:**  
+**David Chen, MD**  
+Anatomic Pathology  
+Date/Time: 11/30/2023 14:32
+
+---
+*This is a final report. For questions, contact Pathology at (555) 428-7000.*

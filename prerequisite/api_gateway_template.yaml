@@ -96,31 +96,6 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AgentCoreApiGateway}/*/*'
 
-  # Usage Plans for Tenant Throttling
-  BasicTenantUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    Properties:
-      UsagePlanName: basic-tenant-plan
-      Description: Basic tenant with 100 requests per minute
-      Throttle:
-        RateLimit: 100
-        BurstLimit: 200
-      ApiStages:
-        - ApiId: !Ref AgentCoreApiGateway
-          Stage: !Ref ApiGatewayStage
-
-  PremiumTenantUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    Properties:
-      UsagePlanName: premium-tenant-plan
-      Description: Premium tenant with 1000 requests per minute
-      Throttle:
-        RateLimit: 1000
-        BurstLimit: 2000
-      ApiStages:
-        - ApiId: !Ref AgentCoreApiGateway
-          Stage: !Ref ApiGatewayStage
-
   # API Gateway Deployment
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
@@ -139,6 +114,7 @@ Resources:
   # Usage Plans for demo - very low limits to show throttling
   PremiumUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiGatewayStage
     Properties:
       UsagePlanName: premium-tier-demo
       Description: Premium tier for demo - higher limits
@@ -150,10 +126,11 @@ Resources:
         Period: DAY
       ApiStages:
         - ApiId: !Ref AgentCoreApiGateway
-          Stage: prod
+          Stage: !Ref ApiGatewayStage
 
   BasicUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiGatewayStage
     Properties:
       UsagePlanName: basic-tier-demo
       Description: Basic tier for demo - very low limits
@@ -165,7 +142,7 @@ Resources:
         Period: DAY
       ApiStages:
         - ApiId: !Ref AgentCoreApiGateway
-          Stage: prod
+          Stage: !Ref ApiGatewayStage
 
   # API Keys for tenants
   PremiumApiKey:
@@ -197,15 +174,30 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref BasicUsagePlan
 
+  # NOTE: API Key SSM parameters are created by scripts/fix_api_key_ssm.sh
+  # after stack deployment. CloudFormation's !Ref on ApiKey returns the
+  # resource ID, not the actual secret key value needed for x-api-key header.
+
+  # SSM Parameter for API Gateway URL
+  ApiGatewayUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/api_gateway_url
+      Type: String
+      Value: !Sub 'https://${AgentCoreApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+      Description: API Gateway URL for healthcare AgentCore
+      Tags:
+        Application: Healthcare
+
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway endpoint URL
     Value: !Sub 'https://${AgentCoreApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
     Export:
       Name: !Sub '${AWS::StackName}-ApiGatewayUrl'
-  PremiumApiKey:
-    Description: Premium API Key
+  PremiumApiKeyId:
+    Description: Premium API Key Resource ID (use get-api-key --include-value for actual key)
     Value: !Ref PremiumApiKey
-  BasicApiKey:
-    Description: Basic API Key  
+  BasicApiKeyId:
+    Description: Basic API Key Resource ID (use get-api-key --include-value for actual key)
     Value: !Ref BasicApiKey

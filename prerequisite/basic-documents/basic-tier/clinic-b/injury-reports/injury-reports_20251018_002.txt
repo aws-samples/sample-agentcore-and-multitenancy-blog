@@ -1,0 +1,34 @@
+**CLINIC B URGENT CARE CENTER**
+**INJURY REPORT**
+
+---
+
+**Patient Name:** Marcus Thompson (synthetic)  
+**Date of Birth:** 03/15/1987  
+**Date of Service:** January 14, 2025  
+**Time:** 14:30  
+**MRN:** CB-789456  
+
+---
+
+**CHIEF COMPLAINT:**  
+Right hand laceration
+
+**MECHANISM OF INJURY:**  
+Patient reports he was preparing food at home when a glass measuring cup shattered in his right hand at approximately 13:45 today. He sustained a laceration to the palmar aspect of his right hand. Denies loss of consciousness, head trauma, or other injuries. Bleeding was controlled with direct pressure using a clean kitchen towel prior to arrival.
+
+**PHYSICAL EXAMINATION:**  
+**Vitals:** BP 128/82, HR 76, RR 16, Temp 98.4°F, SpO2 98% on RA
+
+**Right Hand:** 3.5 cm oblique laceration noted to the thenar eminence extending from the base of the thumb toward the wrist. Wound edges slightly irregular. Minimal active bleeding. No foreign bodies visualized. Neurovascular examination reveals intact sensation to light touch in median, ulnar, and radial nerve distributions. Capillary refill <2 seconds all digits. Full range of motion of thumb and fingers intact. Flexor pollicis longus and abductor pollicis brevis strength 5/5 bilaterally.
+
+**TREATMENT PROVIDED:**  
+Wound irrigated copiously with 500mL normal saline. Local anesthesia achieved with 5mL of 1% lidocaine without epinephrine. Wound explored—no deep structure involvement, no retained glass fragments identified. Hemostasis obtained. Wound closed with 8 interrupted 4-0 nylon sutures. Sterile dressing applied. Tetanus toxoid 0.5mL IM administered to left deltoid (last tetanus >10 years ago).
+
+**DISPOSITION:**  
+Patient discharged home in stable condition with wound care instructions. Prescribed cephalexin 500mg PO QID x 7 days for infection prophylaxis. Advised to keep wound clean and dry. Suture removal scheduled in 10-14 days. Return precautions reviewed including signs of infection, increased pain, or neurovascular compromise.
+
+---
+
+**Provider:** Dr. Sarah Chen, MD  
+**Signature:** [Electronic signature on file]

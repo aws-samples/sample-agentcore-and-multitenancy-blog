@@ -1,0 +1,67 @@
+# SPECIALIST REFERRAL
+
+**FROM:** Clinic D Internal Medicine  
+**Address:** 2847 Medical Plaza Drive, Suite 304, Springfield, IL 62704  
+**Phone:** (217) 555-0198 | **Fax:** (217) 555-0199
+
+---
+
+**Date:** March 15, 2024
+
+**TO:** Dr. Sarah Chen, MD, FACC  
+Cardiology Associates of Central Illinois  
+1520 Heart Center Parkway  
+Springfield, IL 62702
+
+---
+
+**PATIENT INFORMATION**
+
+**Name:** Robert Mitchell  
+**DOB:** 08/12/1968 (55 years old)  
+**MRN:** CDM-789456  
+**Phone:** (217) 555-3421  
+**Insurance:** Blue Cross Blue Shield PPO | ID: XYZ889452301
+
+---
+
+**REFERRING PHYSICIAN:** Dr. James Patterson, MD  
+**Date of Consultation:** March 12, 2024
+
+---
+
+**REASON FOR REFERRAL:** Evaluation of exertional chest discomfort and abnormal stress test
+
+**CLINICAL SUMMARY:**
+
+Mr. Mitchell presents with a 6-week history of substernal chest pressure occurring with moderate exertion (climbing two flights of stairs, brisk walking). Discomfort resolves with 3-5 minutes of rest. He denies radiation, associated diaphoresis, nausea, or palpitations. No symptoms at rest.
+
+**PAST MEDICAL HISTORY:**
+- Hypertension (controlled)
+- Type 2 Diabetes Mellitus (HbA1c 7.1%)
+- Hyperlipidemia
+- Former smoker (quit 2019, 30 pack-year history)
+
+**CURRENT MEDICATIONS:**
+- Lisinopril 20mg daily
+- Metformin 1000mg BID
+- Atorvastatin 40mg daily
+- Aspirin 81mg daily
+
+**RECENT DIAGNOSTIC STUDIES:**
+- ECG (03/12/24): Normal sinus rhythm, no acute changes
+- Exercise stress test (03/14/24): Positive at 7 minutes, 1.5mm ST depression in leads V4-V6, chest pressure reproduced
+- Lipid panel: TC 198, LDL 115, HDL 42, TG 205
+
+**PHYSICAL EXAM:**
+BP 138/84, HR 76, regular. Cardiovascular: RRR, no murmurs. Lungs clear. No peripheral edema.
+
+**REQUEST:** Please evaluate for coronary artery disease and recommend management including possible coronary angiography.
+
+Patient is clinically stable. Urgent but not emergent evaluation requested within 2 weeks.
+
+---
+
+**James Patterson, MD**  
+Clinic D Internal Medicine  
+NPI: 1234567890

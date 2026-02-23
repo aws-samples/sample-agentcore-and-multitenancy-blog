@@ -314,22 +314,22 @@ AgentCore Memory provides these isolation guarantees at the **API level**:
 ### Implementation Checklist
 
 **Phase 1: Memory Resource Setup**
-- [ ] Create 2 Memory resources (basic-tier, premium-tier) with namespace templates
-- [ ] Configure namespace templates: `"clinic/{actorId}/facts/{sessionId}"`
-- [ ] Store Memory resource IDs in SSM:
+- [x] Create 2 Memory resources (basic-tier, premium-tier) with namespace templates
+- [x] Configure namespace templates: `"clinic/{actorId}/facts/{sessionId}"`
+- [x] Store Memory resource IDs in SSM:
   - `/app/healthcare/memory/basic_id`
   - `/app/healthcare/memory/premium_id`
 - [ ] Verify Memory resources are ACTIVE
 
 **Phase 2: JWT and Actor ID Configuration**
-- [ ] Update JWT parsing to extract `user_id` from `cognito:username`
-- [ ] Implement hierarchical `actor_id` construction: `"{tier}-{clinic_id}-{user_id}"`
-- [ ] Update agent code to use user-specific `actor_id` for all memory operations
-- [ ] Add logging for `actor_id` generation for debugging
+- [x] Update JWT parsing to extract `user_id` from `cognito:username`
+- [x] Implement hierarchical `actor_id` construction: `"{tier}-{clinic_id}-{user_id}"`
+- [x] Update agent code to use user-specific `actor_id` for all memory operations
+- [x] Add logging for `actor_id` generation for debugging
 
 **Phase 3: Agent Integration**
-- [ ] Update `main.py` to initialize `MemorySessionManager` with tier-specific memory
-- [ ] Update `main_premium.py` similarly
+- [x] Update `main.py` to initialize `MemorySessionManager` with tier-specific memory
+- [x] Update `main_premium.py` similarly
 - [ ] Configure `retrieval_config` with namespace templates
 - [ ] Test memory operations with different `actor_id` values
 

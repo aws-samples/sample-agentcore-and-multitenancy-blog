@@ -1,0 +1,55 @@
+# Hospital A Multi-Specialty Medical Center
+
+## DIAGNOSTIC IMAGING REPORT
+
+**Patient Name:** Martinez, Angela R.  
+**MRN:** 847293-HSA  
+**DOB:** 03/15/1968 (Age: 56)  
+**Date of Service:** January 18, 2025  
+**Ordering Physician:** Dr. Kenneth Patel, Internal Medicine
+
+---
+
+### EXAMINATION: CT Chest with IV Contrast
+
+**Clinical Indication:** Persistent cough for 6 weeks, history of smoking (20 pack-years), mild dyspnea on exertion
+
+**Technique:** Multidetector helical CT of the chest performed with 100mL intravenous contrast (Omnipaque 350). Images acquired in arterial and venous phases with 1.25mm slice thickness. Coronal and sagittal reconstructions obtained.
+
+**Comparison:** Chest X-ray dated November 12, 2024
+
+---
+
+### FINDINGS:
+
+**Lungs:** Mild bilateral upper lobe paraseptal emphysematous changes consistent with smoking history. No focal consolidation, mass, or nodule identified. No pleural effusion or pneumothorax.
+
+**Airways:** Trachea and main bronchi patent without obstruction. Mild bronchial wall thickening bilaterally, suggesting chronic bronchitis.
+
+**Mediastinum:** No mediastinal or hilar lymphadenopathy by size criteria (nodes <10mm short axis). Heart size normal. Aorta demonstrates minimal atherosclerotic calcification, age-appropriate.
+
+**Cardiac:** Cardiac silhouette within normal limits. No pericardial effusion.
+
+**Osseous Structures:** Degenerative changes noted in the thoracic spine. No aggressive lytic or blastic lesions.
+
+**Upper Abdomen:** Limited views show normal liver, spleen, and adrenal glands.
+
+---
+
+### IMPRESSION:
+
+1. **Mild centrilobular and paraseptal emphysema**, consistent with COPD in the setting of tobacco use
+2. **Chronic bronchial wall thickening** suggesting chronic bronchitis
+3. **No evidence of pulmonary mass or nodule**
+4. **No acute cardiopulmonary process identified**
+
+**Recommendation:** Pulmonary function testing recommended for further COPD assessment. Smoking cessation counseling advised.
+
+---
+
+**Radiologist:** Dr. Sarah J. Montgomery, MD, FACR  
+**Electronically Signed:** 01/18/2025 14:32  
+**Report Status:** Final
+
+---
+*Hospital A Multi-Specialty Medical Center | 2500 Medical Plaza Drive | Phone: (555) 234-7800*

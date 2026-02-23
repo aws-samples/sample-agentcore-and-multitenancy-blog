@@ -1,0 +1,57 @@
+**CLINIC B URGENT CARE CENTER**
+**URGENT CARE DIAGNOSTIC NOTE**
+
+---
+
+**Patient Name:** Martinez, Sofia  
+**MRN:** UCB-847293  
+**DOB:** 08/14/1987  
+**Date of Visit:** January 15, 2025  
+**Time:** 14:30  
+**Provider:** Dr. Kenneth Park, MD
+
+---
+
+**CHIEF COMPLAINT:**  
+"Sharp pain in my right side and burning when I urinate for 2 days"
+
+**PRESENTING SYMPTOMS:**  
+35-year-old female presents with acute onset right flank pain radiating to lower abdomen, dysuria, urinary frequency, and mild nausea. Reports pain severity 7/10. Denies fever, vomiting, or vaginal discharge. Last menstrual period 2 weeks ago. No history of kidney stones. 
+
+**PHYSICAL EXAMINATION:**  
+- Vitals: BP 128/82, HR 88, Temp 99.1°F, RR 16, O2 sat 98% RA
+- General: Alert, oriented, mild discomfort
+- Abdomen: Soft, positive right costovertebral angle tenderness
+- No suprapubic tenderness or guarding
+
+**DIAGNOSTIC REASONING:**  
+Clinical presentation highly suggestive of urinary tract pathology. Differential diagnosis includes:
+1. **Acute pyelonephritis** - flank pain, CVA tenderness, low-grade fever
+2. **Nephrolithiasis** - acute colicky flank pain, nausea
+3. **Complicated cystitis** - dysuria, frequency with ascending symptoms
+4. **Appendicitis** - less likely given pain location and urinary symptoms
+
+**DIAGNOSTICS PERFORMED:**  
+- Urinalysis: 3+ leukocytes, 2+ blood, positive nitrites, positive leukocyte esterase
+- Urine pregnancy test: Negative
+- Basic metabolic panel: Within normal limits
+
+**DIAGNOSIS:**  
+Acute pyelonephritis, right-sided
+
+**TREATMENT PLAN:**  
+1. Ciprofloxacin 500mg PO BID x 7 days
+2. Ondansetron 4mg PO PRN nausea
+3. Ibuprofen 600mg PO Q6H PRN pain
+4. Increased oral hydration (64+ oz daily)
+5. Follow-up with PCP in 48-72 hours or sooner if worsening
+6. Return precautions: high fever >101.5°F, persistent vomiting, severe pain
+
+**DISPOSITION:**  
+Discharged home in stable condition with prescriptions and patient education provided.
+
+---
+
+**Electronically signed by:**  
+Dr. Kenneth Park, MD  
+January 15, 2025 15:05

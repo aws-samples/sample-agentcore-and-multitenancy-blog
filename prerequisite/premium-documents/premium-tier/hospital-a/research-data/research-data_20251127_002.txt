@@ -1,0 +1,65 @@
+# HOSPITAL A MULTI-SPECIALTY MEDICAL CENTER
+
+**Clinical Research Data Summary**
+
+---
+
+**Study Title:** Efficacy of Early Mobilization Protocol in Post-Operative Orthopedic Patients
+
+**Protocol Number:** HAMSMC-2024-087  
+**Principal Investigator:** Dr. Sarah Mitchell, MD, FACS  
+**Study Period:** January 2024 - March 2024
+
+---
+
+## Patient Cohort Summary (N=45)
+
+**Demographics:**
+- Mean Age: 58.3 years (Range: 42-74)
+- Gender Distribution: 24 Female (53%), 21 Male (47%)
+- Average BMI: 27.8 kg/m²
+
+**Surgical Procedures:**
+- Total Knee Arthroplasty (TKA): 18 patients
+- Total Hip Arthroplasty (THA): 15 patients
+- Spinal Fusion (L4-L5): 12 patients
+
+---
+
+## Clinical Outcomes
+
+**Primary Endpoint - Mobilization Time:**
+- Intervention Group (n=23): 14.2 ± 3.1 hours post-op
+- Control Group (n=22): 28.6 ± 5.4 hours post-op
+- p-value: <0.001
+
+**Secondary Endpoints:**
+
+*Pain Scores (VAS Scale at 48 hours):*
+- Intervention: 3.8 ± 1.2
+- Control: 5.4 ± 1.8
+
+*Length of Stay:*
+- Intervention: 3.2 ± 0.8 days
+- Control: 4.9 ± 1.3 days
+
+*Complications:*
+- DVT occurrence: 2 cases (Control group)
+- Wound infections: 1 case (Intervention group)
+- No pulmonary embolism events reported
+
+**Functional Recovery (6-week follow-up):**
+- Modified Harris Hip Score (THA): 82.4 vs 74.1 (p=0.02)
+- Knee Society Score (TKA): 78.9 vs 71.3 (p=0.03)
+- Oswestry Disability Index (Spinal): 28.2 vs 35.7 (p=0.04)
+
+---
+
+**Conclusion:** Early mobilization protocol demonstrated statistically significant improvements in time to ambulation, reduced hospital length of stay, and enhanced functional outcomes without increasing adverse events. Data supports implementation across orthopedic service line.
+
+**Adverse Events:** All SAEs reported to IRB within 24 hours per protocol requirements.
+
+---
+
+*Document ID: HAMSMC-RD-2024-Q1-087*  
+*Generated: March 28, 2024*

@@ -1,0 +1,51 @@
+# Hospital B Academic Medical Center
+## Department of Radiology and Imaging Sciences
+
+---
+
+**RADIOLOGY REPORT**
+
+**Patient Name:** Martinez, Sofia E.  
+**MRN:** 847392615  
+**DOB:** 03/17/1968 (Age: 56)  
+**Date of Exam:** January 15, 2025  
+**Ordering Physician:** Dr. Kenneth Walsh, Pulmonology  
+
+---
+
+**EXAMINATION:** CT Chest with Intravenous Contrast
+
+**CLINICAL INDICATION:** Persistent cough, suspected pulmonary nodule on prior chest radiograph, history of 25-pack-year smoking.
+
+**TECHNIQUE:** Multidetector CT of the chest performed with 100 mL iohexol contrast. Axial images reconstructed at 2.5 mm slice thickness. Coronal and sagittal reformations obtained.
+
+**COMPARISON:** Chest radiograph dated December 28, 2024.
+
+**FINDINGS:**
+
+**Lungs:** A 1.8 cm spiculated nodule is identified in the right upper lobe (Series 3, Image 47), demonstrating heterogeneous enhancement. No additional suspicious pulmonary nodules detected. No pleural effusion or pneumothorax.
+
+**Mediastinum:** Mildly enlarged right paratracheal lymph node measuring 1.2 cm in short axis, likely reactive. No pathologically enlarged hilar or mediastinal lymphadenopathy by size criteria. Heart size within normal limits.
+
+**Airways:** Trachea and main bronchi patent. Mild bronchial wall thickening consistent with chronic bronchitis.
+
+**Bones:** No acute osseous abnormality. Mild degenerative changes noted in the thoracic spine.
+
+**Upper Abdomen:** Limited views show no gross abnormality in visualized liver, spleen, or adrenal glands.
+
+**IMPRESSION:**
+
+1. **1.8 cm spiculated right upper lobe pulmonary nodule with enhancement** - concerning for primary bronchogenic carcinoma. PET-CT and tissue diagnosis recommended.
+2. Mildly enlarged right paratracheal lymph node, likely reactive but requires correlation with PET-CT.
+3. Chronic bronchitic changes.
+
+**RECOMMENDATION:** Multidisciplinary discussion recommended. Consider PET-CT and pulmonology consultation for possible bronchoscopy with biopsy.
+
+---
+
+**Electronically signed by:**  
+**Dr. Rachel K. Patterson, MD**  
+Board Certified Radiologist  
+Date/Time: 01/15/2025 16:42
+
+**Report Status:** Final

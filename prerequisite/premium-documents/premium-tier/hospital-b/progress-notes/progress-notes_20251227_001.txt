@@ -1,0 +1,44 @@
+```
+HOSPITAL B ACADEMIC MEDICAL CENTER
+Department of Internal Medicine
+Progress Note
+
+Patient Name: Morrison, Patricia L.
+MRN: 08472391
+DOB: 03/15/1968 (Age: 56)
+Date of Service: 01/18/2025
+Time: 14:30
+Attending: Dr. James K. Richardson, MD
+Location: 5 West Medical Unit
+
+SUBJECTIVE:
+Patient is POD #2 s/p laparoscopic cholecystectomy for acute cholecystitis. Reports improved right upper quadrant pain, now 3/10 from 8/10pre-operatively. Tolerating clear liquids without nausea. Reports passing flatus. Denies fever, chills, or dyspnea. Surgical sites with minimal discomfort.
+
+OBJECTIVE:
+Vitals: T 98.4°F, BP 128/76, HR 74, RR 16, SpO2 98% on RA
+General: Alert, oriented x3, comfortable, ambulating in hallway
+CV: Regular rate and rhythm, no murmurs
+Pulm: Clear to auscultation bilaterally, good air movement
+Abd: Soft, non-distended, bowel sounds present in all quadrants. Laparoscopic port sites clean, dry, intact with steri-strips. No erythema or drainage. Mild tenderness to palpation at umbilical port site.
+Extremities: No edema, negative Homan's sign bilaterally
+
+LABS (Today):
+WBC 8.2 K/µL (↓ from 14.1 on admission)
+Hgb 12.1 g/dL, Hct 36.2%
+BMP: Na 139, K 3.9, Cl 102, CO2 24, BUN 14, Cr 0.8, Glucose 104
+
+ASSESSMENT/PLAN:
+56-year-old female with uncomplicated postoperative course following laparoscopic cholecystectomy for acute cholecystitis.
+
+1. Pain management: Continue oral hydrocodone-acetaminophen PRN, transitioning to acetaminophen alone
+2. Diet: Advance to low-fat diet as tolerated
+3. DVT prophylaxis: Continue ambulation TID, sequential compression devices
+4. Discharge planning: Target discharge tomorrow AM if tolerating regular diet and pain controlled on PO medications
+5. Follow-up: Surgery clinic in 2 weeks for wound check
+
+_________________________________
+James K. Richardson, MD
+Internal Medicine
+Hospital B Academic Medical Center
+Electronically signed: 01/18/2025 15:05
+```

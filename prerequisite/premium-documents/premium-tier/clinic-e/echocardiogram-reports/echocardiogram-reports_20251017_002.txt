@@ -1,0 +1,63 @@
+# ECHOCARDIOGRAM REPORT
+
+**CLINIC E CARDIOLOGY SPECIALISTS**
+2847 Medical Plaza Drive, Suite 302
+Portland, OR 97214
+Phone: (503) 555-0187 | Fax: (503) 555-0188
+
+---
+
+**PATIENT INFORMATION**
+Name: Sandra M. Kowalski
+DOB: 08/15/1967
+MRN: ECH-892634
+Exam Date: January 15, 2025
+Ordering Physician: Dr. Michael Chen, MD
+
+**INDICATION:** Evaluation of dyspnea on exertion and suspected valvular disease
+
+**PROCEDURE:** Transthoracic Echocardiogram with Doppler
+
+---
+
+**MEASUREMENTS:**
+- Left Ventricular End-Diastolic Diameter: 4.8 cm
+- Left Ventricular End-Systolic Diameter: 3.1 cm
+- Interventricular Septum: 1.0 cm
+- Posterior Wall Thickness: 0.9 cm
+- Left Atrium: 3.9 cm
+- Aortic Root: 3.2 cm
+- Ejection Fraction (biplane Simpson's): 58%
+
+**FINDINGS:**
+
+*Left Ventricle:* Normal size and wall thickness. Systolic function is preserved with estimated ejection fraction of 58%. No regional wall motion abnormalities identified.
+
+*Right Ventricle:* Normal size and function. TAPSE 2.2 cm.
+
+*Atria:* Left atrium is normal in size. Right atrium is normal.
+
+*Valves:* 
+- Mitral valve: Mild mitral regurgitation with trace posterior leaflet prolapse
+- Aortic valve: Trileaflet with mild sclerosis, no significant stenosis or regurgitation
+- Tricuspid valve: Structurally normal, trace regurgitation, RVSP estimated at 28 mmHg
+- Pulmonic valve: Normal appearance and function
+
+*Pericardium:* No pericardial effusion
+
+*Doppler:* Normal diastolic filling pattern. E/A ratio 1.1.
+
+**IMPRESSION:**
+1. Normal left ventricular size and systolic function (EF 58%)
+2. Mild mitral regurgitation with trace mitral valve prolapse
+3. Mild aortic sclerosis without hemodynamically significant stenosis
+4. No pericardial effusion
+
+**RECOMMENDATION:** Clinical correlation advised. Consider follow-up echocardiogram in 2-3 years or sooner if symptoms progress.
+
+---
+
+*Electronically signed by:*
+**Dr. Patricia Reynolds, MD, FACC**
+Board Certified Cardiologist
+Date: January 15, 2025, 16:42 EST

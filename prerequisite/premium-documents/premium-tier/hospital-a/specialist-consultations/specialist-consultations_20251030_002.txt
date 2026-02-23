@@ -1,0 +1,53 @@
+# Hospital A Multi-Specialty Medical Center
+
+## SPECIALIST CONSULTATION REPORT
+
+**PATIENT INFORMATION**
+- Name: Anderson, Margaret L.
+- MRN: 847295-HC
+- DOB: 08/14/1968 (Age: 55)
+- Date of Consultation: January 15, 2025
+- Referring Physician: Dr. James Mitchell, Internal Medicine
+
+**CONSULTING SPECIALIST**
+Dr. Patricia Cervantes, MD, FACC
+Division of Cardiology
+
+**REASON FOR CONSULTATION**
+Evaluation of persistent atypical chest pain and abnormal stress test findings.
+
+**HISTORY OF PRESENT ILLNESS**
+Patient is a 55-year-old female with a three-month history of exertional chest discomfort described as pressure-like sensation in the substernal region, radiating to the left shoulder. Episodes last 5-10 minutes and resolve with rest. Recent nuclear stress test showed reversible inferior wall perfusion defect. No associated dyspnea, diaphoresis, or syncope.
+
+**PAST MEDICAL HISTORY**
+- Hypertension (controlled)
+- Hyperlipidemia
+- Type 2 Diabetes Mellitus
+- Former smoker (quit 2019)
+
+**MEDICATIONS**
+Lisinopril 20mg daily, Metformin 1000mg BID, Atorvastatin 40mg daily, Aspirin 81mg daily
+
+**PHYSICAL EXAMINATION**
+BP 138/82, HR 76, regular rhythm. Cardiovascular: S1, S2 normal, no murmurs or gallops. Lungs clear bilaterally. No peripheral edema.
+
+**DIAGNOSTIC FINDINGS**
+ECG shows normal sinus rhythm, no acute ST-T changes. Recent lipid panel: TC 198, LDL 118, HDL 52, TG 140.
+
+**ASSESSMENT**
+Stable angina pectoris with evidence of myocardial ischemia on stress testing, likely secondary to coronary artery disease.
+
+**RECOMMENDATIONS**
+1. Schedule cardiac catheterization within two weeks
+2. Increase Atorvastatin to 80mg daily
+3. Add Metoprolol succinate 50mg daily
+4. Nitroglycerin SL 0.4mg PRN for chest pain
+5. Dietary consultation for cardiac diet
+6. Follow-up post-catheterization
+
+**Electronically signed by:**
+Dr. Patricia Cervantes, MD, FACC
+January 15, 2025, 16:45
+
+---
+*Hospital A Multi-Specialty Medical Center | 2500 Healthcare Boulevard | Phone: (555) 123-4500*

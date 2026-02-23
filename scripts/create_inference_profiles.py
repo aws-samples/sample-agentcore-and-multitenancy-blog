@@ -9,30 +9,36 @@ import json
 import sys
 from botocore.exceptions import ClientError
 
-def create_inference_profile(bedrock_client, profile_name: str, model_id: str = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"):
+def create_inference_profile(bedrock_client, profile_name: str, model_arn: str, tier: str, region: str):
     """Create a Bedrock inference profile"""
     try:
-        response = bedrock_client.create_application_inference_profile(
+        response = bedrock_client.create_inference_profile(
             inferenceProfileName=profile_name,
-            description=f"Inference profile for {profile_name} tier customer support",
+            description=f"Inference profile for {tier} tier healthcare system",
             modelSource={
-                'copyFrom': model_id
+                'copyFrom': model_arn
             },
             tags=[
                 {
                     'key': 'Project',
-                    'value': 'CustomerSupport'
+                    'value': 'HealthcareDemo'
                 },
                 {
                     'key': 'Tier',
-                    'value': profile_name.title()
+                    'value': tier
+                },
+                {
+                    'key': 'Environment',
+                    'value': 'demo'
                 }
             ]
         )
         
         profile_arn = response['inferenceProfileArn']
         print(f"✅ Created inference profile: {profile_name}")
+        print(f"   Model: {model_arn}")
         print(f"   ARN: {profile_arn}")
+        print(f"   Status: {response.get('status', 'ACTIVE')}")
         return profile_arn
         
     except ClientError as e:
@@ -40,7 +46,7 @@ def create_inference_profile(bedrock_client, profile_name: str, model_id: str = 
             print(f"⚠️ Inference profile {profile_name} already exists")
             # Get existing profile ARN
             try:
-                response = bedrock_client.get_application_inference_profile(
+                response = bedrock_client.get_inference_profile(
                     inferenceProfileIdentifier=profile_name
                 )
                 return response['inferenceProfileArn']
@@ -67,43 +73,65 @@ def store_profile_arn_in_ssm(ssm_client, param_name: str, profile_arn: str):
 
 def main():
     """Main function to create inference profiles"""
-    print("🧠 Creating Bedrock inference profiles for multi-tenant deployment...")
+    print("🧠 Creating Bedrock inference profiles for healthcare multi-tenant deployment...")
     
     try:
         # Initialize AWS clients
         bedrock_client = boto3.client('bedrock')
         ssm_client = boto3.client('ssm')
         
-        # Create basic tier inference profile
+        # Get current region and account
+        session = boto3.session.Session()
+        region = session.region_name or 'us-west-2'
+        sts_client = boto3.client('sts')
+        account_id = sts_client.get_caller_identity()['Account']
+        print(f"📍 Using region: {region}")
+        print(f"📍 Account ID: {account_id}")
+        
+        # Create basic tier inference profile (Nova Micro)
+        # Use cross-region inference profile ARN as copyFrom source
+        print("\n📊 Creating Basic Tier profile...")
+        basic_inference_profile_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/us.amazon.nova-micro-v1:0"
         basic_profile_arn = create_inference_profile(
             bedrock_client, 
-            "customersupport-basic-profile"
+            profile_name="healthcare-basic-profile",
+            model_arn=basic_inference_profile_arn,
+            tier="Basic",
+            region=region
         )
         
         if basic_profile_arn:
             store_profile_arn_in_ssm(
                 ssm_client,
-                "/app/customersupport/inference_profiles/basic_arn",
+                "/app/healthcare/inference_profiles/basic_arn",
                 basic_profile_arn
             )
         
-        # Create premium tier inference profile
+        # Create premium tier inference profile (Claude Sonnet 4.5)
+        # Use cross-region inference profile ARN as copyFrom source
+        print("\n📊 Creating Premium Tier profile...")
+        premium_inference_profile_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
         premium_profile_arn = create_inference_profile(
             bedrock_client,
-            "customersupport-premium-profile"
+            profile_name="healthcare-premium-profile",
+            model_arn=premium_inference_profile_arn,
+            tier="Premium",
+            region=region
         )
         
         if premium_profile_arn:
             store_profile_arn_in_ssm(
                 ssm_client,
-                "/app/customersupport/inference_profiles/premium_arn", 
+                "/app/healthcare/inference_profiles/premium_arn", 
                 premium_profile_arn
             )
         
-        print("✅ Inference profile creation completed!")
+        print("\n✅ Inference profile creation completed!")
+        print(f"   Basic: Nova Micro (cost-effective)")
+        print(f"   Premium: Claude Sonnet 4.5 (advanced reasoning)")
         
         # Update configuration
-        print("🔧 Updating deployment configuration...")
+        print("\n🔧 Updating deployment configuration...")
         import subprocess
         subprocess.run([sys.executable, "scripts/configure_deployment.py"], check=True)
         

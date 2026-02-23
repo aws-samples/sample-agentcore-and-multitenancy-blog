@@ -1,0 +1,69 @@
+# TREATMENT PLAN
+
+**CLINIC F ONCOLOGY CENTER**
+
+2847 Medical Plaza Drive, Suite 300 | Phone: (555) 742-8900 | Fax: (555) 742-8901
+
+---
+
+**PATIENT INFORMATION**
+
+Name: Patricia M. Henderson  
+DOB: 08/14/1967  
+MRN: CF-089452  
+Date of Service: January 15, 2025
+
+**DIAGNOSIS**
+
+Primary: Stage IIIA Non-Small Cell Lung Carcinoma (NSCLC), Adenocarcinoma  
+ICD-10: C34.11 - Malignant neoplasm of upper lobe, right bronchus
+
+**ONCOLOGIST**
+
+Dr. Michael Chen, MD, FACP
+
+---
+
+**TREATMENT PLAN OVERVIEW**
+
+**Treatment Intent:** Curative with multimodal approach
+
+**Phase 1: Neoadjuvant Chemotherapy (Cycles 1-4)**
+- Regimen: Cisplatin 75 mg/m² IV + Pemetrexed 500 mg/m² IV
+- Schedule: Day 1 of each 21-day cycle
+- Duration: 12 weeks (4 cycles)
+- Start Date: January 22, 2025
+
+**Supportive Medications:**
+- Ondansetron 16mg IV pre-chemotherapy
+- Dexamethasone 8mg PO BID (days 0-3)
+- Vitamin B12 1000mcg IM every 9 weeks
+- Folic acid 400mcg PO daily
+
+**Phase 2: Surgical Intervention**
+- Right upper lobectomy with mediastinal lymph node dissection
+- Scheduled approximately 4-6 weeks post-chemotherapy completion
+- Surgical oncology consultation with Dr. Sarah Patel
+
+**Phase 3: Adjuvant Therapy**
+- Concurrent chemoradiation pending surgical pathology
+- Radiation: 60 Gy in 30 fractions to tumor bed and mediastinal nodes
+- Chemotherapy: Weekly Carboplatin AUC 2 + Paclitaxel 45 mg/m²
+
+**MONITORING REQUIREMENTS**
+
+- CBC with differential before each cycle
+- Comprehensive metabolic panel, including renal function
+- CT chest with contrast every 2 cycles
+- PET-CT scan post-neoadjuvant therapy for restaging
+
+**FOLLOW-UP**
+
+Next appointment: January 22, 2025 for chemotherapy cycle 1  
+Nurse Navigator: Jennifer Martinez, RN, OCN | (555) 742-8915
+
+---
+
+*Electronically signed by Dr. Michael Chen, MD on 01/15/2025*
+
+**CLINIC F ONCOLOGY CENTER** | Comprehensive Cancer Care

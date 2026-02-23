@@ -1,0 +1,67 @@
+# CLINIC E CARDIOLOGY SPECIALISTS
+## Cardiac Imaging Report
+
+**Patient Name:** Morrison, Jennifer L.  
+**MRN:** CE-847392  
+**DOB:** 03/15/1968  
+**Age/Sex:** 56 years / Female  
+**Exam Date:** January 15, 2025  
+**Referring Physician:** Dr. Alan Patel, MD
+
+---
+
+### EXAMINATION: Transthoracic Echocardiogram with Doppler
+
+**INDICATION:** Dyspnea on exertion, hypertension, evaluation of left ventricular function
+
+**TECHNICAL QUALITY:** Adequate for interpretation. Limited apical windows due to body habitus.
+
+---
+
+### FINDINGS:
+
+**LEFT VENTRICLE:**  
+- Chamber size: Normal (LVEDD 4.8 cm)
+- Wall thickness: Normal (IVS 1.0 cm, PW 0.9 cm)
+- Systolic function: Normal, estimated LVEF 58%
+- Wall motion: No regional wall motion abnormalities identified
+- Diastolic function: Grade I diastolic dysfunction (impaired relaxation)
+
+**LEFT ATRIUM:**  
+- Mildly dilated (LA volume index 32 mL/m²)
+
+**RIGHT VENTRICLE:**  
+- Normal size and systolic function
+- TAPSE 2.2 cm
+
+**VALVES:**  
+- Mitral valve: Mild mitral regurgitation, trace mitral annular calcification
+- Aortic valve: Trileaflet, mild aortic sclerosis without stenosis (peak velocity 1.8 m/s)
+- Tricuspid valve: Trivial tricuspid regurgitation, RVSP estimated 28 mmHg
+- Pulmonic valve: Normal
+
+**PERICARDIUM:**  
+- No pericardial effusion
+
+**AORTA:**  
+- Normal ascending aorta (3.2 cm)
+
+---
+
+### IMPRESSION:
+
+1. Normal left ventricular size and systolic function (LVEF 58%)
+2. Grade I diastolic dysfunction
+3. Mild left atrial enlargement
+4. Mild mitral regurgitation
+5. Mild aortic sclerosis without hemodynamically significant stenosis
+6. Normal estimated right ventricular systolic pressures
+
+**RECOMMENDATIONS:** Clinical correlation advised. Consider optimization of blood pressure management given diastolic dysfunction.
+
+---
+
+**Electronically signed by:**  
+**Rachel Chen, MD, FACC**  
+Board Certified Cardiologist  
+Date/Time: 01/15/2025 16:42

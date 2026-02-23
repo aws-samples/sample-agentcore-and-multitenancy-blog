@@ -93,11 +93,11 @@ def main():
         model_id="us.amazon.nova-micro-v1:0"  # CHANGED
     )
     
-    # Premium tier: Claude Sonnet 4.5 (high-quality)
+    # Premium tier: Nova 2 Lite (with built-in web grounding)
     premium_profile_arn = create_inference_profile(
         bedrock_client,
         "healthcare-premium-profile",
-        model_id="us.anthropic.claude-sonnet-4-v2:0"  # CHANGED
+        model_id="us.amazon.nova-2-lite-v1:0"  # CHANGED - Nova 2 Lite
     )
     
     # Store in SSM with healthcare prefix
@@ -136,7 +136,7 @@ inference_profile_mapping = {
   - Change profile names: `healthcare-basic-profile`, `healthcare-premium-profile`
   - Change model IDs:
     - Basic: `us.amazon.nova-micro-v1:0`
-    - Premium: `us.anthropic.claude-sonnet-4-v2:0` (Claude Sonnet 4.5)
+    - Premium: `us.amazon.nova-2-lite-v1:0` (Nova 2 Lite with web grounding)
   - Update tags for cost tracking:
     ```python
     tags=[
@@ -251,12 +251,13 @@ inference_profile_mapping = {
 - Output: $0.00014 per 1K tokens
 - Example: 100K input + 50K output = $0.0035 + $0.007 = **$0.0105 per clinic**
 
-**Premium Tier (Claude Sonnet 4.5)**:
-- Input: $0.003 per 1K tokens
-- Output: $0.015 per 1K tokens
-- Example: 100K input + 50K output = $0.30 + $0.75 = **$1.05 per clinic**
+**Premium Tier (Nova 2 Lite)**:
+- Input: $0.00035 per 1K tokens
+- Output: $0.0014 per 1K tokens
+- Example: 100K input + 50K output = $0.035 + $0.07 = **$0.105 per clinic**
+- **Built-in web grounding** - no external API costs!
 
-**Cost Difference**: 100x (demonstrates clear tier differentiation!)
+**Cost Difference**: 10x (demonstrates clear tier differentiation while keeping costs reasonable!)
 
 #### Runtime Costs (Minimal - <5% of total)
 
@@ -282,12 +283,12 @@ inference_profile_mapping = {
 - **Total: $0.31/month**
 
 **Hospital A (Premium Tier)**:
-- Model: $10.50 (1M input + 500K output tokens)
+- Model: $1.05 (1M input + 500K output tokens with Nova 2 Lite)
 - Runtime: $0.06 (5400 CPU-seconds)
 - Memory: $0.05 (15K events + 8K retrievals)
-- **Total: $10.61/month**
+- **Total: $1.16/month**
 
-**Key Insight**: Premium costs **34x more** due to Claude Sonnet 4.5 pricing, demonstrating clear tier value differentiation!
+**Key Insight**: Premium costs **3.7x more** due to Nova 2 Lite pricing + web grounding capability, demonstrating clear tier value differentiation while keeping costs reasonable!
 
 ---
 
@@ -334,10 +335,10 @@ def test_basic_tier_uses_nova_micro():
     agent = CustomerSupport(tenant_id="basic", clinic_id="clinic-a")
     assert "nova-micro" in agent.model_id.lower()
 
-def test_premium_tier_uses_claude_sonnet():
-    """Verify premium tier uses Claude Sonnet 4.5"""
+def test_premium_tier_uses_nova_2():
+    """Verify premium tier uses Nova 2 Lite model"""
     agent = CustomerSupport(tenant_id="premium", clinic_id="hospital-a")
-    assert "claude-sonnet-4" in agent.model_id.lower()
+    assert "nova-2-lite" in agent.model_id.lower()
 
 def test_clinic_isolation():
     """Verify different clinics use same tier profile"""
@@ -395,17 +396,18 @@ def test_cost_attribution():
 
 **Current System**: 2 tier-level profiles with same model (Claude 3.7 Sonnet)
 
-**Healthcare System**: 2 tier-level profiles with different models (Nova Micro vs Claude Sonnet 4.5)
+**Healthcare System**: 2 tier-level profiles with different Nova models (Nova Micro vs Nova 2 Lite)
 
 **Key Changes**:
-1. Model IDs (Nova Micro for basic, Claude Sonnet 4.5 for premium)
+1. Model IDs (Nova Micro for basic, Nova 2 Lite for premium)
 2. Profile names (healthcare-* instead of customersupport-*)
 3. SSM paths (/app/healthcare/* instead of /app/customersupport/*)
 4. OpenTelemetry baggage (add clinic_id for cost tracking)
 5. Tags (HealthcareDemo project, clinic metadata)
+6. **Premium web grounding** (enabled via Nova 2 `tool_config` - no Lambda needed!)
 
 **Implementation Time**: 2-3 days
 
 **Complexity**: Low (reuses existing architecture)
 
-**Demo Value**: High (clear tier differentiation, accurate cost tracking)
+**Demo Value**: High (clear tier differentiation, native web search, accurate cost tracking)

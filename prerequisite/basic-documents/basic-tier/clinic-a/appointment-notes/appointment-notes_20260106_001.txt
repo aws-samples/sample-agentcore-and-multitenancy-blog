@@ -1,0 +1,50 @@
+**Clinic A Family Practice**
+
+---
+
+**Patient Name:** Sarah Mitchell  
+**DOB:** 03/15/1978  
+**Date of Service:** 01/15/2025  
+**Provider:** Dr. James Robertson, MD
+
+---
+
+**CHIEF COMPLAINT:** Persistent cough and fatigue for 10 days
+
+**SUBJECTIVE:**
+
+Ms. Mitchell is a 46-year-old female presenting with a nonproductive cough that began 10 days ago. She reports associated fatigue, mild sore throat (resolved after 3 days), and low-grade fever (max 100.8°F) during the first few days. She denies shortness of breath, chest pain, or wheezing. No recent sick contacts reported, though her children had colds 2 weeks ago. She has been taking over-the-counter dextromethorphan with minimal relief. No improvement despite adequate rest and hydration.
+
+**Past Medical History:** Hypothyroidism, well-controlled on levothyroxine  
+**Medications:** Levothyroxine 75 mcg daily  
+**Allergies:** NKDA  
+**Social History:** Non-smoker, occasional alcohol use
+
+**OBJECTIVE:**
+
+- **Vitals:** BP 118/76, HR 78, RR 16, Temp 98.4°F, SpO2 98% on room air
+- **General:** Alert and oriented, appears tired but not in distress
+- **HEENT:** Oropharynx mildly erythematous, no exudates. TMs clear bilaterally
+- **Neck:** No lymphadenopathy
+- **Lungs:** Clear to auscultation bilaterally, no wheezes or crackles
+- **Heart:** Regular rate and rhythm, no murmurs
+- **Abdomen:** Soft, non-tender
+
+**ASSESSMENT:**
+
+1. Acute viral bronchitis
+2. Hypothyroidism, stable
+
+**PLAN:**
+
+1. Reassurance regarding viral etiology; expected course 2-3 weeks
+2. Symptomatic management: increase fluid intake, honey for cough suppression, rest
+3. Prescribed benzonatate 100 mg TID PRN for cough
+4. Advised to return if fever recurs, develops dyspnea, or symptoms persist beyond 3 weeks
+5. Continue levothyroxine as prescribed
+6. Follow-up PRN or if no improvement in 1 week
+
+---
+
+**Electronically signed by:** Dr. James Robertson, MD  
+**Date/Time:** 01/15/2025 14:35
