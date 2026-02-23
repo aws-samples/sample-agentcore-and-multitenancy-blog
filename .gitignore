@@ -41,3 +41,4 @@ env/
 
 *.zip
 .agentcore.json
+.bedrock_agentcore.yaml
