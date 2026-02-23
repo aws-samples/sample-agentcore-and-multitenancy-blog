@@ -42,3 +42,6 @@ env/
 *.zip
 .agentcore.json
 .bedrock_agentcore.yaml
+
+config/deployment_config.json
+generated-docs/

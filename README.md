@@ -48,7 +48,7 @@ chmod +x deploy.sh
 ### Launch the Demo
 
 ```bash
-# In another terminal, start the web interface
+source .venv/bin/activate
 streamlit run app.py --server.port 8501
 
 # Log in using credentials stored under /credentials/test_user.json
