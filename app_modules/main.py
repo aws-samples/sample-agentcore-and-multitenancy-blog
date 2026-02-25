@@ -1,6 +1,6 @@
 import streamlit as st
 from .auth import AuthManager
-from .chat_with_api_gateway import ChatManager
+from .chat import ChatManager
 from .styles import apply_custom_styles
 from .ui_components import (
     render_clinic_header,
