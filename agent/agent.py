@@ -148,9 +148,12 @@ AVAILABLE TOOLS:
   * Searches documents under: {s3_prefix}
 - patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications)
   * Automatically filtered to your clinic for security
+<<<<<<< HEAD
   * IMPORTANT: You MUST include request_hour parameter with the current hour (0-23) from current_time.
     This is required by the business hours policy. Access is only permitted between 8am-6pm.
     Always call current_time first to get the current hour before calling patient_context.
+=======
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
 - current_time: Get current date and time
 {web_tool_section}
@@ -159,11 +162,14 @@ SECURITY RULES:
 2. All tools automatically filter to your clinic — you cannot access other clinics' data
 3. Document searches are restricted to: {s3_prefix}
 
+<<<<<<< HEAD
 When answering questions:
 1. Before accessing patient data, call current_time to get the current hour
 2. Include request_hour (0-23) when calling patient_context — access is denied outside 8am-6pm
 3. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information
 
+=======
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
 RESPONSE GUIDELINES:
 - Provide concise, clinically relevant information
 - Always cite sources (patient records, documents, knowledge base)
@@ -263,11 +269,15 @@ class HealthcareAgent:
 
         @tool(
             name="patient_context",
+<<<<<<< HEAD
             description=(
                 "Retrieve patient metadata (demographics, conditions, allergies, medications). "
                 "Filtered to your clinic. IMPORTANT: You MUST include request_hour (0-23) from current_time. "
                 "Access is only permitted between 8am-6pm by business hours policy."
             ),
+=======
+            description="Retrieve patient metadata (demographics, conditions, allergies, medications). Filtered to your clinic.",
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
         )
         def patient_context(
             patient_id: str = None,
@@ -275,13 +285,21 @@ class HealthcareAgent:
             limit: int = 20,
             request_hour: int = None,
         ) -> str:
+<<<<<<< HEAD
             """Look up patient metadata with clinic isolation and business hours enforcement.
+=======
+            """Look up patient metadata with clinic isolation.
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
 
             Args:
                 patient_id: Unique patient identifier (e.g., P12345).
                 list_patients: If true, returns all patients for the clinic.
                 limit: Max patients to return in list mode.
+<<<<<<< HEAD
                 request_hour: Current hour 0-23. Required for business hours policy. Get from current_time.
+=======
+                request_hour: Current hour 0-23 for business hours policy.
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
             """
             args = {}
             if patient_id is not None:
@@ -299,6 +317,7 @@ class HealthcareAgent:
                 )
                 return str(result.content)
             except Exception as e:
+<<<<<<< HEAD
                 error_msg = str(e)
                 if "denied" in error_msg.lower() or "policy" in error_msg.lower():
                     return (
@@ -307,6 +326,9 @@ class HealthcareAgent:
                         "Please try again during business hours."
                     )
                 return f"Error accessing patient data: {error_msg}"
+=======
+                return f"Error accessing patient data: {e}"
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
 
         @tool(
             name="clinic_config",

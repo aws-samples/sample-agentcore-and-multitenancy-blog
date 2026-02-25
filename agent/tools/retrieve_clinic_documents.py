@@ -2,6 +2,7 @@
 
 import boto3
 import os
+<<<<<<< HEAD
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from strands import tool
@@ -10,6 +11,10 @@ EASTERN = ZoneInfo("America/New_York")
 BUSINESS_HOUR_START = 8
 BUSINESS_HOUR_END = 18
 
+=======
+from strands import tool
+
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
 
 @tool
 def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5) -> str:
@@ -19,9 +24,12 @@ def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5) 
     Tenant isolation is enforced via a metadata filter on clinic_id — each clinic
     can only retrieve documents tagged with their own identifier.
 
+<<<<<<< HEAD
     Access is restricted to business hours (8 AM – 6 PM Eastern) to align with
     the gateway policy on patient_context.
 
+=======
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
     Args:
         query: Question about clinical documents, patient information, or medical procedures.
         clinic_id: Clinic identifier for metadata filtering.
@@ -30,6 +38,7 @@ def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5) 
     Returns:
         Formatted string with matching document content.
     """
+<<<<<<< HEAD
     # Enforce business hours — same window as the Cedar policy on patient_context
     current_hour = datetime.now(EASTERN).hour
     if not (BUSINESS_HOUR_START <= current_hour < BUSINESS_HOUR_END):
@@ -39,6 +48,8 @@ def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5) 
             "Please try again during business hours."
         )
 
+=======
+>>>>>>> 05b7d08 (refactor: consolidate agent tiers, remove duplicates, trim bloat)
     region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
     kb_id = os.environ.get("KNOWLEDGE_BASE_ID")
 
