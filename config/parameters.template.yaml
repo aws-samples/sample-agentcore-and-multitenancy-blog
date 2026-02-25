@@ -1,50 +1,43 @@
 # Configuration Template for Multi-Tenant AgentCore Deployment
-# This file will be populated during deployment with account-specific values
+# Populated during deployment by scripts/configure_deployment.py
 
-# AWS Account Configuration
 aws:
   account_id: "${AWS_ACCOUNT_ID}"
   region: "${AWS_REGION}"
-  
-# Inference Profiles (will be created during deployment)
+
+# Inference Profiles (created by scripts/create_inference_profiles.py)
 inference_profiles:
   basic:
     arn: "arn:aws:bedrock:${AWS_REGION}:${AWS_ACCOUNT_ID}:application-inference-profile/${BASIC_PROFILE_ID}"
   premium:
     arn: "arn:aws:bedrock:${AWS_REGION}:${AWS_ACCOUNT_ID}:application-inference-profile/${PREMIUM_PROFILE_ID}"
 
-# Cognito Configuration (will be created during deployment)
+# Cognito Configuration (created by prerequisite/cognito_multitenant.yaml)
 cognito:
   user_pool_id: "${COGNITO_USER_POOL_ID}"
   client_id: "${COGNITO_CLIENT_ID}"
   discovery_url: "https://cognito-idp.${AWS_REGION}.amazonaws.com/${COGNITO_USER_POOL_ID}/.well-known/openid-configuration"
 
-# AgentCore Configuration (will be populated after agent creation)
+# AgentCore Agents (created by agentcore configure + deploy)
 agents:
   basic:
-    name: "customersupport-basic"
+    name: "healthcare_basic"
     agent_id: "${BASIC_AGENT_ID}"
     agent_arn: "arn:aws:bedrock-agentcore:${AWS_REGION}:${AWS_ACCOUNT_ID}:runtime/${BASIC_AGENT_ID}"
   premium:
-    name: "customersupport-premium"
+    name: "healthcare_premium"
     agent_id: "${PREMIUM_AGENT_ID}"
     agent_arn: "arn:aws:bedrock-agentcore:${AWS_REGION}:${AWS_ACCOUNT_ID}:runtime/${PREMIUM_AGENT_ID}"
 
-# IAM Roles (will be created during deployment)
+# IAM Roles (created by prerequisite/infrastructure.yaml)
 iam:
   execution_role: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/${EXECUTION_ROLE_NAME}"
-  codebuild_role: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/${CODEBUILD_ROLE_NAME}"
 
-# ECR Repositories
-ecr:
-  basic_repository: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/bedrock-agentcore-customersupport-basic"
-  premium_repository: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/bedrock-agentcore-customersupport-premium"
-
-# Knowledge Bases (will be created during deployment)
+# Knowledge Bases (created by prerequisite/knowledge_base.py)
 knowledge_bases:
   basic:
     id: "${BASIC_KB_ID}"
-    name: "customersupport-basic-kb"
+    name: "healthcare-basic-kb"
   premium:
     id: "${PREMIUM_KB_ID}"
-    name: "customersupport-premium-kb"
+    name: "healthcare-premium-kb"

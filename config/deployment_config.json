@@ -1,0 +1,41 @@
+{
+  "aws": {
+    "account_id": "ACCOUNT_ID",
+    "region": "us-east-1"
+  },
+  "inference_profiles": {
+    "basic": {
+      "arn": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/BASIC_PROFILE_ID"
+    },
+    "premium": {
+      "arn": "arn:aws:bedrock:us-east-1:ACCOUNT_ID:application-inference-profile/PREMIUM_PROFILE_ID"
+    }
+  },
+  "cognito": {
+    "user_pool_id": "COGNITO_USER_POOL_ID",
+    "client_id": "COGNITO_CLIENT_ID",
+    "discovery_url": "https://cognito-idp.us-east-1.amazonaws.com/COGNITO_USER_POOL_ID/.well-known/openid-configuration"
+  },
+  "agents": {
+    "basic": {
+      "agent_id": "healthcare-basic-AGENT_ID",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:ACCOUNT_ID:runtime/healthcare-basic-AGENT_ID"
+    },
+    "premium": {
+      "agent_id": "healthcare-premium-AGENT_ID",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:ACCOUNT_ID:runtime/healthcare-premium-AGENT_ID"
+    }
+  },
+  "iam": {
+    "execution_role": "arn:aws:iam::ACCOUNT_ID:role/HealthcareStackInfra-RuntimeAgentCoreRole",
+    "codebuild_role": "arn:aws:iam::ACCOUNT_ID:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1"
+  },
+  "knowledge_bases": {
+    "basic": {
+      "id": "BASIC_KB_ID"
+    },
+    "premium": {
+      "id": "PREMIUM_KB_ID"
+    }
+  }
+}
