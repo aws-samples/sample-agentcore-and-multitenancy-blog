@@ -3,7 +3,7 @@ from agent_config.memory_hook_provider import MemoryHook
 from agent_config.tools.retrieve_clinic_documents import retrieve_clinic_documents  # Import custom tool
 from mcp.client.streamable_http import streamablehttp_client
 from strands import Agent, tool
-from strands_tools import current_time  # Keep current_time
+from strands_tools import current_time
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 from typing import List

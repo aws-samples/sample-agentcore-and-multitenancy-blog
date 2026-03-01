@@ -32,6 +32,7 @@ from opentelemetry import baggage, context
 
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
+os.environ["DEFAULT_TIMEZONE"] = "America/New_York"
 
 # Tier is set via AGENT_TIER env var (defaults to "basic").
 # When deploying two agents, set AGENT_TIER=premium for the premium instance.

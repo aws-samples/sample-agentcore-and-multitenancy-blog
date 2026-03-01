@@ -182,19 +182,18 @@ def render_document_scope_indicator(clinic_id: str, tier: str):
 
 def render_policy_status_banner(tier: str):
     """
-    Display policy enforcement status for premium tier users.
+    Display policy enforcement status for users.
     Shows business hours restriction on patient data access.
 
     Args:
         tier: User's tier (basic or premium)
     """
-    if tier != "premium":
-        return
 
     from datetime import datetime, timezone, timedelta
 
-    # Use US Eastern as a reasonable clinic-local default
-    eastern = timezone(timedelta(hours=-5))
+    # Use US Eastern with proper DST handling
+    from zoneinfo import ZoneInfo
+    eastern = ZoneInfo("America/New_York")
     now = datetime.now(eastern)
     current_hour = now.hour
     is_business_hours = 8 <= current_hour < 18
@@ -273,22 +272,22 @@ def render_sidebar_user_info(user_claims: Dict[str, Any], auth_manager):
     render_tier_features_sidebar(user_claims.get('tier', 'basic'))
     
     # Policy status in sidebar (premium only)
-    if user_claims.get('tier') == 'premium':
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 🛡️ Access Policies")
-        
-        from datetime import datetime, timezone, timedelta
-        eastern = timezone(timedelta(hours=-5))
-        current_hour = datetime.now(eastern).hour
-        is_business_hours = 8 <= current_hour < 18
-        
-        if is_business_hours:
-            st.sidebar.markdown("🟢 Patient data: **Available**")
-        else:
-            st.sidebar.markdown("🔴 Patient data: **Restricted**")
-            st.sidebar.caption("Business hours: 8 AM – 6 PM")
-        st.sidebar.markdown("🟢 Clinic config: **Available**")
-        st.sidebar.markdown("🟢 Document search: **Available**")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🛡️ Access Policies")
+    
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    eastern = ZoneInfo("America/New_York")
+    current_hour = datetime.now(eastern).hour
+    is_business_hours = 8 <= current_hour < 18
+    
+    if is_business_hours:
+        st.sidebar.markdown("🟢 Patient data: **Available**")
+    else:
+        st.sidebar.markdown("🔴 Patient data: **Restricted**")
+        st.sidebar.caption("Business hours: 8 AM – 6 PM ET")
+    st.sidebar.markdown("🟢 Clinic config: **Available**")
+    st.sidebar.markdown("🟢 Document search: **Available**")
     
     st.sidebar.markdown("---")
     
