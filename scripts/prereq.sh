@@ -9,7 +9,7 @@ INFRA_STACK_NAME=${2:-HealthcareStackInfra}
 COGNITO_STACK_NAME=${3:-HealthcareStackCognito}
 API_GATEWAY_STACK_NAME=${4:-HealthcareStackApiGateway}
 INFRA_TEMPLATE_FILE="prerequisite/infrastructure.yaml"
-COGNITO_TEMPLATE_FILE="prerequisite/cognito.yaml"
+COGNITO_TEMPLATE_FILE="prerequisite/cognito_multitenant.yaml"
 API_GATEWAY_TEMPLATE_FILE="prerequisite/api_gateway_template.yaml"
 REGION=$(aws configure get region)
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -34,18 +34,23 @@ else
     2>/dev/null || echo "ℹ️ Bucket may already exist or be owned by you."
 fi
 
-# ----- 2. Zip Lambda code -----
+# ----- 2. Zip Lambda code (CustomerSupport Lambda - no external dependencies needed) -----
 echo "📦 Zipping contents of $LAMBDA_SRC into $ZIP_FILE..."
 cd "$LAMBDA_SRC"
-zip -r "../../../$ZIP_FILE" . > /dev/null
+zip -r "../../../$ZIP_FILE" lambda_function.py patient_context.py clinic_config.py > /dev/null
 cd - > /dev/null
 
-# ----- 2b. Zip API Gateway Lambda code -----
-echo "📦 Zipping API Gateway Lambda code into $API_GATEWAY_ZIP_FILE..."
+# ----- 2b. Zip API Gateway Lambda code with dependencies -----
+echo "📦 Packaging API Gateway Lambda with dependencies into $API_GATEWAY_ZIP_FILE..."
 if [ -f "prerequisite/lambda/python/api_gateway_lambda.py" ]; then
-  cd "prerequisite/lambda/python"
-  zip "../../../$API_GATEWAY_ZIP_FILE" api_gateway_lambda.py > /dev/null
+  rm -rf api_gw_lambda_package
+  mkdir api_gw_lambda_package
+  pip3 install -r prerequisite/lambda/python/requirements.txt -t api_gw_lambda_package/ --quiet
+  cp prerequisite/lambda/python/api_gateway_lambda.py api_gw_lambda_package/
+  cd api_gw_lambda_package
+  zip -r "../$API_GATEWAY_ZIP_FILE" . > /dev/null
   cd - > /dev/null
+  rm -rf api_gw_lambda_package
 else
   echo "⚠️  API Gateway Lambda code not found, skipping..."
 fi

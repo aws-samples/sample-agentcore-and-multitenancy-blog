@@ -168,7 +168,7 @@ fi
 
 print_step "Configuring premium tier agent with JWT authorization..."
 if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
-    agentcore configure --entrypoint main_premium.py \
+    agentcore configure --entrypoint main.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare_premium \
       --deployment-type direct_code_deploy \
@@ -176,7 +176,7 @@ if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
       --authorizer-config "$AUTHORIZER_CONFIG" \
       --non-interactive
 else
-    agentcore configure --entrypoint main_premium.py \
+    agentcore configure --entrypoint main.py \
       -er "$RUNTIME_ROLE" \
       --name healthcare_premium \
       --deployment-type container \

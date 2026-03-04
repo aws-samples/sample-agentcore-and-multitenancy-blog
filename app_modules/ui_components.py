@@ -125,33 +125,28 @@ def render_tier_features_sidebar(tier: str):
 
 def render_prompt_suggestions(tier: str):
     """
-    Display tier-specific prompt suggestions.
+    Display prompt suggestions for clinical assistant.
+    All tiers share the same suggestions; the last one is marked as premium-only.
     
     Args:
         tier: User's tier (basic or premium)
     """
     st.markdown("### 💡 Suggested Queries")
     
-    if tier == "premium":
-        suggestions = [
-            "Analyze cardiac catheterization trends across all patients",
-            "Search latest ACC/AHA guidelines for heart failure management",
-            "Compare echocardiogram results with stress test findings",
-            "Identify trends in post-operative complications",
-        ]
-    else:
-        suggestions = [
-            "Show me recent patient intake forms",
-            "What are today's lab results?",
-            "List patients with abnormal vital signs",
-            "Find all intake forms from last week",
-        ]
+    suggestions = [
+        "List all patients in my clinic",
+        "Get me patient P50001 info",
+        "Get me documents that I have access to",
+        "Get me the latest COVID-19 guidance ⭐ Premium",
+    ]
     
     cols = st.columns(2)
     for idx, suggestion in enumerate(suggestions):
         with cols[idx % 2]:
             if st.button(suggestion, key=f"suggestion_{idx}", use_container_width=True):
-                return suggestion
+                # Strip the premium badge before sending as prompt
+                clean_prompt = suggestion.replace(" ⭐ Premium", "")
+                return clean_prompt
     
     return None
 
@@ -182,19 +177,18 @@ def render_document_scope_indicator(clinic_id: str, tier: str):
 
 def render_policy_status_banner(tier: str):
     """
-    Display policy enforcement status for premium tier users.
+    Display policy enforcement status for users.
     Shows business hours restriction on patient data access.
 
     Args:
         tier: User's tier (basic or premium)
     """
-    if tier != "premium":
-        return
 
     from datetime import datetime, timezone, timedelta
 
-    # Use US Eastern as a reasonable clinic-local default
-    eastern = timezone(timedelta(hours=-5))
+    # Use US Eastern with proper DST handling
+    from zoneinfo import ZoneInfo
+    eastern = ZoneInfo("America/New_York")
     now = datetime.now(eastern)
     current_hour = now.hour
     is_business_hours = 8 <= current_hour < 18
@@ -273,22 +267,22 @@ def render_sidebar_user_info(user_claims: Dict[str, Any], auth_manager):
     render_tier_features_sidebar(user_claims.get('tier', 'basic'))
     
     # Policy status in sidebar (premium only)
-    if user_claims.get('tier') == 'premium':
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 🛡️ Access Policies")
-        
-        from datetime import datetime, timezone, timedelta
-        eastern = timezone(timedelta(hours=-5))
-        current_hour = datetime.now(eastern).hour
-        is_business_hours = 8 <= current_hour < 18
-        
-        if is_business_hours:
-            st.sidebar.markdown("🟢 Patient data: **Available**")
-        else:
-            st.sidebar.markdown("🔴 Patient data: **Restricted**")
-            st.sidebar.caption("Business hours: 8 AM – 6 PM")
-        st.sidebar.markdown("🟢 Clinic config: **Available**")
-        st.sidebar.markdown("🟢 Document search: **Available**")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🛡️ Access Policies")
+    
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    eastern = ZoneInfo("America/New_York")
+    current_hour = datetime.now(eastern).hour
+    is_business_hours = 8 <= current_hour < 18
+    
+    if is_business_hours:
+        st.sidebar.markdown("🟢 Patient data: **Available**")
+    else:
+        st.sidebar.markdown("🔴 Patient data: **Restricted**")
+        st.sidebar.caption("Business hours: 8 AM – 6 PM ET")
+    st.sidebar.markdown("🟢 Clinic config: **Available**")
+    st.sidebar.markdown("🟢 Document search: **Available**")
     
     st.sidebar.markdown("---")
     

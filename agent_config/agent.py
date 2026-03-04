@@ -1,12 +1,57 @@
+import json
 from .utils import get_ssm_parameter
 from agent_config.memory_hook_provider import MemoryHook
 from agent_config.tools.retrieve_clinic_documents import retrieve_clinic_documents  # Import custom tool
 from mcp.client.streamable_http import streamablehttp_client
 from strands import Agent, tool
-from strands_tools import current_time  # Keep current_time
+from strands_tools import current_time
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 from typing import List
+
+
+def _extract_gateway_response(result) -> str:
+    """Extract clean text from an MCP gateway call result and unwrap Lambda envelope."""
+    raw = ""
+    try:
+        if isinstance(result, dict):
+            content = result.get("content", result)
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and "text" in block:
+                        text_parts.append(str(block["text"]))
+                    elif hasattr(block, "text"):
+                        text_parts.append(str(block.text))
+                    else:
+                        text_parts.append(str(block))
+                raw = "\n".join(text_parts)
+            elif isinstance(content, str):
+                raw = content
+            else:
+                raw = str(content)
+        elif hasattr(result, "content") and isinstance(result.content, list):
+            text_parts = []
+            for block in result.content:
+                if hasattr(block, "text"):
+                    text_parts.append(block.text)
+            raw = "\n".join(text_parts) if text_parts else str(result.content)
+        else:
+            raw = str(result)
+    except Exception:
+        raw = str(result)
+
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict) and "body" in parsed:
+            body = parsed["body"]
+            if isinstance(body, str):
+                body = json.loads(body)
+            return json.dumps(body)
+    except (json.JSONDecodeError, TypeError, KeyError):
+        pass
+
+    return raw
 
 
 class CustomerSupport:
@@ -37,56 +82,6 @@ class CustomerSupport:
             # Fallback to system-defined profiles if application profiles don't exist
             basic_profile_arn = "us.amazon.nova-micro-v1:0"
             premium_profile_arn = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-        
-                # Get inference profile ARNs from SSM parameters
-        try:
-            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
-            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
-            print(f"   Falling back to default model: {bedrock_model_id}")
-            basic_profile_arn = bedrock_model_id
-            premium_profile_arn = bedrock_model_id
-        
-                # Get inference profile ARNs from SSM parameters
-        try:
-            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
-            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
-            print(f"   Falling back to default model: {bedrock_model_id}")
-            basic_profile_arn = bedrock_model_id
-            premium_profile_arn = bedrock_model_id
-        
-                # Get inference profile ARNs from SSM parameters
-        try:
-            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
-            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
-            print(f"   Falling back to default model: {bedrock_model_id}")
-            basic_profile_arn = bedrock_model_id
-            premium_profile_arn = bedrock_model_id
-        
-                # Get inference profile ARNs from SSM parameters
-        try:
-            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
-            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
-            print(f"   Falling back to default model: {bedrock_model_id}")
-            basic_profile_arn = bedrock_model_id
-            premium_profile_arn = bedrock_model_id
-        
-                # Get inference profile ARNs from SSM parameters
-        try:
-            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
-            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
-            print(f"   Falling back to default model: {bedrock_model_id}")
-            basic_profile_arn = bedrock_model_id
-            premium_profile_arn = bedrock_model_id
         
         # Map tenant to inference profile
         inference_profile_mapping = {
@@ -239,7 +234,7 @@ Remember: You are serving {clinic_id} only. All data access is automatically res
                     name=f"{gateway_target}___patient_context",
                     arguments=args,
                 )
-                return str(result.content)
+                return _extract_gateway_response(result)
             except Exception as e:
                 return f"Error accessing patient data: {e}"
 
@@ -268,7 +263,7 @@ Remember: You are serving {clinic_id} only. All data access is automatically res
                     name=f"{gateway_target}___clinic_config",
                     arguments=args,
                 )
-                return str(result.content)
+                return _extract_gateway_response(result)
             except Exception as e:
                 return f"Error accessing clinic configuration: {e}"
 

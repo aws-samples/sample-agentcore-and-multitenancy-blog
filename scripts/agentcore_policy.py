@@ -126,97 +126,43 @@ def get_gateway_target_name(gateway_id: str) -> str:
     return items[0]["name"]
 
 
-@click.group()
-def cli():
-    """AgentCore Policy Management for Healthcare Premium Tier."""
-    pass
+def _create_policies_for_gateway(policy_engine_id: str, gateway_arn: str, target_name: str, tier: str):
+    """Create Cedar policies (business hours + clinic_config permits) for a single gateway.
 
-
-@cli.command()
-def create():
-    """Create policy engine with business hours policy and attach to premium gateway."""
-    click.echo("🛡️  Creating AgentCore Policy for Premium Gateway")
-    click.echo(f"📍 Region: {REGION}")
-
-    # Get premium gateway info from SSM
-    try:
-        gateway_id = get_ssm_parameter("/app/healthcare/agentcore/premium_gateway_id")
-        gateway_arn = get_ssm_parameter("/app/healthcare/agentcore/premium_gateway_arn")
-    except Exception as e:
-        click.echo(f"❌ Premium gateway not found in SSM. Deploy gateways first: {e}", err=True)
-        sys.exit(1)
-
-    click.echo(f"🔗 Premium Gateway: {gateway_id}")
-
-    # Get target name for Cedar action format
-    try:
-        target_name = get_gateway_target_name(gateway_id)
-        click.echo(f"🎯 Gateway Target: {target_name}")
-    except Exception as e:
-        click.echo(f"❌ Could not get gateway target: {e}", err=True)
-        sys.exit(1)
-
-    # Step 1: Create policy engine
-    click.echo("\n📋 Step 1: Creating policy engine...")
-    try:
-        resp = policy_client.create_policy_engine(
-            name="healthcare_premium_policy_engine",
-            description="Business hours enforcement for premium healthcare agent tools",
-        )
-        policy_engine_id = resp["policyEngineId"]
-        policy_engine_arn = resp["policyEngineArn"]
-        click.echo(f"✅ Policy engine created: {policy_engine_id}")
-    except policy_client.exceptions.ConflictException:
-        click.echo("⚠️  Policy engine already exists, looking up...")
-        # List and find existing
-        resp = policy_client.list_policy_engines(maxResults=50)
-        found = None
-        for engine in resp.get("policyEngines", []):
-            if engine.get("name") == "healthcare_premium_policy_engine":
-                found = engine
-                break
-        if not found:
-            click.echo("❌ Could not find existing policy engine", err=True)
-            sys.exit(1)
-        policy_engine_id = found["policyEngineId"]
-        policy_engine_arn = found["policyEngineArn"]
-        click.echo(f"✅ Found existing policy engine: {policy_engine_id}")
-
-    # Wait for policy engine to be ready
-    if not wait_for_policy_engine_ready(policy_engine_id):
-        sys.exit(1)
-
-    # Step 2: Create Cedar policies
-    click.echo("\n📋 Step 2: Creating Cedar policies...")
-
+    Args:
+        policy_engine_id: ID of the shared policy engine.
+        gateway_arn: ARN of the gateway to create policies for.
+        target_name: Gateway target name (e.g., "HealthcareLambda-Basic").
+        tier: Tier label used for naming ("basic" or "premium").
+    """
     # Business hours policy for patient_context
     business_hours_cedar = get_business_hours_cedar_policy(gateway_arn, target_name)
-    click.echo(f"\n--- Business Hours Policy (patient_context) ---")
+    policy_name = f"business_hours_patient_access_{tier}"
+    click.echo(f"\n--- Business Hours Policy ({tier} / patient_context) ---")
     click.echo(business_hours_cedar)
     click.echo("---")
 
     try:
         resp = policy_client.create_policy(
             policyEngineId=policy_engine_id,
-            name="business_hours_patient_access",
+            name=policy_name,
             definition={"cedar": {"statement": business_hours_cedar}},
-            description="Restrict patient_context access to business hours (8am-6pm)",
+            description=f"Restrict {tier} patient_context access to business hours (8am-6pm)",
         )
-        click.echo(f"✅ Business hours policy created: {resp['policyId']}")
-        put_ssm_parameter("/app/healthcare/agentcore/policy_business_hours_id", resp["policyId"])
+        click.echo(f"✅ Business hours policy ({tier}) created: {resp['policyId']}")
+        put_ssm_parameter(f"/app/healthcare/agentcore/policy_business_hours_{tier}_id", resp["policyId"])
     except policy_client.exceptions.ConflictException:
-        click.echo("⚠️  Business hours policy already exists, skipping...")
+        click.echo(f"⚠️  Business hours policy ({tier}) already exists, skipping...")
     except Exception as e:
-        click.echo(f"❌ Failed to create business hours policy: {e}", err=True)
+        click.echo(f"❌ Failed to create business hours policy ({tier}): {e}", err=True)
         sys.exit(1)
 
     # Permit policies for clinic_config (no time restriction)
-    # Split into two complementary policies to satisfy the policy validator
     clinic_config_policies = get_clinic_config_permit_policy(gateway_arn, target_name)
 
     for suffix, cedar_statement, description in clinic_config_policies:
-        policy_name = f"permit_clinic_config_{suffix}"
-        click.echo(f"\n--- Clinic Config Policy ({suffix}) ---")
+        policy_name = f"permit_clinic_config_{tier}_{suffix}"
+        click.echo(f"\n--- Clinic Config Policy ({tier} / {suffix}) ---")
         click.echo(cedar_statement)
         click.echo("---")
 
@@ -225,22 +171,29 @@ def create():
                 policyEngineId=policy_engine_id,
                 name=policy_name,
                 definition={"cedar": {"statement": cedar_statement}},
-                description=description,
+                description=f"{description} ({tier})",
             )
-            click.echo(f"✅ Clinic config policy ({suffix}) created: {resp['policyId']}")
-            put_ssm_parameter(f"/app/healthcare/agentcore/policy_clinic_config_{suffix}_id", resp["policyId"])
+            click.echo(f"✅ Clinic config policy ({tier}/{suffix}) created: {resp['policyId']}")
+            put_ssm_parameter(f"/app/healthcare/agentcore/policy_clinic_config_{tier}_{suffix}_id", resp["policyId"])
         except policy_client.exceptions.ConflictException:
-            click.echo(f"⚠️  Clinic config policy ({suffix}) already exists, skipping...")
+            click.echo(f"⚠️  Clinic config policy ({tier}/{suffix}) already exists, skipping...")
         except Exception as e:
-            click.echo(f"❌ Failed to create clinic config policy ({suffix}): {e}", err=True)
+            click.echo(f"❌ Failed to create clinic config policy ({tier}/{suffix}): {e}", err=True)
             sys.exit(1)
 
-    # Step 3: Attach policy engine to premium gateway
-    click.echo("\n📋 Step 3: Attaching policy engine to premium gateway...")
+
+def _attach_policy_engine_to_gateway(gateway_id: str, policy_engine_arn: str, tier: str):
+    """Attach a policy engine to a gateway in ENFORCE mode.
+
+    Args:
+        gateway_id: Gateway identifier.
+        policy_engine_arn: ARN of the policy engine to attach.
+        tier: Tier label for logging ("basic" or "premium").
+    """
+    click.echo(f"\n📎 Attaching policy engine to {tier} gateway ({gateway_id})...")
     try:
-        # update_gateway requires all original fields — fetch them first
         gw_details = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
-        
+
         update_params = {
             "gatewayIdentifier": gateway_id,
             "name": gw_details["name"],
@@ -252,16 +205,79 @@ def create():
                 "mode": "ENFORCE",
             },
         }
-        
-        # Preserve existing authorizer config if present
+
         if "authorizerConfiguration" in gw_details:
             update_params["authorizerConfiguration"] = gw_details["authorizerConfiguration"]
-        
+
         gateway_client.update_gateway(**update_params)
-        click.echo(f"✅ Policy engine attached to gateway in ENFORCE mode")
+        click.echo(f"✅ Policy engine attached to {tier} gateway in ENFORCE mode")
     except Exception as e:
-        click.echo(f"❌ Failed to attach policy engine: {e}", err=True)
+        click.echo(f"❌ Failed to attach policy engine to {tier} gateway: {e}", err=True)
         sys.exit(1)
+
+
+@click.group()
+def cli():
+    """AgentCore Policy Management for Healthcare Gateways (Basic + Premium)."""
+    pass
+
+
+@cli.command()
+def create():
+    """Create policy engine with business hours policies and attach to both gateways."""
+    click.echo("🛡️  Creating AgentCore Policy for Basic + Premium Gateways")
+    click.echo(f"📍 Region: {REGION}")
+
+    # Gather gateway info for both tiers
+    gateways = {}
+    for tier in ("basic", "premium"):
+        try:
+            gw_id = get_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_id")
+            gw_arn = get_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_arn")
+            target = get_gateway_target_name(gw_id)
+            gateways[tier] = {"id": gw_id, "arn": gw_arn, "target": target}
+            click.echo(f"🔗 {tier.capitalize()} Gateway: {gw_id}  (target: {target})")
+        except Exception as e:
+            click.echo(f"❌ {tier.capitalize()} gateway not found in SSM. Deploy gateways first: {e}", err=True)
+            sys.exit(1)
+
+    # Step 1: Create (or find) shared policy engine
+    click.echo("\n📋 Step 1: Creating policy engine...")
+    try:
+        resp = policy_client.create_policy_engine(
+            name="healthcare_policy_engine",
+            description="Business hours enforcement for healthcare agent tools (all tiers)",
+        )
+        policy_engine_id = resp["policyEngineId"]
+        policy_engine_arn = resp["policyEngineArn"]
+        click.echo(f"✅ Policy engine created: {policy_engine_id}")
+    except policy_client.exceptions.ConflictException:
+        click.echo("⚠️  Policy engine already exists, looking up...")
+        resp = policy_client.list_policy_engines(maxResults=50)
+        found = None
+        for engine in resp.get("policyEngines", []):
+            if engine.get("name") in ("healthcare_policy_engine", "healthcare_premium_policy_engine"):
+                found = engine
+                break
+        if not found:
+            click.echo("❌ Could not find existing policy engine", err=True)
+            sys.exit(1)
+        policy_engine_id = found["policyEngineId"]
+        policy_engine_arn = found["policyEngineArn"]
+        click.echo(f"✅ Found existing policy engine: {policy_engine_id}")
+
+    if not wait_for_policy_engine_ready(policy_engine_id):
+        sys.exit(1)
+
+    # Step 2: Create Cedar policies for each gateway
+    click.echo("\n📋 Step 2: Creating Cedar policies...")
+    for tier, gw in gateways.items():
+        _create_policies_for_gateway(policy_engine_id, gw["arn"], gw["target"], tier)
+
+    # Step 3: Attach policy engine to both gateways
+    click.echo("\n📋 Step 3: Attaching policy engine to gateways...")
+    for tier, gw in gateways.items():
+        _attach_policy_engine_to_gateway(gw["id"], policy_engine_arn, tier)
 
     # Save to SSM
     put_ssm_parameter("/app/healthcare/agentcore/policy_engine_id", policy_engine_id)
@@ -272,7 +288,8 @@ def create():
     click.echo("=" * 60)
     click.echo(f"Policy Engine: {policy_engine_id}")
     click.echo(f"Mode: ENFORCE")
-    click.echo(f"Policies:")
+    click.echo(f"Gateways: basic + premium")
+    click.echo(f"Policies (per gateway):")
     click.echo(f"  - business_hours_patient_access: patient_context restricted to 8am-6pm")
     click.echo(f"  - permit_clinic_config: clinic_config always permitted")
 
@@ -295,21 +312,22 @@ def delete(confirm):
         click.echo("⚠️  No policy engine found in SSM")
         return
 
-    # Detach from gateway first
-    try:
-        gateway_id = get_ssm_parameter("/app/healthcare/agentcore/premium_gateway_id")
-        gw_details = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
-        gateway_client.update_gateway(
-            gatewayIdentifier=gateway_id,
-            name=gw_details["name"],
-            roleArn=gw_details["roleArn"],
-            protocolType=gw_details["protocolType"],
-            authorizerType=gw_details["authorizerType"],
-            policyEngineConfiguration={},
-        )
-        click.echo(f"✅ Policy engine detached from gateway {gateway_id}")
-    except Exception as e:
-        click.echo(f"⚠️  Could not detach from gateway: {e}")
+    # Detach from both gateways
+    for tier in ("basic", "premium"):
+        try:
+            gateway_id = get_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_id")
+            gw_details = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
+            gateway_client.update_gateway(
+                gatewayIdentifier=gateway_id,
+                name=gw_details["name"],
+                roleArn=gw_details["roleArn"],
+                protocolType=gw_details["protocolType"],
+                authorizerType=gw_details["authorizerType"],
+                policyEngineConfiguration={},
+            )
+            click.echo(f"✅ Policy engine detached from {tier} gateway {gateway_id}")
+        except Exception as e:
+            click.echo(f"⚠️  Could not detach from {tier} gateway: {e}")
 
     # Delete policies
     try:
@@ -333,8 +351,15 @@ def delete(confirm):
     # Clean up SSM
     delete_ssm_parameter("/app/healthcare/agentcore/policy_engine_id")
     delete_ssm_parameter("/app/healthcare/agentcore/policy_engine_arn")
+    for tier in ("basic", "premium"):
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_business_hours_{tier}_id")
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_clinic_config_{tier}_with_id_id")
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_clinic_config_{tier}_default_id")
+    # Legacy keys from premium-only setup
     delete_ssm_parameter("/app/healthcare/agentcore/policy_business_hours_id")
     delete_ssm_parameter("/app/healthcare/agentcore/policy_clinic_config_id")
+    delete_ssm_parameter("/app/healthcare/agentcore/policy_clinic_config_with_id_id")
+    delete_ssm_parameter("/app/healthcare/agentcore/policy_clinic_config_default_id")
     click.echo("🧹 SSM parameters cleaned up")
 
 
@@ -370,19 +395,20 @@ def status():
     except Exception as e:
         click.echo(f"Error listing policies: {e}")
 
-    # Check gateway attachment
-    try:
-        gateway_id = get_ssm_parameter("/app/healthcare/agentcore/premium_gateway_id")
-        gw_resp = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
-        policy_config = gw_resp.get("policyEngineConfiguration", {})
-        if policy_config:
-            click.echo(f"\nGateway Attachment:")
-            click.echo(f"  Gateway: {gateway_id}")
-            click.echo(f"  Mode: {policy_config.get('mode', 'N/A')}")
-        else:
-            click.echo(f"\n⚠️  Policy engine not attached to gateway")
-    except Exception as e:
-        click.echo(f"Error checking gateway: {e}")
+    # Check gateway attachments
+    for tier in ("basic", "premium"):
+        try:
+            gateway_id = get_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_id")
+            gw_resp = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
+            policy_config = gw_resp.get("policyEngineConfiguration", {})
+            if policy_config:
+                click.echo(f"\n{tier.capitalize()} Gateway Attachment:")
+                click.echo(f"  Gateway: {gateway_id}")
+                click.echo(f"  Mode: {policy_config.get('mode', 'N/A')}")
+            else:
+                click.echo(f"\n⚠️  Policy engine not attached to {tier} gateway")
+        except Exception as e:
+            click.echo(f"⚠️  Error checking {tier} gateway: {e}")
 
 
 if __name__ == "__main__":

@@ -1,151 +1,149 @@
+"""
+Single AgentCore entrypoint for all tiers.
+
+Tier is determined from the incoming payload (tenant_id field), not from
+separate codepaths. This means one deployed agent binary can serve both
+basic and premium tenants — or you can deploy two instances of the same
+code with different KB IDs via environment variables.
+
+Multi-tenancy concerns handled here:
+  - Tenant identity extraction from payload
+  - Hierarchical actor_id construction for memory isolation
+  - Per-tenant memory resource routing
+  - OpenTelemetry baggage for cost attribution
+"""
+
 import os
 import logging
 import asyncio
+import uuid
 
-# Set AWS region FIRST before any imports that use boto3
 if "AWS_REGION" not in os.environ:
     os.environ["AWS_REGION"] = "us-east-1"
 
-# Now import modules that may use boto3
-from agent_config.context import CustomerSupportContext
-from agent_config.access_token import get_gateway_access_token
-from agent_config.agent_task import agent_task
-from agent_config.streaming_queue import StreamingQueue
+from agent.context import TenantContext
+from agent.access_token import get_gateway_access_token
+from agent.agent_task import agent_task
+from agent.streaming_queue import StreamingQueue
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from bedrock_agentcore.memory import MemorySessionManager
 from scripts.utils import get_ssm_parameter
 from opentelemetry import baggage, context
 
-# Environment flags
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
+os.environ["DEFAULT_TIMEZONE"] = "America/New_York"
 
-os.environ["KNOWLEDGE_BASE_ID"] = get_ssm_parameter(
-    "/app/healthcare/knowledge_base/basic_kb_id"
-)
+# Default tier (overridden per-request from payload)
+AGENT_TIER = os.environ.get("AGENT_TIER", "basic")
 
-# Logging setup
+# Load both KB IDs at startup so the correct one can be selected per-request
+KB_IDS = {}
+for _tier in ("basic", "premium"):
+    try:
+        KB_IDS[_tier] = get_ssm_parameter(f"/app/healthcare/knowledge_base/{_tier}_kb_id")
+    except Exception:
+        KB_IDS[_tier] = ""
+
+# Default to basic until a request arrives with tenant context
+os.environ["KNOWLEDGE_BASE_ID"] = KB_IDS.get(AGENT_TIER, KB_IDS.get("basic", ""))
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Bedrock app and global agent instance
+logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.get('premium')}")
+
 app = BedrockAgentCoreApp()
 
 
 @app.entrypoint
 async def invoke(payload, agentcore_context=None):
-    # Initialize response queue if not set
-    if not CustomerSupportContext.get_response_queue_ctx():
-        CustomerSupportContext.set_response_queue_ctx(StreamingQueue())
+    # Initialize streaming queue
+    if not TenantContext.get_response_queue():
+        TenantContext.set_response_queue(StreamingQueue())
 
-    # Initialize gateway token and extract tenant info from payload
-    if not CustomerSupportContext.get_gateway_token_ctx():
+    # Initialize gateway token and extract tenant info
+    if not TenantContext.get_gateway_token():
         gateway_token = await get_gateway_access_token()
-        CustomerSupportContext.set_gateway_token_ctx(gateway_token)
-        
-        # Extract tenant information from payload (forwarded by API Gateway Lambda)
-        tier = payload.get('tenant_id', 'basic')
-        clinic_id = payload.get('clinic_id', 'demo-clinic')
-        user_id = payload.get('user_id', 'demo-user')
-        
-        # Construct hierarchical identifiers
-        actor_id = f"{tier}-{clinic_id}-{user_id}"
-        tenant_key = f"{tier}-{clinic_id}"
-        memory_id = get_ssm_parameter(f"/app/healthcare/memory/{tier}_id")
-        s3_prefix = f"{tier}-tier/{clinic_id}/"
-        role = payload.get('role', 'user')
-        
-        tenant_info = {
-            'tier': tier,
-            'clinic_id': clinic_id,
-            'user_id': user_id,
-            'actor_id': actor_id,
-            'tenant_key': tenant_key,
-            'memory_id': memory_id,
-            's3_prefix': s3_prefix,
-            'role': role
-        }
-        logger.info(f"✅ Extracted tenant info from payload: {tenant_info}")
-        
-        # Set all tenant context variables
-        CustomerSupportContext.set_tenant_id_ctx(tenant_info['tier'])
-        CustomerSupportContext.set_clinic_id_ctx(tenant_info['clinic_id'])
-        CustomerSupportContext.set_user_id_ctx(tenant_info['user_id'])
-        CustomerSupportContext.set_actor_id_ctx(tenant_info['actor_id'])
-        CustomerSupportContext.set_tenant_key_ctx(tenant_info['tenant_key'])
-        CustomerSupportContext.set_s3_prefix_ctx(tenant_info['s3_prefix'])
-        CustomerSupportContext.set_memory_id_ctx(tenant_info['memory_id'])
-        CustomerSupportContext.set_role_ctx(tenant_info.get('role', 'user'))
-        
-        # Set OpenTelemetry baggage for observability and cost tracking
-        ctx = baggage.set_baggage("tenant_id", tenant_info['tenant_key'])
-        ctx = baggage.set_baggage("tier", tenant_info['tier'], context=ctx)
-        ctx = baggage.set_baggage("clinic_id", tenant_info['clinic_id'], context=ctx)
-        ctx = baggage.set_baggage("actor_id", tenant_info['actor_id'], context=ctx)
-        context.attach(ctx)
-        logger.info(f"📊 OpenTelemetry baggage set for cost tracking: tier={tenant_info['tier']}, clinic={tenant_info['clinic_id']}, actor={tenant_info['actor_id']}")
+        TenantContext.set_gateway_token(gateway_token)
 
-    # Initialize Memory Session Manager with tier-specific memory
-    memory_id = CustomerSupportContext.get_memory_id_ctx()
-    actor_id = CustomerSupportContext.get_actor_id_ctx()
-    
-    logger.info(f"💾 Initializing Memory Session Manager: memory_id={memory_id}, actor_id={actor_id}")
-    
+        # Extract tenant identity from payload (forwarded by API Gateway Lambda)
+        tier = payload.get("tenant_id", AGENT_TIER)
+        clinic_id = payload.get("clinic_id", "demo-clinic")
+        user_id = payload.get("user_id", "demo-user")
+        role = payload.get("role", "user")
+
+        # Select the correct Knowledge Base for this tenant's tier
+        kb_id = KB_IDS.get(tier, KB_IDS.get("basic", ""))
+        os.environ["KNOWLEDGE_BASE_ID"] = kb_id
+        logger.info(f"Selected KB for tier '{tier}': {kb_id}")
+
+        # Construct hierarchical identifiers for isolation
+        actor_id = f"{tier}-{clinic_id}-{user_id}"
+        s3_prefix = f"{tier}-tier/{clinic_id}/"
+        memory_id = get_ssm_parameter(f"/app/healthcare/memory/{tier}_id")
+
+        logger.info(
+            f"Tenant context: tier={tier}, clinic={clinic_id}, "
+            f"actor_id={actor_id}, memory_id={memory_id}"
+        )
+
+        # Set all tenant context
+        TenantContext.set_tenant_id(tier)
+        TenantContext.set_clinic_id(clinic_id)
+        TenantContext.set_user_id(user_id)
+        TenantContext.set_actor_id(actor_id)
+        TenantContext.set_s3_prefix(s3_prefix)
+        TenantContext.set_memory_id(memory_id)
+        TenantContext.set_role(role)
+
+        # OpenTelemetry baggage for per-tenant cost tracking
+        ctx = baggage.set_baggage("tenant_id", f"{tier}-{clinic_id}")
+        ctx = baggage.set_baggage("tier", tier, context=ctx)
+        ctx = baggage.set_baggage("clinic_id", clinic_id, context=ctx)
+        ctx = baggage.set_baggage("actor_id", actor_id, context=ctx)
+        context.attach(ctx)
+
+    # Initialize Memory Session
+    memory_id = TenantContext.get_memory_id()
+    actor_id = TenantContext.get_actor_id()
+
+    session_id = (
+        agentcore_context.session_id
+        if agentcore_context and hasattr(agentcore_context, "session_id")
+        else str(uuid.uuid4())
+    )
+
+    memory_session = None
     try:
         memory_manager = MemorySessionManager(
             memory_id=memory_id,
-            region_name=os.environ.get('AWS_REGION', 'us-east-1')
+            region_name=os.environ.get("AWS_REGION", "us-east-1"),
         )
-        
-        # Create memory session with user-specific actor_id for complete isolation
-        # Handle case where agentcore_context might be None
-        if agentcore_context and hasattr(agentcore_context, 'session_id'):
-            session_id = agentcore_context.session_id
-        else:
-            # Generate a session ID if context is not available
-            import uuid
-            session_id = str(uuid.uuid4())
-            logger.warning(f"⚠️ No agentcore_context provided, generated session_id: {session_id}")
-        
-        if not session_id:
-            raise Exception("Context session_id is not set")
-        
         memory_session = memory_manager.create_memory_session(
-            actor_id=actor_id,
-            session_id=session_id
+            actor_id=actor_id, session_id=session_id
         )
-        logger.info(f"✅ Memory session created: session_id={session_id}, actor_id={actor_id}")
-        
+        logger.info(f"Memory session created: session_id={session_id}, actor_id={actor_id}")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize memory session: {e}")
-        # Continue without memory if initialization fails
-        memory_session = None
-        # Still need session_id for agent_task
-        if agentcore_context and hasattr(agentcore_context, 'session_id'):
-            session_id = agentcore_context.session_id
-        else:
-            import uuid
-            session_id = str(uuid.uuid4())
+        logger.error(f"Failed to initialize memory session: {e}")
 
-    # Extract user message
+    # Run agent task
     user_message = payload["prompt"]
-
-    # Create agent task with memory session
     task = asyncio.create_task(
         agent_task(
             user_message=user_message,
             session_id=session_id,
             actor_id=actor_id,
-            memory_session=memory_session  # Pass memory session to agent task
+            memory_session=memory_session,
         )
     )
 
-    response_queue = CustomerSupportContext.get_response_queue_ctx()
+    response_queue = TenantContext.get_response_queue()
 
     async def stream_output():
         async for item in response_queue.stream():
             yield item
-        await task  # Ensure task completion
+        await task
 
     return stream_output()
 
