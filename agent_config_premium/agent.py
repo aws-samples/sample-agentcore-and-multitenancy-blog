@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 
@@ -12,6 +13,56 @@ from strands.tools.mcp import MCPClient
 from typing import List
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_gateway_response(result) -> str:
+    """Extract clean text from an MCP gateway call result and unwrap Lambda envelope.
+
+    call_tool_sync returns a dict with keys: status, toolUseId, content.
+    content is a list of blocks, each a dict with a 'text' key containing
+    the Lambda response as a JSON string with statusCode/body envelope.
+    """
+    raw = ""
+    try:
+        if isinstance(result, dict):
+            content = result.get("content", result)
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and "text" in block:
+                        text_parts.append(str(block["text"]))
+                    elif hasattr(block, "text"):
+                        text_parts.append(str(block.text))
+                    else:
+                        text_parts.append(str(block))
+                raw = "\n".join(text_parts)
+            elif isinstance(content, str):
+                raw = content
+            else:
+                raw = str(content)
+        elif hasattr(result, "content") and isinstance(result.content, list):
+            text_parts = []
+            for block in result.content:
+                if hasattr(block, "text"):
+                    text_parts.append(block.text)
+            raw = "\n".join(text_parts) if text_parts else str(result.content)
+        else:
+            raw = str(result)
+    except Exception:
+        raw = str(result)
+
+    # Unwrap Lambda statusCode/body envelope if present
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict) and "body" in parsed:
+            body = parsed["body"]
+            if isinstance(body, str):
+                body = json.loads(body)
+            return json.dumps(body)
+    except (json.JSONDecodeError, TypeError, KeyError):
+        pass
+
+    return raw
 
 
 def _create_websearch_tool():
@@ -394,7 +445,7 @@ Remember: You are serving {clinic_id} with premium-tier capabilities{' including
                     name=f"{gateway_target}___patient_context",
                     arguments=args,
                 )
-                return str(result.content)
+                return _extract_gateway_response(result)
             except Exception as e:
                 error_msg = str(e)
                 if "denied" in error_msg.lower() or "policy" in error_msg.lower():
@@ -430,7 +481,7 @@ Remember: You are serving {clinic_id} with premium-tier capabilities{' including
                     name=f"{gateway_target}___clinic_config",
                     arguments=args,
                 )
-                return str(result.content)
+                return _extract_gateway_response(result)
             except Exception as e:
                 return f"Error accessing clinic configuration: {e}"
 

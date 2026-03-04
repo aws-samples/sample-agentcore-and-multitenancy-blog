@@ -126,6 +126,7 @@ def lambda_handler(event, context):
             }, default=decimal_default)
         }
         print(f"✅ [patient_context] Returning patient data for {patient_id}")
+        print(f"🔍 [patient_context] Full return object: {json.dumps(result, default=str)[:1000]}")
         return result
     
     except Exception as e:
