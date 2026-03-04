@@ -34,16 +34,24 @@ os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
 os.environ["DEFAULT_TIMEZONE"] = "America/New_York"
 
-# Tier is set via AGENT_TIER env var (defaults to "basic").
-# When deploying two agents, set AGENT_TIER=premium for the premium instance.
+# Default tier (overridden per-request from payload)
 AGENT_TIER = os.environ.get("AGENT_TIER", "basic")
 
-# Load the appropriate Knowledge Base ID for this tier
-kb_ssm_key = f"/app/healthcare/knowledge_base/{AGENT_TIER}_kb_id"
-os.environ["KNOWLEDGE_BASE_ID"] = get_ssm_parameter(kb_ssm_key)
+# Load both KB IDs at startup so the correct one can be selected per-request
+KB_IDS = {}
+for _tier in ("basic", "premium"):
+    try:
+        KB_IDS[_tier] = get_ssm_parameter(f"/app/healthcare/knowledge_base/{_tier}_kb_id")
+    except Exception:
+        KB_IDS[_tier] = ""
+
+# Default to basic until a request arrives with tenant context
+os.environ["KNOWLEDGE_BASE_ID"] = KB_IDS.get(AGENT_TIER, KB_IDS.get("basic", ""))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.get('premium')}")
 
 app = BedrockAgentCoreApp()
 
@@ -64,6 +72,11 @@ async def invoke(payload, agentcore_context=None):
         clinic_id = payload.get("clinic_id", "demo-clinic")
         user_id = payload.get("user_id", "demo-user")
         role = payload.get("role", "user")
+
+        # Select the correct Knowledge Base for this tenant's tier
+        kb_id = KB_IDS.get(tier, KB_IDS.get("basic", ""))
+        os.environ["KNOWLEDGE_BASE_ID"] = kb_id
+        logger.info(f"Selected KB for tier '{tier}': {kb_id}")
 
         # Construct hierarchical identifiers for isolation
         actor_id = f"{tier}-{clinic_id}-{user_id}"
