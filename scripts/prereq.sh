@@ -34,10 +34,10 @@ else
     2>/dev/null || echo "ℹ️ Bucket may already exist or be owned by you."
 fi
 
-# ----- 2. Zip Lambda code -----
+# ----- 2. Zip Lambda code (CustomerSupport Lambda - no external dependencies needed) -----
 echo "📦 Zipping contents of $LAMBDA_SRC into $ZIP_FILE..."
 cd "$LAMBDA_SRC"
-zip -r "../../../$ZIP_FILE" . > /dev/null
+zip -r "../../../$ZIP_FILE" lambda_function.py patient_context.py clinic_config.py > /dev/null
 cd - > /dev/null
 
 # ----- 2b. Zip API Gateway Lambda code with dependencies -----
