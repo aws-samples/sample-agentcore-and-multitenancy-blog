@@ -9,6 +9,7 @@ IAM roles and S3 Vectors.
 """
 
 import json
+import sys
 import boto3
 import time
 import uuid
@@ -34,7 +35,7 @@ def read_yaml_file(file_path: str):
     Args:
         file_path: the path to the yaml file
     """
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         try:
             return yaml.safe_load(file)
         except yaml.YAMLError as e:
@@ -898,7 +899,7 @@ if __name__ == "__main__":
     
     if not data:
         print(f"❌ Failed to read config file: {config_path}")
-        exit(1)
+        sys.exit(1)
 
     print(data)
     if args.mode == "create":

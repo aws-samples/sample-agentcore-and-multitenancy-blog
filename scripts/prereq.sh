@@ -45,7 +45,7 @@ echo "📦 Packaging API Gateway Lambda with dependencies into $API_GATEWAY_ZIP_
 if [ -f "prerequisite/lambda/python/api_gateway_lambda.py" ]; then
   rm -rf api_gw_lambda_package
   mkdir api_gw_lambda_package
-  pip3 install -r prerequisite/lambda/python/requirements.txt -t api_gw_lambda_package/ --quiet
+  pip3 install -r prerequisite/lambda/python/requirements.txt -t api_gw_lambda_package/ --platform manylinux2014_x86_64 --python-version 3.12 --only-binary=:all: --quiet
   cp prerequisite/lambda/python/api_gateway_lambda.py api_gw_lambda_package/
   cd api_gw_lambda_package
   zip -r "../$API_GATEWAY_ZIP_FILE" . > /dev/null
@@ -112,7 +112,16 @@ cognito_exit_code=$?
 
 echo "🔧 Starting deployment of API Gateway stack..."
 if [ -f "$API_GATEWAY_ZIP_FILE" ]; then
-  deploy_stack "$API_GATEWAY_STACK_NAME" "$API_GATEWAY_TEMPLATE_FILE" --parameter-overrides LambdaCodeBucket="$FULL_BUCKET_NAME" LambdaCodeKey="$API_GATEWAY_S3_KEY"
+  # Fetch Cognito params from SSM (created by Cognito stack above)
+  COGNITO_USER_POOL_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/userpool_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+  COGNITO_WEB_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/web_client_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+
+  deploy_stack "$API_GATEWAY_STACK_NAME" "$API_GATEWAY_TEMPLATE_FILE" \
+    --parameter-overrides \
+      LambdaCodeBucket="$FULL_BUCKET_NAME" \
+      LambdaCodeKey="$API_GATEWAY_S3_KEY" \
+      CognitoUserPoolId="$COGNITO_USER_POOL_ID" \
+      CognitoClientId="$COGNITO_WEB_CLIENT_ID"
   api_gateway_exit_code=$?
 
   if [ $api_gateway_exit_code -eq 0 ]; then

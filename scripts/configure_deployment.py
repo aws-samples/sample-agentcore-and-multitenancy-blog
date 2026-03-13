@@ -221,7 +221,7 @@ def main():
     
     # Save configuration
     os.makedirs('config', exist_ok=True)
-    with open('config/deployment_config.json', 'w') as f:
+    with open('config/deployment_config.json', 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2)
     
     # Update configuration files

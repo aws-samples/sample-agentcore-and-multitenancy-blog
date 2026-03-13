@@ -1,0 +1,5 @@
+# False positive: deployment_config.json contains only placeholder values, not real secrets
+80d2a86792f70cb8c15d39a27ed6f225fdd4f506:config/deployment_config.json:generic-api-key:16
+
+# False positive: credentials.json contains generated test user credentials, not real secrets
+b1b8eb474a29bf038a3d5acba680718f5b026eb1:credentials.json:generic-api-key:1

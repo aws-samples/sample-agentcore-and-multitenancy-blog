@@ -187,6 +187,7 @@ Resources:
                 Action:
                   - bedrock-agentcore:AuthorizeAction
                   - bedrock-agentcore:PartiallyAuthorizeActions
+                  - bedrock-agentcore:CheckAuthorizePermissions
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
@@ -214,6 +215,9 @@ Resources:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
       Tags:
         - Key: Application
           Value: Healthcare
@@ -233,6 +237,9 @@ Resources:
           KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
       Tags:
         - Key: Application
           Value: Healthcare

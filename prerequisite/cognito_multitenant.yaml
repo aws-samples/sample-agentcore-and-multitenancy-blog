@@ -33,7 +33,9 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Ref UserPoolName
-      MfaConfiguration: 'OFF'
+      MfaConfiguration: 'OPTIONAL'
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
       UsernameConfiguration:
         CaseSensitive: false
       UsernameAttributes:
@@ -186,7 +188,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - cognito-idp:AdminAddUserToGroup
-                Resource: "*"
+                Resource: !GetAtt UserPool.Arn
 
   PostSignupFunction:
     Type: AWS::Lambda::Function

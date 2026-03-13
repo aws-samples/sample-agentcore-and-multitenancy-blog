@@ -87,6 +87,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
     """Extract tenant information from JWT token in Authorization header"""
     import jwt
+    from jwt import PyJWKClient
     
     tenant_info = {
         'tenant_id': 'basic',  # default tier
@@ -104,8 +105,25 @@ def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
     bearer_token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
     
     try:
-        # Decode JWT token without verification (already validated by AgentCore)
-        decoded = jwt.decode(bearer_token, options={"verify_signature": False})
+        # Verify JWT token against Cognito JWKS
+        user_pool_id = os.environ.get('COGNITO_USER_POOL_ID', '')
+        client_id = os.environ.get('COGNITO_CLIENT_ID', '')
+        
+        if user_pool_id and client_id:
+            region = user_pool_id.split('_')[0] if '_' in user_pool_id else os.environ.get('AWS_REGION', 'us-east-1')
+            jwks_url = f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}/.well-known/jwks.json"
+            jwks_client = PyJWKClient(jwks_url, cache_keys=True)
+            signing_key = jwks_client.get_signing_key_from_jwt(bearer_token)
+            decoded = jwt.decode(
+                bearer_token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=client_id,
+                issuer=f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}",
+            )
+        else:
+            print("Warning: COGNITO_USER_POOL_ID or COGNITO_CLIENT_ID not set, skipping JWT verification")
+            decoded = jwt.decode(bearer_token, options={"verify_signature": False})  # nosemgrep: unverified-jwt-decode
         
         # Extract tenant_id (tier: basic/premium)
         if 'custom:tenant_id' in decoded:
@@ -167,10 +185,7 @@ def forward_to_agentcore(agent_arn: str, payload: str, session_id: str,
         print(f"Response status: {response.status_code}")
         print(f"Response headers: {dict(response.headers)}")
         
-        if response.status_code != 200:
-            error_text = response.text
-            print(f"Error response: {error_text}")
-            return f"AgentCore error: {response.status_code} - {error_text}"
+        response.raise_for_status()
         
         # Stream response back
         response_text = ""

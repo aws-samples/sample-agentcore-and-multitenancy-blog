@@ -317,14 +317,18 @@ def delete(confirm):
         try:
             gateway_id = get_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_id")
             gw_details = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
-            gateway_client.update_gateway(
-                gatewayIdentifier=gateway_id,
-                name=gw_details["name"],
-                roleArn=gw_details["roleArn"],
-                protocolType=gw_details["protocolType"],
-                authorizerType=gw_details["authorizerType"],
-                policyEngineConfiguration={},
-            )
+
+            update_params = {
+                "gatewayIdentifier": gateway_id,
+                "name": gw_details["name"],
+                "roleArn": gw_details["roleArn"],
+                "protocolType": gw_details["protocolType"],
+                "authorizerType": gw_details["authorizerType"],
+            }
+            if "authorizerConfiguration" in gw_details:
+                update_params["authorizerConfiguration"] = gw_details["authorizerConfiguration"]
+
+            gateway_client.update_gateway(**update_params)
             click.echo(f"✅ Policy engine detached from {tier} gateway {gateway_id}")
         except Exception as e:
             click.echo(f"⚠️  Could not detach from {tier} gateway: {e}")

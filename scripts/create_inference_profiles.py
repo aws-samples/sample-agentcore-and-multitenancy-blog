@@ -132,8 +132,8 @@ def main():
         
         # Update configuration
         print("\n🔧 Updating deployment configuration...")
-        import subprocess
-        subprocess.run([sys.executable, "scripts/configure_deployment.py"], check=True)
+        from configure_deployment import main as configure_deployment
+        configure_deployment()
         
     except Exception as e:
         print(f"❌ Error in inference profile creation: {e}")

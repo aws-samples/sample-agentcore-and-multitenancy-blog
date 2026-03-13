@@ -4,6 +4,7 @@ import os
 import uuid
 import json
 import jwt
+from jwt import PyJWKClient
 from urllib.parse import urlencode
 import requests
 import streamlit as st
@@ -19,6 +20,12 @@ class AuthManager:
         self.client_id = get_ssm_parameter(
             "/app/healthcare/agentcore/web_client_id"
         )
+        self.user_pool_id = get_ssm_parameter(
+            "/app/healthcare/agentcore/userpool_id"
+        )
+        self.region = self.user_pool_id.split("_")[0] if "_" in self.user_pool_id else "us-east-1"
+        self.jwks_url = f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}/.well-known/jwks.json"
+        self._jwks_client = PyJWKClient(self.jwks_url, cache_keys=True)
         self.redirect_uri = "http://localhost:8501/"
         self.scopes = "email openid profile"
         self.cookies = CookieController()
@@ -89,7 +96,7 @@ class AuthManager:
                 "code_verifier": code_verifier,
             }
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
-            response = requests.post(token_url, data=data, headers=headers)
+            response = requests.post(token_url, data=data, headers=headers, timeout=30)
 
             if response.ok:
                 tokens = response.json()
@@ -142,7 +149,17 @@ class AuthManager:
     def get_user_claims(self):
         tokens = self.get_tokens()
         if tokens:
-            return jwt.decode(tokens["id_token"], options={"verify_signature": False})
+            try:
+                signing_key = self._jwks_client.get_signing_key_from_jwt(tokens["id_token"])
+                return jwt.decode(
+                    tokens["id_token"],
+                    signing_key.key,
+                    algorithms=["RS256"],
+                    audience=self.client_id,
+                    issuer=f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}",
+                )
+            except jwt.exceptions.PyJWTError:
+                return None
         return None
 
     def get_enhanced_user_claims(self):
