@@ -178,6 +178,82 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
 
         return gateway
 
+    except gateway_client.exceptions.ConflictException:
+        click.echo(f"ℹ️  Gateway '{gateway_name}' already exists, retrieving existing configuration...")
+        # List gateways to find the existing one, then get full details
+        paginator = gateway_client.get_paginator('list_gateways')
+        for page in paginator.paginate():
+            for gw in page.get('items', []):
+                if gw['name'] == gateway_name:
+                    gateway_id = gw['gatewayId']
+                    # Get full gateway details including ARN and URL
+                    full_gw = gateway_client.get_gateway(gatewayIdentifier=gateway_id)
+                    gateway = {
+                        "id": gateway_id,
+                        "name": gateway_name,
+                        "tier": tier,
+                        "gateway_url": full_gw.get("gatewayUrl", ""),
+                        "gateway_arn": full_gw.get("gatewayArn", ""),
+                    }
+
+                    # Ensure gateway target exists
+                    try:
+                        existing_targets = gateway_client.list_gateway_targets(
+                            gatewayIdentifier=gateway_id, maxResults=100
+                        )
+                        if not existing_targets.get("items"):
+                            click.echo(f"⚠️  No targets found, creating gateway target...")
+                            if not wait_for_gateway_active(gateway_id):
+                                click.echo(f"❌ Gateway not ready, cannot create target", err=True)
+                                sys.exit(1)
+
+                            lambda_target_config = {
+                                "mcp": {
+                                    "lambda": {
+                                        "lambdaArn": get_ssm_parameter("/app/healthcare/agentcore/lambda_arn"),
+                                        "toolSchema": {"inlinePayload": api_spec},
+                                    }
+                                }
+                            }
+                            credential_config = [{"credentialProviderType": "GATEWAY_IAM_ROLE"}]
+                            metadata_config = {
+                                "allowedRequestHeaders": ["X-Tenant-ID", "X-Clinic-ID", "X-S3-Prefix"]
+                            }
+                            create_target_response = gateway_client.create_gateway_target(
+                                gatewayIdentifier=gateway_id,
+                                name=f"HealthcareLambda-{tier.title()}",
+                                description=f"Healthcare Lambda Target - {tier.title()} Tier",
+                                targetConfiguration=lambda_target_config,
+                                credentialProviderConfigurations=credential_config,
+                                metadataConfiguration=metadata_config,
+                            )
+                            click.echo(f"✅ Gateway target created: {create_target_response['targetId']}")
+                        else:
+                            click.echo(f"✅ Gateway target already exists ({len(existing_targets['items'])} target(s))")
+                    except Exception as target_err:
+                        click.echo(f"⚠️  Could not verify/create gateway target: {target_err}")
+
+                    # Ensure SSM parameters are up to date
+                    put_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_id", gateway_id)
+                    put_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_name", gateway_name)
+                    if gateway["gateway_arn"]:
+                        put_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_arn", gateway["gateway_arn"])
+                    if gateway["gateway_url"]:
+                        put_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_url", gateway["gateway_url"])
+
+                    if tier == "basic":
+                        put_ssm_parameter(
+                            "/app/healthcare/agentcore/cognito_secret",
+                            get_cognito_client_secret(),
+                            with_encryption=True,
+                        )
+
+                    click.echo(f"✅ Using existing gateway: {gateway_id}")
+                    click.echo(f"✅ SSM parameters updated for tier: {tier}")
+                    return gateway
+        click.echo(f"❌ Gateway exists but could not be found in listing", err=True)
+        sys.exit(1)
+
     except Exception as e:
         click.echo(f"❌ Error creating gateway: {str(e)}", err=True)
         sys.exit(1)

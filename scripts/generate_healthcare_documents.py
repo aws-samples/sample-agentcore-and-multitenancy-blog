@@ -220,7 +220,7 @@ def save_documents_locally(documents, base_path):
                 "document_type": doc['document_type']
             }
         }
-        with open(metadata_path, 'w') as f:
+        with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, indent=2)
 
 def main():

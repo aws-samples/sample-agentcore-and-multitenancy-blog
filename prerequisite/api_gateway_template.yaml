@@ -9,6 +9,14 @@ Parameters:
     Type: String
     Description: S3 key for Lambda code zip file
     Default: api_gateway_lambda.zip
+  CognitoUserPoolId:
+    Type: String
+    Description: Cognito User Pool ID for JWT verification
+    Default: ''
+  CognitoClientId:
+    Type: String
+    Description: Cognito Client ID for JWT audience verification
+    Default: ''
 
 Resources:
   # Lambda Function
@@ -16,13 +24,17 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: agentcore-api-gateway-proxy
-      Runtime: python3.11
+      Runtime: python3.12
       Handler: api_gateway_lambda.lambda_handler
       Code:
         S3Bucket: !Ref LambdaCodeBucket
         S3Key: !Ref LambdaCodeKey
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 120
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoClientId
 
   # Lambda Execution Role
   LambdaExecutionRole:
@@ -37,16 +49,26 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: BedrockAgentCoreAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - bedrock:InvokeAgent
-                  - bedrock-agentcore:*
-                Resource: '*'
+
+  # CloudWatch Logs role for API Gateway (account-level setting)
+  ApiGatewayCloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    DependsOn: AgentCoreApiGateway
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchRole.Arn
 
   # API Gateway
   AgentCoreApiGateway:
@@ -80,7 +102,7 @@ Resources:
       RestApiId: !Ref AgentCoreApiGateway
       ResourceId: !Ref AgentArnResource
       HttpMethod: POST
-      AuthorizationType: NONE
+      AuthorizationType: None
       ApiKeyRequired: true  # Enable API key requirement
       Integration:
         Type: AWS_PROXY
@@ -103,13 +125,24 @@ Resources:
     Properties:
       RestApiId: !Ref AgentCoreApiGateway
 
+  # CloudWatch Log Group for API Gateway access logs
+  ApiGatewayAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${AgentCoreApiGateway}/access-logs'
+      RetentionInDays: 30
+
   # API Gateway Stage
   ApiGatewayStage:
+    DependsOn: ApiGatewayAccount
     Type: AWS::ApiGateway::Stage
     Properties:
       RestApiId: !Ref AgentCoreApiGateway
       DeploymentId: !Ref ApiGatewayDeployment
       StageName: prod
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","caller":"$context.identity.caller","user":"$context.identity.user","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength"}'
 
   # Usage Plans for demo - very low limits to show throttling
   PremiumUsagePlan:

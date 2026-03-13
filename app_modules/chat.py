@@ -123,22 +123,6 @@ class ChatManager:
             "X-API-Key": api_key,  # Add API key for throttling
         }
 
-        # Debug: Decode and print token claims (first 50 chars only for security)
-        try:
-            import jwt
-            decoded = jwt.decode(bearer_token, options={"verify_signature": False})
-            print(f"DEBUG: Token issuer: {decoded.get('iss', 'NOT FOUND')}")
-            print(f"DEBUG: Token client_id: {decoded.get('client_id', 'NOT FOUND')}")
-            print(f"DEBUG: Token aud: {decoded.get('aud', 'NOT FOUND')}")
-            print(f"DEBUG: Token use: {decoded.get('token_use', 'NOT FOUND')}")
-            
-            # Check if this is an access token (which won't work with JWT authorizer)
-            if decoded.get('token_use') == 'access':
-                print("WARNING: Using access_token - AgentCore JWT authorizer expects id_token!")
-                print("         Access tokens don't have 'aud' claim, only 'client_id'")
-        except Exception as e:
-            print(f"DEBUG: Could not decode token: {e}")
-
         try:
             body = json.loads(payload) if isinstance(payload, str) else payload
         except json.JSONDecodeError:

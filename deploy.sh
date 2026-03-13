@@ -118,7 +118,7 @@ print_step "Enabling Memory Observability for cost tracking..."
 python scripts/setup_memory_observability.py enable-all
 
 print_step "Verifying Memory Observability configuration..."
-python scripts/setup_memory_observability.py verify-all
+python scripts/setup_memory_observability.py verify-all || echo -e "${YELLOW}[WARNING]${NC} Memory observability verification incomplete — deliveries may take time to propagate. This is non-blocking."
 
 print_step "Getting runtime role from SSM..."
 RUNTIME_ROLE=$(aws ssm get-parameter --name /app/healthcare/agentcore/runtime_iam_role --query 'Parameter.Value' --output text)

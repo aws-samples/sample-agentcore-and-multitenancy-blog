@@ -4,8 +4,8 @@
 rm -rf lambda_package
 mkdir lambda_package
 
-# Install dependencies
-pip3 install -r requirements_lambda.txt -t lambda_package/
+# Install dependencies targeting Lambda runtime (Amazon Linux x86_64)
+pip3 install -r prerequisite/lambda/python/requirements.txt -t lambda_package/ --platform manylinux2014_x86_64 --python-version 3.12 --only-binary=:all:
 
 # Copy healthcare Lambda files
 cp prerequisite/lambda/python/api_gateway_lambda.py lambda_package/
