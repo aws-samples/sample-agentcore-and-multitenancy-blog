@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "CloudFormation template for Customer Support System with DynamoDB tables, SSM parameters, and synthetic data"
+Description: "CloudFormation template for HealthCare AI System with DynamoDB tables, SSM parameters, and synthetic data"
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -16,7 +16,7 @@ Parameters:
     MinLength: 1
 
   LambdaS3Key:
-    Description: The S3 object key which contains customer support assistant code in zip format
+    Description: The S3 object key which contains Healthcare AI assistant code in zip format
     Type: String
     MinLength: 1
 
@@ -175,7 +175,7 @@ Resources:
                 Action:
                   - lambda:InvokeFunction
                 Resource:
-                  - !GetAtt CustomerSupportLambda.Arn
+                  - !GetAtt HealthCareAILambda.Arn
               - Sid: PolicyEngineAccess
                 Effect: Allow
                 Action:
@@ -192,12 +192,46 @@ Resources:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
 
+  # KMS key for DynamoDB table encryption
+  HealthcareTableKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: CMK for healthcare DynamoDB tables
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnableRootAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowLambdaDecrypt
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt HealthCareAILambdaRole.Arn
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource: "*"
+
+  HealthcareTableKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${AWS::StackName}-dynamodb-key
+      TargetKeyId: !Ref HealthcareTableKey
+
   # Healthcare Tables
   PatientMetadataTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub "${AWS::StackName}-PatientMetadata"
       BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt HealthcareTableKey.Arn
       AttributeDefinitions:
         - AttributeName: patient_id
           AttributeType: S
@@ -229,6 +263,10 @@ Resources:
     Properties:
       TableName: !Sub "${AWS::StackName}-ClinicConfig"
       BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt HealthcareTableKey.Arn
       AttributeDefinitions:
         - AttributeName: clinic_id
           AttributeType: S
@@ -247,7 +285,7 @@ Resources:
           Value: Healthcare
 
   # Lambda target for healthcare tools
-  CustomerSupportLambdaRole:
+  HealthCareAILambdaRole:
     Type: AWS::IAM::Role
     Properties:
       Path: /service-role/
@@ -265,6 +303,11 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              - Sid: AllowSendToDLQ
+                Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt HealthCareAILambdaDLQ.Arn
+
               - Sid: AllowReadHealthcareTableNamesFromSSM
                 Effect: Allow
                 Action: ssm:GetParameter
@@ -295,19 +338,30 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ClinicConfigTable}
 
-  CustomerSupportLambda:
+  # DLQ for Lambda failure capture
+  HealthCareAILambdaDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AWS::StackName}-LambdaDLQ"
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  HealthCareAILambda:
     Type: AWS::Lambda::Function
     Properties:
-      Description: "Lambda function for Customer Support Assistant"
+      Description: "Lambda function for Healthcare AI Assistant"
       Handler: lambda_function.lambda_handler
       Code:
         S3Bucket: !Ref LambdaS3Bucket
         S3Key: !Ref LambdaS3Key
-      Role: !GetAtt CustomerSupportLambdaRole.Arn
+      Role: !GetAtt HealthCareAILambdaRole.Arn
       Runtime: python3.12
       PackageType: Zip
       Architectures:
         - x86_64
+      ReservedConcurrentExecutions: 10
+      DeadLetterConfig:
+        TargetArn: !GetAtt HealthCareAILambdaDLQ.Arn
       Environment:
         Variables:
           PATIENT_METADATA_TABLE: !Ref PatientMetadataTable
@@ -359,7 +413,7 @@ Resources:
     Properties:
       Name: /app/healthcare/agentcore/lambda_arn
       Type: String
-      Value: !GetAtt CustomerSupportLambda.Arn
+      Value: !GetAtt HealthCareAILambda.Arn
       Description: ARN of the lambda that integrates with agentcore
       Tags:
         Application: Healthcare

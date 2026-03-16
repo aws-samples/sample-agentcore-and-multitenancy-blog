@@ -54,7 +54,7 @@ def _extract_gateway_response(result) -> str:
     return raw
 
 
-class CustomerSupport:
+class HealthcareAI:
     def __init__(
         self,
         bearer_token: str,

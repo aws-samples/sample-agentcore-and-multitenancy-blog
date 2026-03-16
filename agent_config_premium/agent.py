@@ -144,7 +144,7 @@ def _create_websearch_tool():
         return None
 
 
-class CustomerSupport:
+class HealthCareAI:
     def __init__(
         self,
         bearer_token: str,

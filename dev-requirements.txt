@@ -1,4 +1,4 @@
-# Development requirements for Customer Support Assistant
+# Development requirements for HealthCare AI Assistant
 # Generated from pyproject.toml dependencies
 
 # Core AgentCore dependencies

@@ -243,7 +243,7 @@ class ChatManager:
             start_time = time.time()
 
             create_safe_markdown_text(
-                '<span class="thinking-bubble">🤖 💭 Customer Support Assistant is thinking...</span>',
+                '<span class="thinking-bubble">🤖 💭 Healthcare AI Assistant is thinking...</span>',
                 message_placeholder,
             )
 
@@ -317,7 +317,7 @@ class ChatManager:
                 start_time = time.time()
 
                 create_safe_markdown_text(
-                    '<span class="thinking-bubble">🤖 💭 Customer Support Assistant is thinking...</span>',
+                    '<span class="thinking-bubble">🤖 💭 Healthcare AI Assistant is thinking...</span>',
                     message_placeholder,
                 )
 

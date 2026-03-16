@@ -238,7 +238,7 @@ Resources:
       Value: !Ref WebUserPoolClient
       Description: Cognito client ID for web app
       Tags:
-        Application: CustomerSuppor
+        Application: HealthcareAI
 
   UserPoolIdParameter:
     Type: AWS::SSM::Parameter
