@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Amazon.com and its affiliates; all rights reserved.
+# SPDX-License-Identifier: MIT-0
+
 """
 Generate synthetic healthcare documents for multi-tenant demo.
 This script generates ~80 clinical documents across 8 clinics.

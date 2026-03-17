@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Amazon.com and its affiliates; all rights reserved.
+# SPDX-License-Identifier: MIT-0
+
 """
 Create Bedrock inference profiles for multi-tenant deployment.
 This script creates separate inference profiles for basic and premium tiers.

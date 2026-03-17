@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Copyright (c) 2026 Amazon Web Services, Inc. All rights reserved.
+# Licensed under the MIT-0 License.
+#
+# WARNING: This script performs DESTRUCTIVE operations that will:
+# - Delete all healthcare infrastructure resources
+# - Remove patient data and clinical documents
+# - Cannot be undone once executed
+#
+# RISK ASSESSMENT: High - Permanent data loss, service disruption
+# Ensure backups are complete before running this script.
+
 # Multi-Tenant Healthcare AgentCore Cleanup Script
 # Reverse order of deploy.sh to respect resource dependencies
 
