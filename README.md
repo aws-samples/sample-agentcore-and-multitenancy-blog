@@ -6,6 +6,58 @@ A multi-tenant AI clinical document assistant built on Amazon Bedrock AgentCore,
 
 Healthcare staff can search, summarize, and analyze patient records and clinical documents. Each clinic is fully isolated — they can only see their own data.
 
+## Quick Start
+
+### Prerequisites
+
+- AWS account with Bedrock access enabled
+- AWS CLI configured with appropriate permissions
+- Python 3.12+
+
+### Deploy
+
+```bash
+git clone <repository-url>
+cd agentcore-multitenancy
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r dev-requirements.txt
+
+chmod +x deploy.sh
+./deploy.sh
+```
+
+### Run the Web UI
+
+```bash
+source .venv/bin/activate
+streamlit run app.py --server.port 8501
+```
+
+Log in with test credentials from `credentials/test_users.json` (generated during deployment).
+
+### Example Chat Queries
+
+Once logged in, try these prompts to explore the agent's capabilities:
+
+| Prompt | What It Does | Tier |
+|--------|-------------|------|
+| "List out all patient info" | Retrieves patient metadata for your clinic from DynamoDB | Both |
+| "Show me all available documents" | Searches the Knowledge Base for all clinical documents scoped to your clinic | Both |
+| "What are the current medications patient A is taking?" | Searches current medications | Both |
+| "Get me the latest COVID-19 guidance from CDC" | Uses web search to fetch current CDC guidelines | Premium only |
+| "What are the current treatment protocols for Type 2 diabetes?" | Searches medical literature via web grounding | Premium only |
+
+> **Note:** Basic tier users only have access to document search and patient context tools. Web search queries require a Premium tier account.
+
+## Cleanup
+
+```bash
+chmod +x scripts/cleanup.sh
+./scripts/cleanup.sh
+```
+
 ## Multi-Tenancy Patterns Demonstrated
 
 ### 1. Data Isolation — Knowledge Base Metadata Filtering
@@ -69,36 +121,6 @@ X-S3-Prefix: premium-tier/hospital-a/
 - **Basic** — Primary care clinics (A–D). Document search, summarization via Nova Micro.
 - **Premium** — Specialty care orgs (Hospitals A–B, Clinics E–F). All basic features plus web search for medical research, Claude Sonnet model.
 
-## Quick Start
-
-### Prerequisites
-
-- AWS account with Bedrock access enabled
-- AWS CLI configured with appropriate permissions
-- Python 3.12+
-
-### Deploy
-
-```bash
-git clone <repository-url>
-cd agentcore-multitenancy
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r dev-requirements.txt
-
-chmod +x deploy.sh
-./deploy.sh
-```
-
-### Run the Web UI
-
-```bash
-source .venv/bin/activate
-streamlit run app.py --server.port 8501
-```
-
-Log in with test credentials from `credentials/test_users.json` (generated during deployment).
 
 ### Example Chat Queries
 
@@ -136,9 +158,4 @@ Once logged in, try these prompts to explore the agent's capabilities:
 └── config/                        # Deployment configuration templates
 ```
 
-## Cleanup
 
-```bash
-chmod +x scripts/cleanup.sh
-./scripts/cleanup.sh
-```
