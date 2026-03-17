@@ -100,6 +100,21 @@ streamlit run app.py --server.port 8501
 
 Log in with test credentials from `credentials/test_users.json` (generated during deployment).
 
+### Example Chat Queries
+
+Once logged in, try these prompts to explore the agent's capabilities:
+
+| Prompt | What It Does | Tier |
+|--------|-------------|------|
+| "List out all patient info" | Retrieves patient metadata for your clinic from DynamoDB | Both |
+| "Show me all available documents" | Searches the Knowledge Base for all clinical documents scoped to your clinic | Both |
+| "Summarize the latest lab results for patient John Smith" | Retrieves and summarizes lab result documents filtered by patient | Both |
+| "What prescriptions were issued last month?" | Searches prescription documents with date-based context | Both |
+| "Get me the latest COVID-19 guidance from CDC" | Uses web search to fetch current CDC guidelines | Premium only |
+| "What are the current treatment protocols for Type 2 diabetes?" | Searches medical literature via web grounding | Premium only |
+
+> **Note:** Basic tier users only have access to document search and patient context tools. Web search queries require a Premium tier account.
+
 ## Project Structure
 
 ```

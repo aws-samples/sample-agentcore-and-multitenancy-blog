@@ -48,78 +48,6 @@ def load_ssm_parameters() -> Dict[str, str]:
     
     return parameters
 
-def update_agent_config_files(config: Dict[str, Any]):
-    """Update agent configuration files with dynamic values using regex patterns"""
-    
-    # Update basic agent configuration
-    basic_agent_file = Path("agent_config/agent.py")
-    if basic_agent_file.exists():
-        content = basic_agent_file.read_text()
-        
-        # Replace the entire inference_profile_mapping dictionary with SSM-based loading
-        # This ensures the agent loads profiles dynamically from SSM at runtime
-        mapping_replacement = '''        # Get inference profile ARNs from SSM parameters
-        try:
-            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
-            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
-            print(f"   Falling back to default model: {bedrock_model_id}")
-            basic_profile_arn = bedrock_model_id
-            premium_profile_arn = bedrock_model_id
-        
-        # Map tenant to inference profile
-        inference_profile_mapping = {
-            "basic": basic_profile_arn,
-            "premium": premium_profile_arn,
-            "default": basic_profile_arn
-        }'''
-        
-        # Replace any hardcoded inference profile mappings
-        content = re.sub(
-            r'# Map tenant to inference profile.*?\n.*?inference_profile_mapping = \{[^}]+\}',
-            mapping_replacement,
-            content,
-            flags=re.DOTALL
-        )
-        
-        basic_agent_file.write_text(content)
-        print("✅ Updated basic agent configuration")
-    
-    # Update premium agent configuration
-    premium_agent_file = Path("agent_config_premium/agent.py")
-    if premium_agent_file.exists():
-        content = premium_agent_file.read_text()
-        
-        # Replace the entire inference_profile_mapping dictionary with SSM-based loading
-        mapping_replacement = '''        # Get inference profile ARNs from SSM parameters
-        try:
-            basic_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/basic_arn")
-            premium_profile_arn = get_ssm_parameter("/app/healthcare/inference_profiles/premium_arn")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load inference profiles from SSM: {e}")
-            print(f"   Falling back to default model: {bedrock_model_id}")
-            basic_profile_arn = bedrock_model_id
-            premium_profile_arn = bedrock_model_id
-        
-        # Map tenant to inference profile
-        inference_profile_mapping = {
-            "basic": basic_profile_arn,
-            "premium": premium_profile_arn,
-            "default": basic_profile_arn
-        }'''
-        
-        # Replace any hardcoded inference profile mappings
-        content = re.sub(
-            r'# Map tenant to inference profile.*?\n.*?inference_profile_mapping = \{[^}]+\}',
-            mapping_replacement,
-            content,
-            flags=re.DOTALL
-        )
-        
-        premium_agent_file.write_text(content)
-        print("✅ Updated premium agent configuration")
-
 def generate_agentcore_yaml(config: Dict[str, Any], deployment_type: str = "direct_code_deploy"):
     """Generate .bedrock_agentcore.yaml with dynamic values
     
@@ -224,8 +152,6 @@ def main():
     with open('config/deployment_config.json', 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2)
     
-    # Update configuration files
-    update_agent_config_files(config)
     generate_agentcore_yaml(config, deployment_type)
     
     print("✅ Configuration completed!")

@@ -1,1 +1,1 @@
-# Streamlit module for customer support assistant
+# Streamlit module for healthcare AI assistant
