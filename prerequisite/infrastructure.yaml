@@ -210,11 +210,14 @@ Resources:
           - Sid: AllowLambdaDecrypt
             Effect: Allow
             Principal:
-              AWS: !GetAtt HealthCareAILambdaRole.Arn
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action:
               - kms:Decrypt
               - kms:DescribeKey
             Resource: "*"
+            Condition:
+              ArnLike:
+                aws:PrincipalArn: !Sub arn:aws:iam::${AWS::AccountId}:role/service-role/*
 
   HealthcareTableKeyAlias:
     Type: AWS::KMS::Alias
@@ -249,9 +252,6 @@ Resources:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
-      SSESpecification:
-        SSEEnabled: true
-        SSEType: KMS
       Tags:
         - Key: Application
           Value: Healthcare
@@ -275,9 +275,6 @@ Resources:
           KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
-      SSESpecification:
-        SSEEnabled: true
-        SSEType: KMS
       Tags:
         - Key: Application
           Value: Healthcare
@@ -312,8 +309,8 @@ Resources:
                 Effect: Allow
                 Action: ssm:GetParameter
                 Resource:
-                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PatientMetadataTableNameParameter}
-                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ClinicConfigTableNameParameter}
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/app/healthcare/dynamodb/patient_metadata_table_name
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/app/healthcare/dynamodb/clinic_config_table_name
 
               - Sid: AllowReadPatientMetadataTable
                 Effect: Allow
