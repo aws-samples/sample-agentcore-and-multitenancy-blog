@@ -60,7 +60,7 @@ chmod +x scripts/cleanup.sh
 
 ## Multi-Tenancy Patterns Demonstrated
 
-![Multitenancy Architecture](multitenancy_architecture.png)
+![Multitenancy Architecture](agentcore-blog-architecture.png)
 
 
 ### 1. Data Isolation — Knowledge Base Metadata Filtering
