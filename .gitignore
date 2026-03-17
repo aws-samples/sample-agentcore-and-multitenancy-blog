@@ -1,6 +1,9 @@
 .bedrock_agentcore.yaml
 .bedrock_agentcore/
 
+# Kiro IDE
+.kiro/
+
 # Credentials directory (contains test user passwords)
 credentials/
 

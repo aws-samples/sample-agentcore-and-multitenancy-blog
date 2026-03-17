@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Amazon.com and its affiliates; all rights reserved.
+# SPDX-License-Identifier: MIT-0
 
 import sys
 import boto3

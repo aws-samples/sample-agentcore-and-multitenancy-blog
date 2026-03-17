@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Amazon.com and its affiliates; all rights reserved.
+# SPDX-License-Identifier: MIT-0
+
 """
 Configuration script to parameterize hardcoded values for multi-tenant deployment.
 This script replaces hardcoded account IDs, ARNs, and other values with dynamic ones.

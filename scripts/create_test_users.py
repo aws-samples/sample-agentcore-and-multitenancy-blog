@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# Copyright 2026 Amazon.com and its affiliates; all rights reserved.
+# SPDX-License-Identifier: MIT-0
+#
+# NOTICE: This script creates test users for demonstration purposes only.
+# Do not use in production without proper security review.
+
 """
 Create test users in Cognito with custom attributes for healthcare multi-tenancy demo.
 This script is idempotent - it checks if users exist before creating them.

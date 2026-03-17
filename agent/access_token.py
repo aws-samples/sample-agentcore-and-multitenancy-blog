@@ -1,3 +1,6 @@
+# Copyright 2026 Amazon.com and its affiliates; all rights reserved.
+# SPDX-License-Identifier: MIT-0
+
 from .utils import get_ssm_parameter
 from bedrock_agentcore.identity.auth import requires_access_token
 
