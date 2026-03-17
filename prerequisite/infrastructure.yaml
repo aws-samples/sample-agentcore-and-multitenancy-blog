@@ -335,6 +335,13 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ClinicConfigTable}
 
+              - Sid: AllowKMSDecryptForDynamoDB
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:DescribeKey
+                Resource: !GetAtt HealthcareTableKey.Arn
+
   # DLQ for Lambda failure capture
   HealthCareAILambdaDLQ:
     Type: AWS::SQS::Queue

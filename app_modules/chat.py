@@ -113,7 +113,7 @@ class ChatManager:
                 "default": "INVALID_KEY"
             }
         
-        api_key = api_key_mapping.get(tenant_id, "swqp2a46ph")
+        api_key = api_key_mapping.get(tenant_id, "")
 
         headers = {
             "Authorization": f"Bearer {bearer_token}",
