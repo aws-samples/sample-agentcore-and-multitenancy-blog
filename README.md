@@ -60,6 +60,9 @@ chmod +x scripts/cleanup.sh
 
 ## Multi-Tenancy Patterns Demonstrated
 
+![Multitenancy Architecture](multitenancy_architecture.png)
+
+
 ### 1. Data Isolation — Knowledge Base Metadata Filtering
 Each clinic's documents are tagged with a `clinic_id` metadata field. At query time, the agent's `retrieve_clinic_documents` tool applies a metadata filter so tenants only retrieve their own documents.
 
