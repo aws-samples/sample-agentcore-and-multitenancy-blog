@@ -42,7 +42,7 @@ def extract_tenant_info(event: Dict) -> Dict:
     
     return {
         'clinic_id': headers.get('X-Clinic-ID') or body.get('clinic_id', 'demo-clinic'),
-        'tier': headers.get('X-Tenant-ID') or body.get('tier', 'basic')
+        'tier': headers.get('X-Tier') or body.get('tier', 'basic')
     }
 
 

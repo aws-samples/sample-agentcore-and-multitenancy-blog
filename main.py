@@ -4,7 +4,7 @@
 """
 Single AgentCore entrypoint for all tiers.
 
-Tier is determined from the incoming payload (tenant_id field), not from
+Tier is determined from the incoming payload (tier field), not from
 separate codepaths. This means one deployed agent binary can serve both
 basic and premium tenants — or you can deploy two instances of the same
 code with different KB IDs via environment variables.
@@ -71,7 +71,7 @@ async def invoke(payload, agentcore_context=None):
         TenantContext.set_gateway_token(gateway_token)
 
         # Extract tenant identity from payload (forwarded by API Gateway Lambda)
-        tier = payload.get("tenant_id", AGENT_TIER)
+        tier = payload.get("tier", AGENT_TIER)
         clinic_id = payload.get("clinic_id", "demo-clinic")
         user_id = payload.get("user_id", "demo-user")
         role = payload.get("role", "user")
@@ -92,7 +92,7 @@ async def invoke(payload, agentcore_context=None):
         )
 
         # Set all tenant context
-        TenantContext.set_tenant_id(tier)
+        TenantContext.set_tier(tier)
         TenantContext.set_clinic_id(clinic_id)
         TenantContext.set_user_id(user_id)
         TenantContext.set_actor_id(actor_id)
@@ -101,7 +101,7 @@ async def invoke(payload, agentcore_context=None):
         TenantContext.set_role(role)
 
         # OpenTelemetry baggage for per-tenant cost tracking
-        ctx = baggage.set_baggage("tenant_id", f"{tier}-{clinic_id}")
+        ctx = baggage.set_baggage("tier", f"{tier}-{clinic_id}")
         ctx = baggage.set_baggage("tier", tier, context=ctx)
         ctx = baggage.set_baggage("clinic_id", clinic_id, context=ctx)
         ctx = baggage.set_baggage("actor_id", actor_id, context=ctx)

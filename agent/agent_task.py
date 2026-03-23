@@ -39,10 +39,10 @@ async def agent_task(
     try:
         if agent is None:
             # Resolve tier-specific memory ID
-            tenant_id = TenantContext.get_tenant_id() or "basic"
+            tier = TenantContext.get_tier() or "basic"
             memory_id = TenantContext.get_memory_id()
             if not memory_id:
-                memory_id = get_ssm_parameter(f"/app/healthcare/memory/{tenant_id}_id")
+                memory_id = get_ssm_parameter(f"/app/healthcare/memory/{tier}_id")
 
             # Initialize MemoryHook for tenant-isolated conversation history
             memory_hook = None
@@ -64,16 +64,16 @@ async def agent_task(
             clinic_id = TenantContext.get_clinic_id() or "demo-clinic"
             user_id = TenantContext.get_user_id() or "demo-user"
             role = TenantContext.get_role() or "user"
-            s3_prefix = TenantContext.get_s3_prefix() or f"{tenant_id}-tier/{clinic_id}/"
+            s3_prefix = TenantContext.get_s3_prefix() or f"{tier}-tier/{clinic_id}/"
 
             logger.info(
-                f"Creating agent: tier={tenant_id}, clinic={clinic_id}, user={user_id}"
+                f"Creating agent: tier={tier}, clinic={clinic_id}, user={user_id}"
             )
 
             agent = HealthcareAgent(
                 bearer_token=gateway_access_token,
                 memory_hook=memory_hook,
-                tenant_id=tenant_id,
+                tier=tier,
                 clinic_id=clinic_id,
                 user_id=user_id,
                 role=role,

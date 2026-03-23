@@ -8,7 +8,7 @@ Routes tool requests to appropriate healthcare functions based on tenant tier.
 Both basic and premium tiers have access to patient_context and clinic_config tools.
 
 Tenant isolation is enforced through:
-- X-Tenant-ID header (tier: basic/premium)
+- X-Tier header (tier: basic/premium)
 - X-Clinic-ID header (clinic identifier)
 - X-S3-Prefix header (document scope)
 """
@@ -49,11 +49,11 @@ def lambda_handler(event, context):
     # Fallback to event headers (for direct invocation / testing)
     headers = propagated_headers if propagated_headers else event.get('headers', {})
     
-    tenant_id = headers.get('X-Tenant-ID', headers.get('x-tenant-id', 'basic'))
+    tier = headers.get('X-Tier', headers.get('x-tier', 'basic'))
     clinic_id = headers.get('X-Clinic-ID', headers.get('x-clinic-id', 'demo-clinic'))
     s3_prefix = headers.get('X-S3-Prefix', headers.get('x-s3-prefix', 'basic-tier/demo-clinic/'))
     
-    print(f"🏥 Healthcare request - Tenant: {tenant_id}, Clinic: {clinic_id}, Tool: {resource}")
+    print(f"🏥 Healthcare request - Tier: {tier}, Clinic: {clinic_id}, Tool: {resource}")
     print(f"📋 Headers received: {list(headers.keys())}")
     
     # Inject resolved headers into event so downstream handlers can read them

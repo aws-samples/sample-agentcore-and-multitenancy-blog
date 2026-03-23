@@ -21,7 +21,7 @@ class TenantContext:
     and ContextVar (for async-safe per-coroutine isolation).
 
     Key identifiers:
-      - tenant_id: Service tier (basic/premium)
+      - tier: Service tier (basic/premium)
       - clinic_id: Clinic identifier (e.g., 'clinic-a', 'hospital-a')
       - user_id: User identifier
       - actor_id: Hierarchical key for memory isolation ({tier}-{clinic}-{user})
@@ -32,7 +32,7 @@ class TenantContext:
     _gateway_token: Optional[str] = None
     _response_queue: Optional[asyncio.Queue] = None
     _agent = None
-    _tenant_id: Optional[str] = None
+    _tier: Optional[str] = None
     _clinic_id: Optional[str] = None
     _user_id: Optional[str] = None
     _actor_id: Optional[str] = None
@@ -44,7 +44,7 @@ class TenantContext:
     _gateway_token_ctx: ContextVar[Optional[str]] = ContextVar("gateway_token", default=None)
     _response_queue_ctx: ContextVar[Optional[asyncio.Queue]] = ContextVar("response_queue", default=None)
     _agent_ctx: ContextVar = ContextVar("agent", default=None)
-    _tenant_id_ctx: ContextVar[Optional[str]] = ContextVar("tenant_id", default=None)
+    _tier_ctx: ContextVar[Optional[str]] = ContextVar("tier", default=None)
     _clinic_id_ctx: ContextVar[Optional[str]] = ContextVar("clinic_id", default=None)
     _user_id_ctx: ContextVar[Optional[str]] = ContextVar("user_id", default=None)
     _actor_id_ctx: ContextVar[Optional[str]] = ContextVar("actor_id", default=None)
@@ -94,12 +94,12 @@ class TenantContext:
         cls._set("_agent", cls._agent_ctx, agent)
 
     @classmethod
-    def get_tenant_id(cls) -> Optional[str]:
-        return cls._get("_tenant_id", cls._tenant_id_ctx)
+    def get_tier(cls) -> Optional[str]:
+        return cls._get("_tier", cls._tier_ctx)
 
     @classmethod
-    def set_tenant_id(cls, tenant_id: str) -> None:
-        cls._set("_tenant_id", cls._tenant_id_ctx, tenant_id)
+    def set_tier(cls, tier: str) -> None:
+        cls._set("_tier", cls._tier_ctx, tier)
 
     @classmethod
     def get_clinic_id(cls) -> Optional[str]:
@@ -123,7 +123,7 @@ class TenantContext:
         if val:
             return val
         # Fallback: construct from available context
-        tier = cls.get_tenant_id() or "basic"
+        tier = cls.get_tier() or "basic"
         clinic = cls.get_clinic_id() or "demo-clinic"
         user = cls.get_user_id() or "demo-user"
         return f"{tier}-{clinic}-{user}"
@@ -137,7 +137,7 @@ class TenantContext:
         val = cls._get("_s3_prefix", cls._s3_prefix_ctx)
         if val:
             return val
-        tier = cls.get_tenant_id() or "basic"
+        tier = cls.get_tier() or "basic"
         clinic = cls.get_clinic_id() or "demo-clinic"
         return f"{tier}-tier/{clinic}/"
 

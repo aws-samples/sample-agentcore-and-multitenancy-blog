@@ -175,7 +175,7 @@ class AuthManager:
         enhanced_claims = {
             'email': claims.get('email', 'Unknown'),
             'username': claims.get('cognito:username', 'Unknown'),
-            'tier': claims.get('custom:tenant_id', 'basic'),
+            'tier': claims.get('custom:tier', 'basic'),
             'clinic_id': claims.get('custom:clinic_id', 'unknown-clinic'),
             'role': claims.get('custom:role', 'user'),
         }
