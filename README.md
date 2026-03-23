@@ -104,7 +104,7 @@ One `HealthcareAgent` class serves both tiers. Differences are driven by a `TIER
 | Inference Profile | Basic cost tag | Premium cost tag |
 
 ### 4. Authentication & Tenant Identity — Cognito JWT
-Amazon Cognito issues JWTs with custom attributes (`custom:tenant_id`, `custom:clinic_id`). The API Gateway Lambda extracts these claims and forwards them to the agent as payload fields.
+Amazon Cognito issues JWTs with custom attributes (`custom:tier`, `custom:clinic_id`). The API Gateway Lambda extracts these claims and forwards them to the agent as payload fields.
 
 ### 5. Cost Attribution — OpenTelemetry Baggage + Inference Profiles
 Per-tenant cost tracking via:
@@ -114,7 +114,7 @@ Per-tenant cost tracking via:
 ### 6. Gateway Header Propagation
 Tenant context flows through AgentCore Gateway via headers:
 ```
-X-Tenant-ID: premium
+X-Tier: premium
 X-Clinic-ID: hospital-a
 X-S3-Prefix: premium-tier/hospital-a/
 ```

@@ -88,7 +88,7 @@ class ChatManager:
         payload,
         session_id: str,
         bearer_token: Optional[str],
-        tenant_id: str = "default",
+        tier: str = "default",
         endpoint_name: str = "DEFAULT",
     ) -> Any:
         """Invoke agent endpoint via API Gateway with tenant ID."""
@@ -116,13 +116,13 @@ class ChatManager:
                 "default": "INVALID_KEY"
             }
         
-        api_key = api_key_mapping.get(tenant_id, "")
+        api_key = api_key_mapping.get(tier, "")
 
         headers = {
             "Authorization": f"Bearer {bearer_token}",
             "Content-Type": "application/json",
             "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": session_id,
-            "X-Tenant-ID": tenant_id,
+            "X-Tier": tier,
             "X-API-Key": api_key,  # Add API key for throttling
         }
 
@@ -189,9 +189,9 @@ class ChatManager:
             print("Failed to invoke agent endpoint via API Gateway: %s", str(e))
             raise
 
-    def _get_tenant_id(self, user_claims: dict) -> str:
-        """Extract tenant ID from user claims"""
-        return user_claims.get('custom:tenant_id', 'default')
+    def _get_tier(self, user_claims: dict) -> str:
+        """Extract tier from user claims"""
+        return user_claims.get('custom:tier', 'default')
 
     def display_chat_history(self):
         """Display chat messages from history"""
@@ -233,7 +233,7 @@ class ChatManager:
     def process_user_message(self, prompt: str, user_claims: dict, bearer_token: str):
         """Process a user message and get assistant response"""
         st.session_state.messages.append({"role": "user", "content": prompt})
-        tenant_id = self._get_tenant_id(user_claims)
+        tier = self._get_tier(user_claims)
 
         with st.chat_message("user"):
             create_safe_markdown_text(
@@ -260,7 +260,7 @@ class ChatManager:
                 ),
                 bearer_token=bearer_token,
                 session_id=st.session_state["session_id"],
-                tenant_id=tenant_id,
+                tier=tier,
             ):
                 chunk = str(chunk)
                 if chunk.strip():
@@ -306,7 +306,7 @@ class ChatManager:
         """Initialize the conversation with a default message"""
         if not st.session_state.messages:
             default_prompt = f"Hi my email is {user_claims.get('email')}"
-            tenant_id = self._get_tenant_id(user_claims)
+            tier = self._get_tier(user_claims)
             st.session_state.messages = [{"role": "user", "content": default_prompt}]
 
             with st.chat_message("user"):
@@ -337,7 +337,7 @@ class ChatManager:
                     ),
                     bearer_token=bearer_token,
                     session_id=st.session_state["session_id"],
-                    tenant_id=tenant_id,
+                    tier=tier,
                 ):
                     chunk = str(chunk)
                     if chunk.strip():

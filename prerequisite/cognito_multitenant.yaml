@@ -43,7 +43,7 @@ Resources:
       AutoVerifiedAttributes:
         - email  # <--- Auto-verify email if you want to skip confirmation step
       Schema:
-        - Name: tenant_id
+        - Name: tier
           AttributeDataType: String
           Mutable: true
         - Name: clinic_id

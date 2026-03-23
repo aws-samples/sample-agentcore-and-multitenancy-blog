@@ -11,9 +11,9 @@ Tier differences are handled via configuration, not code duplication:
 Multi-tenancy concerns addressed:
   1. Data isolation:   KB metadata filtering by clinic_id
   2. Memory isolation: Hierarchical actor_id in MemoryHook
-  3. Tier routing:     Inference profile selection per tenant
-  4. Cost attribution: Inference profiles for per-tenant cost tracking
-  5. Gateway headers:  X-Tenant-ID, X-Clinic-ID, X-S3-Prefix propagated
+  3. Tier routing:     Inference profile selection per tier
+  4. Cost attribution: Inference profiles for per-tier cost tracking
+  5. Gateway headers:  X-Tier, X-Clinic-ID, X-S3-Prefix propagated
 """
 
 import json
@@ -173,7 +173,7 @@ def _create_websearch_tool():
 
 
 def _build_system_prompt(
-    tenant_id: str,
+    tier: str,
     clinic_id: str,
     user_id: str,
     role: str,
@@ -192,7 +192,7 @@ def _build_system_prompt(
 
 YOUR ASSIGNED CONTEXT:
 - Clinic: {clinic_id}
-- Tier: {tenant_id}
+- Tier: {tier}
 - User: {user_id} (Role: {role})
 - Document Scope: {s3_prefix}
 
@@ -237,19 +237,19 @@ class HealthcareAgent:
         self,
         bearer_token: str,
         memory_hook: Optional[MemoryHook],
-        tenant_id: str = "basic",
+        tier: str = "basic",
         clinic_id: str = "demo-clinic",
         user_id: str = "demo-user",
         role: str = "user",
         s3_prefix: str = "basic-tier/demo-clinic/",
         tools: Optional[List[callable]] = None,
     ):
-        config = TIER_CONFIG.get(tenant_id, TIER_CONFIG["basic"])
+        config = TIER_CONFIG.get(tier, TIER_CONFIG["basic"])
 
-        # --- Model selection via inference profiles (cost attribution per tenant) ---
+        # --- Model selection via inference profiles (cost attribution per tier) ---
         try:
             model_id = get_ssm_parameter(config["inference_profile_ssm"])
-            logger.info(f"Loaded inference profile for tier '{tenant_id}': {model_id}")
+            logger.info(f"Loaded inference profile for tier '{tier}': {model_id}")
         except Exception as e:
             model_id = config["default_model"]
             logger.warning(f"Inference profile unavailable, using default: {model_id} ({e})")
@@ -265,7 +265,7 @@ class HealthcareAgent:
 
         # --- System prompt with tenant context ---
         self.system_prompt = _build_system_prompt(
-            tenant_id=tenant_id,
+            tier=tier,
             clinic_id=clinic_id,
             user_id=user_id,
             role=role,
@@ -283,7 +283,7 @@ class HealthcareAgent:
                     gateway_url,
                     headers={
                         "Authorization": f"Bearer {bearer_token}",
-                        "X-Tenant-ID": tenant_id,
+                        "X-Tier": tier,
                         "X-Clinic-ID": clinic_id,
                         "X-S3-Prefix": s3_prefix,
                     },

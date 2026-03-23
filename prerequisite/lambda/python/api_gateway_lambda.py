@@ -15,12 +15,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         print(f"Received event: {json.dumps(event)}")
         
-        # Extract tenant info (tenant_id, clinic_id, and user_id) from JWT token or headers
+        # Extract tenant info (tier, clinic_id, and user_id) from JWT token or headers
         tenant_info = extract_tenant_info(event)
-        tenant_id = tenant_info['tenant_id']
+        tier = tenant_info['tier']
         clinic_id = tenant_info['clinic_id']
         user_id = tenant_info['user_id']
-        print(f"Tenant ID: {tenant_id}, Clinic ID: {clinic_id}, User ID: {user_id}")
+        print(f"Tier: {tier}, Clinic ID: {clinic_id}, User ID: {user_id}")
         
         # Get AgentCore endpoint details from path
         proxy_path = event.get('pathParameters', {}).get('proxy', '')
@@ -50,11 +50,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except json.JSONDecodeError:
             body = {}
 
-        # Add tenant_id, clinic_id, and user_id to the payload forwarded to AgentCore
-        body['tenant_id'] = tenant_id
+        # Add tier, clinic_id, and user_id to the payload forwarded to AgentCore
+        body['tier'] = tier
         body['clinic_id'] = clinic_id
         body['user_id'] = user_id
-        print(f"Adding to payload - tenant_id: {tenant_id}, clinic_id: {clinic_id}, user_id: {user_id}")
+        print(f"Adding to payload - tier: {tier}, clinic_id: {clinic_id}, user_id: {user_id}")
         
         # Forward request to AgentCore
         response = forward_to_agentcore(
@@ -70,7 +70,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Content-Type': 'text/plain',
                 'Access-Control-Allow-Origin': '*',
-                'X-Tenant-ID': tenant_id,
+                'X-Tier': tier,
                 'X-Clinic-ID': clinic_id,
                 'X-User-ID': user_id
             },
@@ -93,7 +93,7 @@ def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
     from jwt import PyJWKClient
     
     tenant_info = {
-        'tenant_id': 'basic',  # default tier
+        'tier': 'basic',  # default tier
         'clinic_id': 'demo-clinic',  # default clinic
         'user_id': 'demo-user'  # default user
     }
@@ -128,9 +128,9 @@ def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
             print("Warning: COGNITO_USER_POOL_ID or COGNITO_CLIENT_ID not set, skipping JWT verification")
             decoded = jwt.decode(bearer_token, options={"verify_signature": False})  # nosemgrep: unverified-jwt-decode
         
-        # Extract tenant_id (tier: basic/premium)
-        if 'custom:tenant_id' in decoded:
-            tenant_info['tenant_id'] = decoded['custom:tenant_id']
+        # Extract tier (basic/premium)
+        if 'custom:tier' in decoded:
+            tenant_info['tier'] = decoded['custom:tier']
         
         # Extract clinic_id from JWT custom attribute
         if 'custom:clinic_id' in decoded:
@@ -142,14 +142,14 @@ def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
         elif 'sub' in decoded:
             tenant_info['user_id'] = decoded['sub']
         
-        print(f"Extracted from JWT - tenant_id: {tenant_info['tenant_id']}, clinic_id: {tenant_info['clinic_id']}, user_id: {tenant_info['user_id']}")
+        print(f"Extracted from JWT - tier: {tenant_info['tier']}, clinic_id: {tenant_info['clinic_id']}, user_id: {tenant_info['user_id']}")
         
     except Exception as e:
         print(f"Warning: Could not decode JWT token: {e}, using defaults")
     
     # Fallback to headers if JWT decode failed
-    if tenant_info['tenant_id'] == 'basic' and 'X-Tenant-ID' in event.get('headers', {}):
-        tenant_info['tenant_id'] = event['headers']['X-Tenant-ID']
+    if tenant_info['tier'] == 'basic' and 'X-Tier' in event.get('headers', {}):
+        tenant_info['tier'] = event['headers']['X-Tier']
     
     return tenant_info
 

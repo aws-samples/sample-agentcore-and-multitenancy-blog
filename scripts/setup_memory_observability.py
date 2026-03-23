@@ -14,7 +14,7 @@ Memory observability is NOT automatic - it must be configured manually by:
 3. Creating delivery destinations (CloudWatch Logs, X-Ray)
 4. Creating deliveries to connect sources to destinations
 
-Once enabled, OpenTelemetry baggage (tenant_id, clinic_id) will be captured
+Once enabled, OpenTelemetry baggage (tier, clinic_id) will be captured
 in CloudWatch Logs, enabling per-clinic cost queries.
 
 Usage:
@@ -233,7 +233,7 @@ def enable_memory_observability(memory_id: str, tier: str = None) -> dict:
     click.echo(f"🔗 Logs Delivery: {result['logs_delivery_id']}")
     click.echo(f"🔗 Traces Delivery: {result['traces_delivery_id']}")
     click.echo(f"\n💡 Tenant context (baggage) will now be captured in CloudWatch Logs")
-    click.echo(f"   Query example: fields @timestamp, tenant_id, eventCount")
+    click.echo(f"   Query example: fields @timestamp, tier, eventCount")
     
     return result
 

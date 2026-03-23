@@ -55,7 +55,7 @@ def create_user(cognito_client, user_pool_id, user_data):
             UserAttributes=[
                 {'Name': 'email', 'Value': user_data['username']},
                 {'Name': 'email_verified', 'Value': 'true'},
-                {'Name': 'custom:tenant_id', 'Value': user_data['tier']},
+                {'Name': 'custom:tier', 'Value': user_data['tier']},
                 {'Name': 'custom:clinic_id', 'Value': user_data['clinic_id']},
                 {'Name': 'custom:role', 'Value': user_data['role']},
             ],
@@ -194,7 +194,7 @@ def main():
     print("  Temporary Password: TempPass123!")
     print("  Credentials File:   credentials/test_users.json")
     print("\n🔐 Custom Attributes Set:")
-    print("  - custom:tenant_id (tier: basic/premium)")
+    print("  - custom:tier (tier: basic/premium)")
     print("  - custom:clinic_id (clinic identifier)")
     print("  - custom:role (physician/nurse/admin)")
     

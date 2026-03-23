@@ -39,7 +39,7 @@ def main():
         # Get user tier and set appropriate agent
         user_claims = auth_manager.get_user_claims()
         if user_claims:
-            user_tier = user_claims.get('custom:tenant_id', 'basic')
+            user_tier = user_claims.get('custom:tier', 'basic')
             chat_manager.set_agent_for_user(user_tier)
         
         # Authenticated user interface

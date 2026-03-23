@@ -133,7 +133,7 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
         # Configure header propagation for tenant context
         metadata_config = {
             "allowedRequestHeaders": [
-                "X-Tenant-ID",
+                "X-Tier",
                 "X-Clinic-ID", 
                 "X-S3-Prefix"
             ]
@@ -149,7 +149,7 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
         )
 
         click.echo(f"✅ Gateway target created: {create_target_response['targetId']}")
-        click.echo(f"✅ Header propagation enabled: X-Tenant-ID, X-Clinic-ID, X-S3-Prefix")
+        click.echo(f"✅ Header propagation enabled: X-Tier, X-Clinic-ID, X-S3-Prefix")
 
         gateway = {
             "id": gateway_id,
@@ -220,7 +220,7 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
                             }
                             credential_config = [{"credentialProviderType": "GATEWAY_IAM_ROLE"}]
                             metadata_config = {
-                                "allowedRequestHeaders": ["X-Tenant-ID", "X-Clinic-ID", "X-S3-Prefix"]
+                                "allowedRequestHeaders": ["X-Tier", "X-Clinic-ID", "X-S3-Prefix"]
                             }
                             create_target_response = gateway_client.create_gateway_target(
                                 gatewayIdentifier=gateway_id,
