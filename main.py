@@ -10,10 +10,19 @@ basic and premium tenants — or you can deploy two instances of the same
 code with different KB IDs via environment variables.
 
 Multi-tenancy concerns handled here:
-  - Tenant identity extraction from payload
+  - Tenant identity extraction from payload AND propagated JWT header
   - Hierarchical actor_id construction for memory isolation
   - Per-tenant memory resource routing
   - OpenTelemetry baggage for cost attribution
+
+Authentication flow (hybrid):
+  1. AgentCore Runtime's Inbound JWT Authorizer validates the token signature,
+     issuer, audience, and expiry before the agent code runs.
+  2. The Lambda proxy decodes the JWT (without verification) to extract tenant
+     claims and enriches the payload with tier/clinic_id/user_id.
+  3. This entrypoint reads tenant context from the payload. It can also read
+     the propagated Authorization header (via requestHeaderAllowlist) as a
+     secondary source for claim extraction.
 """
 
 import os
@@ -24,6 +33,7 @@ import uuid
 if "AWS_REGION" not in os.environ:
     os.environ["AWS_REGION"] = "us-east-1"
 
+import jwt as pyjwt  # For decoding propagated JWT header
 from agent.context import TenantContext
 from agent.access_token import get_gateway_access_token
 from agent.agent_task import agent_task
@@ -59,6 +69,43 @@ logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.g
 app = BedrockAgentCoreApp()
 
 
+def _extract_claims_from_header(agentcore_context) -> dict:
+    """
+    Extract tenant claims from the propagated Authorization header.
+
+    The JWT signature has already been validated by AgentCore Runtime's
+    Inbound JWT Authorizer, so we skip signature verification here.
+    This is the pattern recommended by the AgentCore docs (Step 6).
+    """
+    claims = {}
+    if not agentcore_context or not hasattr(agentcore_context, 'request_headers'):
+        return claims
+
+    auth_header = agentcore_context.request_headers.get('Authorization', '')
+    if not auth_header:
+        return claims
+
+    token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
+    try:
+        # Skip signature validation — AgentCore Runtime already validated the token
+        decoded = pyjwt.decode(token, options={"verify_signature": False})
+        if 'custom:tier' in decoded:
+            claims['tier'] = decoded['custom:tier']
+        if 'custom:clinic_id' in decoded:
+            claims['clinic_id'] = decoded['custom:clinic_id']
+        if 'custom:role' in decoded:
+            claims['role'] = decoded['custom:role']
+        if 'cognito:username' in decoded:
+            claims['user_id'] = decoded['cognito:username']
+        elif 'sub' in decoded:
+            claims['user_id'] = decoded['sub']
+        logger.info(f"Extracted claims from propagated JWT header: {claims}")
+    except Exception as e:
+        logger.warning(f"Could not decode propagated JWT header: {e}")
+
+    return claims
+
+
 @app.entrypoint
 async def invoke(payload, agentcore_context=None):
     # Initialize streaming queue
@@ -70,11 +117,14 @@ async def invoke(payload, agentcore_context=None):
         gateway_token = await get_gateway_access_token()
         TenantContext.set_gateway_token(gateway_token)
 
-        # Extract tenant identity from payload (forwarded by API Gateway Lambda)
-        tier = payload.get("tier", AGENT_TIER)
-        clinic_id = payload.get("clinic_id", "demo-clinic")
-        user_id = payload.get("user_id", "demo-user")
-        role = payload.get("role", "user")
+        # Primary source: tenant context from payload (enriched by Lambda proxy)
+        # Fallback: claims from propagated Authorization header
+        jwt_claims = _extract_claims_from_header(agentcore_context)
+
+        tier = payload.get("tier") or jwt_claims.get("tier", AGENT_TIER)
+        clinic_id = payload.get("clinic_id") or jwt_claims.get("clinic_id", "demo-clinic")
+        user_id = payload.get("user_id") or jwt_claims.get("user_id", "demo-user")
+        role = payload.get("role") or jwt_claims.get("role", "user")
 
         # Select the correct Knowledge Base for this tenant's tier
         kb_id = KB_IDS.get(tier, KB_IDS.get("basic", ""))

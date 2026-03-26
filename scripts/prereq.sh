@@ -112,16 +112,10 @@ cognito_exit_code=$?
 
 echo "🔧 Starting deployment of API Gateway stack..."
 if [ -f "$API_GATEWAY_ZIP_FILE" ]; then
-  # Fetch Cognito params from SSM (created by Cognito stack above)
-  COGNITO_USER_POOL_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/userpool_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-  COGNITO_WEB_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/web_client_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-
   deploy_stack "$API_GATEWAY_STACK_NAME" "$API_GATEWAY_TEMPLATE_FILE" \
     --parameter-overrides \
       LambdaCodeBucket="$FULL_BUCKET_NAME" \
-      LambdaCodeKey="$API_GATEWAY_S3_KEY" \
-      CognitoUserPoolId="$COGNITO_USER_POOL_ID" \
-      CognitoClientId="$COGNITO_WEB_CLIENT_ID"
+      LambdaCodeKey="$API_GATEWAY_S3_KEY"
   api_gateway_exit_code=$?
 
   if [ $api_gateway_exit_code -eq 0 ]; then

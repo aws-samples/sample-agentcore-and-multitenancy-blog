@@ -9,14 +9,6 @@ Parameters:
     Type: String
     Description: S3 key for Lambda code zip file
     Default: api_gateway_lambda.zip
-  CognitoUserPoolId:
-    Type: String
-    Description: Cognito User Pool ID for JWT verification
-    Default: ''
-  CognitoClientId:
-    Type: String
-    Description: Cognito Client ID for JWT audience verification
-    Default: ''
 
 Resources:
   # Lambda Function
@@ -33,8 +25,10 @@ Resources:
       Timeout: 120
       Environment:
         Variables:
-          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
-          COGNITO_CLIENT_ID: !Ref CognitoClientId
+          # JWT signature verification is handled by AgentCore Runtime's
+          # Inbound JWT Authorizer. The Lambda only decodes the token
+          # (without verification) to extract tenant claims for routing.
+          AWS_REGION_OVERRIDE: !Ref 'AWS::Region'
 
   # Lambda Execution Role
   LambdaExecutionRole:

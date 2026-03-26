@@ -156,6 +156,7 @@ if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
       --deployment-type direct_code_deploy \
       --runtime "$PYTHON_RUNTIME" \
       --authorizer-config "$AUTHORIZER_CONFIG" \
+      --request-header-allowlist "Authorization" \
       --non-interactive
 else
     agentcore configure --entrypoint main.py \
@@ -163,6 +164,7 @@ else
       --name healthcare_basic \
       --deployment-type container \
       --authorizer-config "$AUTHORIZER_CONFIG" \
+      --request-header-allowlist "Authorization" \
       --non-interactive
 fi
 
@@ -174,6 +176,7 @@ if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
       --deployment-type direct_code_deploy \
       --runtime "$PYTHON_RUNTIME" \
       --authorizer-config "$AUTHORIZER_CONFIG" \
+      --request-header-allowlist "Authorization" \
       --non-interactive
 else
     agentcore configure --entrypoint main.py \
@@ -181,6 +184,7 @@ else
       --name healthcare_premium \
       --deployment-type container \
       --authorizer-config "$AUTHORIZER_CONFIG" \
+      --request-header-allowlist "Authorization" \
       --non-interactive
 fi
 
