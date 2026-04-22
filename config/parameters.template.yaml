@@ -5,12 +5,19 @@ aws:
   account_id: "${AWS_ACCOUNT_ID}"
   region: "${AWS_REGION}"
 
-# Inference Profiles (created by scripts/create_inference_profiles.py)
-inference_profiles:
+# Bedrock Projects (created by scripts/create_bedrock_projects.py)
+# Projects use the Mantle (OpenAI-compatible) endpoint for cost attribution.
+# Each tier has a dedicated project whose tags flow into AWS Cost Explorer.
+bedrock_projects:
   basic:
-    arn: "arn:aws:bedrock:${AWS_REGION}:${AWS_ACCOUNT_ID}:application-inference-profile/${BASIC_PROFILE_ID}"
+    id: "${BASIC_PROJECT_ID}"
+    name: "Healthcare-Basic"
   premium:
-    arn: "arn:aws:bedrock:${AWS_REGION}:${AWS_ACCOUNT_ID}:application-inference-profile/${PREMIUM_PROFILE_ID}"
+    id: "${PREMIUM_PROJECT_ID}"
+    name: "Healthcare-Premium"
+
+# Bedrock API Key (for Mantle endpoint authentication)
+bedrock_api_key_ssm: "/app/healthcare/bedrock_api_key"
 
 # Cognito Configuration (created by prerequisite/cognito_multitenant.yaml)
 cognito:

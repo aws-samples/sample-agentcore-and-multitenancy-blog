@@ -13,7 +13,12 @@ Multi-tenancy concerns handled here:
   - Tenant identity extraction from payload AND propagated JWT header
   - Hierarchical actor_id construction for memory isolation
   - Per-tenant memory resource routing
-  - OpenTelemetry baggage for cost attribution
+  - OpenTelemetry baggage for observability
+
+Cost attribution is handled by Amazon Bedrock Projects via the Mantle
+(OpenAI-compatible) endpoint. Each tier has a dedicated project whose
+tags flow into AWS Cost Explorer. See agent/agent.py for the model
+provider configuration.
 
 Authentication flow (hybrid):
   1. AgentCore Runtime's Inbound JWT Authorizer validates the token signature,
@@ -150,9 +155,10 @@ async def invoke(payload, agentcore_context=None):
         TenantContext.set_memory_id(memory_id)
         TenantContext.set_role(role)
 
-        # OpenTelemetry baggage for per-tenant cost tracking
-        ctx = baggage.set_baggage("tier", f"{tier}-{clinic_id}")
-        ctx = baggage.set_baggage("tier", tier, context=ctx)
+        # OpenTelemetry baggage for per-tenant observability
+        # (Cost attribution is handled by Bedrock Projects via the Mantle endpoint;
+        #  baggage is retained for tracing and log correlation.)
+        ctx = baggage.set_baggage("tier", tier)
         ctx = baggage.set_baggage("clinic_id", clinic_id, context=ctx)
         ctx = baggage.set_baggage("actor_id", actor_id, context=ctx)
         context.attach(ctx)

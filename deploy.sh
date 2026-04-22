@@ -75,7 +75,7 @@ fi
 
 print_step "Activating virtual environment and installing dependencies..."
 source .venv/bin/activate
-pip install -r dev-requirements.txt
+pip install -r requirements.txt
 
 print_step "Creating AWS infrastructure..."
 chmod +x scripts/prereq.sh
