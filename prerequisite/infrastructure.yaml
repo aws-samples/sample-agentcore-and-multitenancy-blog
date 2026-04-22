@@ -126,19 +126,20 @@ Resources:
                   - secretsmanager:GetSecretValue
                 Resource:
                   - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:bedrock-agentcore-identity!default/oauth2/healthcare*
-              - Sid: AgentCoreMemory
+              - Sid: AgentCoreMemoryReadOnly
                 Effect: Allow
                 Action:
                   - bedrock-agentcore:ListMemories
-                  - bedrock-agentcore:ListMemoryRecords
-                  - bedrock-agentcore:RetrieveMemoryRecords
                   - bedrock-agentcore:GetMemory
-                  - bedrock-agentcore:GetMemoryRecord
-                  - bedrock-agentcore:CreateEvent
-                  - bedrock-agentcore:GetEvent
-                  - bedrock-agentcore:ListEvents
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:memory/healthcare*
+              - Sid: AssumeMemoryTvmRole
+                Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - sts:TagSession
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-MemoryTvmRole
               - Sid: BedrockKnowledgeBaseAccess
                 Effect: Allow
                 Action:
@@ -191,6 +192,57 @@ Resources:
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
+
+  # TVM (Token Vending Machine) role for ABAC-scoped memory access.
+  # The agent execution role assumes this role per-request with session tags
+  # (Tier, ClinicId, UserId). The ABAC policy conditions ensure each tenant
+  # can only access their own actorId and namespace in memory.
+  MemoryTvmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-MemoryTvmRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt RuntimeAgentCoreRole.Arn
+            Action:
+              - sts:AssumeRole
+              - sts:TagSession
+            Condition:
+              StringLike:
+                aws:RequestTag/Tier: "?*"
+                aws:RequestTag/ClinicId: "?*"
+                aws:RequestTag/UserId: "?*"
+      Policies:
+        - PolicyName: AbacMemoryPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AbacActorIdScope
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreateEvent
+                  - bedrock-agentcore:GetEvent
+                  - bedrock-agentcore:ListEvents
+                  - bedrock-agentcore:DeleteEvent
+                Resource:
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:memory/healthcare*
+                Condition:
+                  StringLike:
+                    bedrock-agentcore:actorId: "${aws:PrincipalTag/Tier}-${aws:PrincipalTag/ClinicId}-${aws:PrincipalTag/UserId}"
+              - Sid: AbacNamespaceScope
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:RetrieveMemoryRecords
+                  - bedrock-agentcore:ListMemoryRecords
+                  - bedrock-agentcore:GetMemoryRecord
+                Resource:
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:memory/healthcare*
+                Condition:
+                  StringLike:
+                    bedrock-agentcore:namespace: "clinic/${aws:PrincipalTag/Tier}-${aws:PrincipalTag/ClinicId}-${aws:PrincipalTag/UserId}/*"
 
   # KMS key for DynamoDB table encryption
   HealthcareTableKey:
@@ -409,6 +461,16 @@ Resources:
       Type: String
       Value: !GetAtt RuntimeAgentCoreRole.Arn
       Description: agentcore IAM role to assume
+      Tags:
+        Application: Healthcare
+
+  MemoryTvmRoleArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/memory/tvm_role_arn
+      Type: String
+      Value: !GetAtt MemoryTvmRole.Arn
+      Description: TVM role ARN for ABAC-scoped memory access
       Tags:
         Application: Healthcare
 
