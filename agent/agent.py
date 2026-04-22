@@ -11,13 +11,19 @@ Tier differences are handled via configuration, not code duplication:
 Multi-tenancy concerns addressed:
   1. Data isolation:   KB metadata filtering by clinic_id
   2. Memory isolation: Hierarchical actor_id in MemoryHook
-  3. Tier routing:     Inference profile selection per tier
-  4. Cost attribution: Inference profiles for per-tier cost tracking
+  3. Tier routing:     Model selection per tier via Bedrock Mantle
+  4. Cost attribution: Bedrock Projects for per-tier cost tracking
   5. Gateway headers:  X-Tier, X-Clinic-ID, X-S3-Prefix propagated
+
+Cost attribution uses Amazon Bedrock Projects via the Mantle (OpenAI-compatible)
+endpoint. Each tier has a dedicated project whose tags flow into AWS Cost Explorer.
+The Strands OpenAIModel provider connects to bedrock-mantle.{region}.api.aws and
+passes the project ID on every inference request.
 """
 
 import json
 import logging
+import os
 import re
 
 import requests
@@ -31,7 +37,7 @@ from .tools.retrieve_clinic_documents import retrieve_clinic_documents
 from mcp.client.streamable_http import streamablehttp_client
 from strands import Agent, tool
 from strands_tools import current_time
-from strands.models import BedrockModel
+from strands.models.openai import OpenAIModel
 from strands.tools.mcp import MCPClient
 
 logger = logging.getLogger(__name__)
@@ -40,15 +46,15 @@ logger = logging.getLogger(__name__)
 
 TIER_CONFIG = {
     "basic": {
-        "default_model": "us.amazon.nova-micro-v1:0",
-        "inference_profile_ssm": "/app/healthcare/inference_profiles/basic_arn",
+        "default_model": "mistral.ministral-3-8b-instruct",
+        "project_ssm": "/app/healthcare/projects/basic_id",
         "gateway_url_ssm": "/app/healthcare/agentcore/basic_gateway_url",
         "gateway_target": "HealthcareLambda-Basic",
         "web_search": False,
     },
     "premium": {
-        "default_model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-        "inference_profile_ssm": "/app/healthcare/inference_profiles/premium_arn",
+        "default_model": "openai.gpt-oss-120b",
+        "project_ssm": "/app/healthcare/projects/premium_id",
         "gateway_url_ssm": "/app/healthcare/agentcore/premium_gateway_url",
         "gateway_target": "HealthcareLambda-Premium",
         "web_search": True,
@@ -246,15 +252,42 @@ class HealthcareAgent:
     ):
         config = TIER_CONFIG.get(tier, TIER_CONFIG["basic"])
 
-        # --- Model selection via inference profiles (cost attribution per tier) ---
-        try:
-            model_id = get_ssm_parameter(config["inference_profile_ssm"])
-            logger.info(f"Loaded inference profile for tier '{tier}': {model_id}")
-        except Exception as e:
-            model_id = config["default_model"]
-            logger.warning(f"Inference profile unavailable, using default: {model_id} ({e})")
+        # --- Model selection via Bedrock Mantle + Projects (cost attribution per tier) ---
+        region = os.environ.get("AWS_REGION", "us-east-1")
+        mantle_base_url = f"https://bedrock-mantle.{region}.api.aws/v1"
 
-        self.model = BedrockModel(model_id=model_id)
+        # Bedrock API key for Mantle authentication
+        try:
+            api_key = get_ssm_parameter("/app/healthcare/bedrock_api_key")
+        except Exception as e:
+            raise RuntimeError(
+                f"Bedrock API key not found in SSM at /app/healthcare/bedrock_api_key: {e}"
+            )
+
+        # Load Bedrock Project ID for cost attribution
+        project_id = None
+        try:
+            project_id = get_ssm_parameter(config["project_ssm"])
+            logger.info(f"Loaded Bedrock project for tier '{tier}': {project_id}")
+        except Exception as e:
+            logger.warning(
+                f"Bedrock project unavailable for tier '{tier}', "
+                f"requests will use the default project: {e}"
+            )
+
+        model_id = config["default_model"]
+
+        client_args = {
+            "base_url": mantle_base_url,
+            "api_key": api_key,
+        }
+        if project_id:
+            client_args["project"] = project_id
+
+        self.model = OpenAIModel(
+            client_args=client_args,
+            model_id=model_id,
+        )
 
         # --- Web search (premium only) ---
         web_search_enabled = False

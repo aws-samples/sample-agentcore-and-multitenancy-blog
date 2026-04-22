@@ -24,6 +24,15 @@ Resources:
   RuntimeAgentCoreRole:
     Type: AWS::IAM::Role
     Properties:
+      Tags:
+        - Key: Application
+          Value: HealthcareDemo
+        - Key: project
+          Value: HealthcareMultiTenant
+        - Key: cost-center
+          Value: HC-AgentCore
+        - Key: Environment
+          Value: demo
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/BedrockAgentCoreFullAccess
       AssumeRolePolicyDocument:

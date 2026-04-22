@@ -22,7 +22,7 @@ cd agentcore-multitenancy
 
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r dev-requirements.txt
+pip install -r requirements.txt
 
 chmod +x deploy.sh
 ./deploy.sh
