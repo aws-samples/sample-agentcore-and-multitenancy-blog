@@ -84,8 +84,8 @@ chmod +x scripts/prereq.sh
 print_step "Populating healthcare data (patient metadata and clinic configurations)..."
 python scripts/populate_healthcare_data.py
 
-print_step "Creating Bedrock inference profiles..."
-python scripts/create_inference_profiles.py
+print_step "Creating Bedrock projects for cost attribution..."
+python scripts/create_bedrock_projects.py
 
 
 print_info "Deployment type: ${DEPLOYMENT_TYPE}"

@@ -15,6 +15,9 @@ strands-agents-tools>=0.2.19
 # OpenAI SDK (required by strands.models.openai for Bedrock Mantle endpoint)
 openai>=1.82.0
 
+# Bedrock API key generation (short-term token auto-refresh)
+aws-bedrock-token-generator
+
 # Google APIs
 google-api-python-client>=2.189.0
 google-auth>=2.48.0

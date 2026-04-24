@@ -21,7 +21,8 @@ def main():
     st.set_page_config(
         page_title="Healthcare Clinical Assistant",
         page_icon="🏥",
-        layout="wide"
+        layout="wide",
+        initial_sidebar_state="collapsed"
     )
 
     # Apply custom styles

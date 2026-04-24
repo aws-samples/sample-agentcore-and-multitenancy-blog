@@ -16,8 +16,8 @@ bedrock_projects:
     id: "${PREMIUM_PROJECT_ID}"
     name: "Healthcare-Premium"
 
-# Bedrock API Key (for Mantle endpoint authentication)
-bedrock_api_key_ssm: "/app/healthcare/bedrock_api_key"
+# Bedrock API Key (generated at runtime via aws-bedrock-token-generator)
+# No longer stored in SSM — agents call provide_token() on each init
 
 # Cognito Configuration (created by prerequisite/cognito_multitenant.yaml)
 cognito:

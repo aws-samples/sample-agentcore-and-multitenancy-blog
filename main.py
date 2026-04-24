@@ -20,14 +20,17 @@ Cost attribution is handled by Amazon Bedrock Projects via the Mantle
 tags flow into AWS Cost Explorer. See agent/agent.py for the model
 provider configuration.
 
-Authentication flow (hybrid):
+Authentication flow (end-to-end JWT):
   1. AgentCore Runtime's Inbound JWT Authorizer validates the token signature,
      issuer, audience, and expiry before the agent code runs.
   2. The Lambda proxy decodes the JWT (without verification) to extract tenant
      claims and enriches the payload with tier/clinic_id/user_id.
-  3. This entrypoint reads tenant context from the payload. It can also read
-     the propagated Authorization header (via requestHeaderAllowlist) as a
-     secondary source for claim extraction.
+  3. This entrypoint reads tenant context from the payload.
+  4. The incoming JWT is read from request_headers["Authorization"] (via
+     requestHeaderAllowlist) and stored in TenantContext.gateway_token.
+  5. Outbound gateway calls forward the same user JWT as a Bearer token.
+     The gateway validates it via its own CUSTOM_JWT authorizer (same
+     Cognito pool). No second app client or managed credential needed.
 """
 
 import os
@@ -38,15 +41,13 @@ import uuid
 if "AWS_REGION" not in os.environ:
     os.environ["AWS_REGION"] = "us-east-1"
 
-import jwt as pyjwt  # For decoding propagated JWT header
 from agent.context import TenantContext
-from agent.access_token import get_gateway_access_token
 from agent.agent_task import agent_task
 from agent.streaming_queue import StreamingQueue
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from bedrock_agentcore.memory import MemorySessionManager
 from scripts.utils import get_ssm_parameter
-from opentelemetry import baggage, context
+from opentelemetry import baggage, context as otel_context
 
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
@@ -74,62 +75,36 @@ logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.g
 app = BedrockAgentCoreApp()
 
 
-def _extract_claims_from_header(agentcore_context) -> dict:
-    """
-    Extract tenant claims from the propagated Authorization header.
-
-    The JWT signature has already been validated by AgentCore Runtime's
-    Inbound JWT Authorizer, so we skip signature verification here.
-    This is the pattern recommended by the AgentCore docs (Step 6).
-    """
-    claims = {}
-    if not agentcore_context or not hasattr(agentcore_context, 'request_headers'):
-        return claims
-
-    auth_header = agentcore_context.request_headers.get('Authorization', '')
-    if not auth_header:
-        return claims
-
-    token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
-    try:
-        # Skip signature validation — AgentCore Runtime already validated the token
-        decoded = pyjwt.decode(token, options={"verify_signature": False})
-        if 'custom:tier' in decoded:
-            claims['tier'] = decoded['custom:tier']
-        if 'custom:clinic_id' in decoded:
-            claims['clinic_id'] = decoded['custom:clinic_id']
-        if 'custom:role' in decoded:
-            claims['role'] = decoded['custom:role']
-        if 'cognito:username' in decoded:
-            claims['user_id'] = decoded['cognito:username']
-        elif 'sub' in decoded:
-            claims['user_id'] = decoded['sub']
-        logger.info(f"Extracted claims from propagated JWT header: {claims}")
-    except Exception as e:
-        logger.warning(f"Could not decode propagated JWT header: {e}")
-
-    return claims
 
 
 @app.entrypoint
-async def invoke(payload, agentcore_context=None):
+async def invoke(payload, context=None):
     # Initialize streaming queue
     if not TenantContext.get_response_queue():
         TenantContext.set_response_queue(StreamingQueue())
 
-    # Initialize gateway token and extract tenant info
-    if not TenantContext.get_gateway_token():
-        gateway_token = await get_gateway_access_token()
-        TenantContext.set_gateway_token(gateway_token)
+    # Extract tenant context from payload (enriched by Lambda proxy)
+    if not TenantContext.get_tier():
+        # Tenant context comes from the payload (enriched by Lambda proxy)
+        tier = payload.get("tier", AGENT_TIER)
+        clinic_id = payload.get("clinic_id", "demo-clinic")
+        user_id = payload.get("user_id", "demo-user")
+        role = payload.get("role", "user")
 
-        # Primary source: tenant context from payload (enriched by Lambda proxy)
-        # Fallback: claims from propagated Authorization header
-        jwt_claims = _extract_claims_from_header(agentcore_context)
-
-        tier = payload.get("tier") or jwt_claims.get("tier", AGENT_TIER)
-        clinic_id = payload.get("clinic_id") or jwt_claims.get("clinic_id", "demo-clinic")
-        user_id = payload.get("user_id") or jwt_claims.get("user_id", "demo-user")
-        role = payload.get("role") or jwt_claims.get("role", "user")
+        # Extract the incoming JWT from request headers (forwarded via
+        # requestHeaderAllowlist: ["Authorization"] on the Runtime config).
+        # This token is already validated by the Runtime's Inbound JWT Authorizer.
+        # We store it so the agent can forward it to the Gateway (CUSTOM_JWT).
+        if context and hasattr(context, "request_headers") and context.request_headers:
+            auth_header = context.request_headers.get("Authorization", "")
+            if auth_header:
+                token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+                TenantContext.set_gateway_token(token)
+                logger.info("JWT extracted from request headers for gateway auth")
+            else:
+                logger.warning("Authorization header not found in request_headers")
+        else:
+            logger.warning(f"No request_headers on context (context={context is not None})")
 
         # Select the correct Knowledge Base for this tenant's tier
         kb_id = KB_IDS.get(tier, KB_IDS.get("basic", ""))
@@ -161,15 +136,15 @@ async def invoke(payload, agentcore_context=None):
         ctx = baggage.set_baggage("tier", tier)
         ctx = baggage.set_baggage("clinic_id", clinic_id, context=ctx)
         ctx = baggage.set_baggage("actor_id", actor_id, context=ctx)
-        context.attach(ctx)
+        otel_context.attach(ctx)
 
     # Initialize Memory Session
     memory_id = TenantContext.get_memory_id()
     actor_id = TenantContext.get_actor_id()
 
     session_id = (
-        agentcore_context.session_id
-        if agentcore_context and hasattr(agentcore_context, "session_id")
+        context.session_id
+        if context and hasattr(context, "session_id")
         else str(uuid.uuid4())
     )
 

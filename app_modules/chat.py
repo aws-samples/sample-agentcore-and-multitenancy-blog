@@ -162,6 +162,7 @@ class ChatManager:
                 return
                 
             # Debug: Print first chunk of response
+            response.encoding = 'utf-8'
             response_content = response.text
             print(f"DEBUG: Response content: {response_content[:200]}...")
             

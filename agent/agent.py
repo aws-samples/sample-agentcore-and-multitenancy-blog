@@ -35,6 +35,9 @@ from .memory_hook import MemoryHook
 from .tools.retrieve_clinic_documents import retrieve_clinic_documents
 
 from mcp.client.streamable_http import streamablehttp_client
+from .streamable_http_sigv4 import streamablehttp_client_with_sigv4
+from .streamable_http_bearer import streamablehttp_client_with_bearer
+from .context import TenantContext
 from strands import Agent, tool
 from strands_tools import current_time
 from strands.models.openai import OpenAIModel
@@ -241,7 +244,6 @@ class HealthcareAgent:
 
     def __init__(
         self,
-        bearer_token: str,
         memory_hook: Optional[MemoryHook],
         tier: str = "basic",
         clinic_id: str = "demo-clinic",
@@ -256,12 +258,13 @@ class HealthcareAgent:
         region = os.environ.get("AWS_REGION", "us-east-1")
         mantle_base_url = f"https://bedrock-mantle.{region}.api.aws/v1"
 
-        # Bedrock API key for Mantle authentication
+        # Bedrock API key for Mantle authentication (short-term, auto-refreshed)
+        from aws_bedrock_token_generator import provide_token
         try:
-            api_key = get_ssm_parameter("/app/healthcare/bedrock_api_key")
+            api_key = provide_token(region=region)
         except Exception as e:
             raise RuntimeError(
-                f"Bedrock API key not found in SSM at /app/healthcare/bedrock_api_key: {e}"
+                f"Failed to generate Bedrock API token: {e}"
             )
 
         # Load Bedrock Project ID for cost attribution
@@ -306,22 +309,52 @@ class HealthcareAgent:
             web_search_enabled=web_search_enabled,
         )
 
-        # --- Gateway client (MCP) with tenant headers ---
+        # --- Gateway client (MCP) with JWT Bearer auth (same token end-to-end) ---
         gateway_url = get_ssm_parameter(config["gateway_url_ssm"])
+        region = os.environ.get("AWS_REGION", "us-east-1")
         logger.info(f"Gateway MCP URL: {gateway_url}")
 
         try:
-            self.gateway_client = MCPClient(
-                lambda: streamablehttp_client(
-                    gateway_url,
-                    headers={
-                        "Authorization": f"Bearer {bearer_token}",
-                        "X-Tier": tier,
-                        "X-Clinic-ID": clinic_id,
-                        "X-S3-Prefix": s3_prefix,
-                    },
+            gateway_token = TenantContext.get_gateway_token()
+
+            if gateway_token:
+                # Use the user's JWT for gateway auth (CUSTOM_JWT authorizer).
+                # Same token validated by Runtime's Inbound JWT Authorizer —
+                # no second app client or managed credential needed.
+                logger.info("Using Bearer token auth for gateway (CUSTOM_JWT)")
+                self.gateway_client = MCPClient(
+                    lambda: streamablehttp_client_with_bearer(
+                        url=gateway_url,
+                        token=gateway_token,
+                        headers={
+                            "X-Tier": tier,
+                            "X-Clinic-ID": clinic_id,
+                            "X-S3-Prefix": s3_prefix,
+                        },
+                    )
                 )
-            )
+            else:
+                # Fallback to SigV4 (Workload Identity) if no JWT available
+                # (e.g., local dev, direct invocation without Bearer token)
+                logger.info("No gateway token available, falling back to SigV4 auth")
+                import boto3
+                session = boto3.Session()
+                credentials = session.get_credentials().get_frozen_credentials()
+
+                self.gateway_client = MCPClient(
+                    lambda: streamablehttp_client_with_sigv4(
+                        url=gateway_url,
+                        credentials=credentials,
+                        service="bedrock-agentcore",
+                        region=region,
+                        headers={
+                            "X-Tier": tier,
+                            "X-Clinic-ID": clinic_id,
+                            "X-S3-Prefix": s3_prefix,
+                        },
+                    )
+                )
+
             self.gateway_client.start()
         except Exception as e:
             raise RuntimeError(f"Error initializing gateway client: {e}")
