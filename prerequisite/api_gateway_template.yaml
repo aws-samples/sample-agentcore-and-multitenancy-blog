@@ -158,10 +158,10 @@ Resources:
       UsagePlanName: premium-tier-demo
       Description: Premium tier for demo - higher limits
       Throttle:
-        RateLimit: 2    # 2 requests per second
-        BurstLimit: 5   # 5 burst requests
+        RateLimit: 10   # 10 requests per second
+        BurstLimit: 20  # 20 burst requests
       Quota:
-        Limit: 20       # 20 requests per day
+        Limit: 500      # 500 requests per day
         Period: DAY
       ApiStages:
         - ApiId: !Ref AgentCoreApiGateway
@@ -172,12 +172,12 @@ Resources:
     DependsOn: ApiGatewayStage
     Properties:
       UsagePlanName: basic-tier-demo
-      Description: Basic tier for demo - very low limits
+      Description: Basic tier for demo - lower limits
       Throttle:
-        RateLimit: 0.5  # 1 request per 2 seconds
-        BurstLimit: 2   # 2 burst requests
+        RateLimit: 2    # 2 requests per second
+        BurstLimit: 5   # 5 burst requests
       Quota:
-        Limit: 5        # 5 requests per day
+        Limit: 50       # 50 requests per day
         Period: DAY
       ApiStages:
         - ApiId: !Ref AgentCoreApiGateway
