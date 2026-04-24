@@ -162,7 +162,7 @@ def forward_to_agentcore(agent_arn: str, payload: str, session_id: str,
     except json.JSONDecodeError:
         body = {"payload": payload}
     
-    print(f"Request body: {json.dumps(body)}")
+    print(f"Request body keys: {list(body.keys())}")
     
     try:
         response = requests.post(

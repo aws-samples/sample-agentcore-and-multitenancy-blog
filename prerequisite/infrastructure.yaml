@@ -162,6 +162,12 @@ Resources:
                   - bedrock:InvokeTool
                 Resource:
                   - arn:aws:bedrock:*:*:system-tool/amazon.nova_grounding
+              - Sid: InvokeGateway
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:InvokeGateway
+                Resource:
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
 
   GatewayAgentCoreRole:
     Type: AWS::IAM::Role

@@ -35,6 +35,7 @@ from .memory_hook import MemoryHook
 from .tools.retrieve_clinic_documents import retrieve_clinic_documents
 
 from mcp.client.streamable_http import streamablehttp_client
+from .streamable_http_sigv4 import streamablehttp_client_with_sigv4
 from strands import Agent, tool
 from strands_tools import current_time
 from strands.models.openai import OpenAIModel
@@ -241,7 +242,6 @@ class HealthcareAgent:
 
     def __init__(
         self,
-        bearer_token: str,
         memory_hook: Optional[MemoryHook],
         tier: str = "basic",
         clinic_id: str = "demo-clinic",
@@ -306,16 +306,23 @@ class HealthcareAgent:
             web_search_enabled=web_search_enabled,
         )
 
-        # --- Gateway client (MCP) with tenant headers ---
+        # --- Gateway client (MCP) with SigV4 auth and tenant headers ---
         gateway_url = get_ssm_parameter(config["gateway_url_ssm"])
+        region = os.environ.get("AWS_REGION", "us-east-1")
         logger.info(f"Gateway MCP URL: {gateway_url}")
 
         try:
+            import boto3
+            session = boto3.Session()
+            credentials = session.get_credentials().get_frozen_credentials()
+
             self.gateway_client = MCPClient(
-                lambda: streamablehttp_client(
-                    gateway_url,
+                lambda: streamablehttp_client_with_sigv4(
+                    url=gateway_url,
+                    credentials=credentials,
+                    service="bedrock-agentcore",
+                    region=region,
                     headers={
-                        "Authorization": f"Bearer {bearer_token}",
                         "X-Tier": tier,
                         "X-Clinic-ID": clinic_id,
                         "X-S3-Prefix": s3_prefix,

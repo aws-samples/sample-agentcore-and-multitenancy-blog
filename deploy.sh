@@ -84,8 +84,25 @@ chmod +x scripts/prereq.sh
 print_step "Populating healthcare data (patient metadata and clinic configurations)..."
 python scripts/populate_healthcare_data.py
 
-print_step "Creating Bedrock inference profiles..."
-python scripts/create_inference_profiles.py
+print_step "Generating short-term Bedrock API key..."
+pip install aws-bedrock-token-generator --quiet
+BEDROCK_API_KEY=$(python -c "
+from aws_bedrock_token_generator import provide_token
+print(provide_token())
+")
+if [ -z "$BEDROCK_API_KEY" ]; then
+    print_error "Failed to generate Bedrock API key. Check your AWS credentials and permissions."
+    exit 1
+fi
+aws ssm put-parameter \
+    --name /app/healthcare/bedrock_api_key \
+    --value "$BEDROCK_API_KEY" \
+    --type SecureString \
+    --overwrite > /dev/null
+print_info "Short-term Bedrock API key stored in SSM"
+
+print_step "Creating Bedrock projects for cost attribution..."
+python scripts/create_bedrock_projects.py
 
 
 print_info "Deployment type: ${DEPLOYMENT_TYPE}"

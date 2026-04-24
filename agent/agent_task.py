@@ -21,10 +21,6 @@ async def agent_task(
 ):
     agent = TenantContext.get_agent()
     response_queue = TenantContext.get_response_queue()
-    gateway_access_token = TenantContext.get_gateway_token()
-
-    if not gateway_access_token:
-        raise RuntimeError("Gateway access token is not set")
 
     try:
         if agent is None:
@@ -67,7 +63,6 @@ async def agent_task(
             )
 
             agent = HealthcareAgent(
-                bearer_token=gateway_access_token,
                 memory_hook=memory_hook,
                 tier=tier,
                 clinic_id=clinic_id,
