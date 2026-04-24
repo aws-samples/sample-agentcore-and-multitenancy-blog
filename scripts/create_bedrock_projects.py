@@ -14,7 +14,6 @@ and CostCenter. The project IDs are stored in SSM Parameter Store so the agent
 can load them at runtime.
 
 Prerequisites:
-  - A Bedrock API key stored in SSM at /app/healthcare/bedrock_api_key
   - IAM permissions: AmazonBedrockMantleFullAccess (or equivalent project management)
 """
 
@@ -104,19 +103,13 @@ def main():
     print(f"📍 Region: {region}")
     print(f"📍 Mantle endpoint: {base_url}")
 
-    # Load Bedrock API key
+    # Generate short-term Bedrock API key
+    from aws_bedrock_token_generator import provide_token
     try:
-        api_key = get_ssm_parameter("/app/healthcare/bedrock_api_key")
+        api_key = provide_token(region=region)
     except Exception as e:
-        print(
-            f"❌ Could not load Bedrock API key from SSM "
-            f"(/app/healthcare/bedrock_api_key): {e}"
-        )
-        print(
-            "   Generate a key in the Bedrock console and store it:\n"
-            "   aws ssm put-parameter --name /app/healthcare/bedrock_api_key "
-            '--value "YOUR_KEY" --type SecureString --overwrite'
-        )
+        print(f"❌ Failed to generate Bedrock API token: {e}")
+        print("   Ensure your AWS credentials have Bedrock permissions.")
         sys.exit(1)
 
     # Check for existing projects so we don't create duplicates

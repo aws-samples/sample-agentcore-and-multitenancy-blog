@@ -33,6 +33,8 @@ table = dynamodb.Table(table_name)
 def extract_tenant_info(event: Dict) -> Dict:
     """Extract tenant information from request headers or body"""
     headers = event.get('headers', {})
+    # Normalize header keys to lowercase for case-insensitive matching
+    normalized = {k.lower(): v for k, v in headers.items()} if headers else {}
     body = event.get('body', {})
     
     if isinstance(body, str):
@@ -42,9 +44,9 @@ def extract_tenant_info(event: Dict) -> Dict:
             body = {}
     
     return {
-        'clinic_id': headers.get('X-Clinic-ID') or body.get('clinic_id', 'demo-clinic'),
-        'tier': headers.get('X-Tier') or body.get('tier', 'basic'),
-        's3_prefix': headers.get('X-S3-Prefix') or body.get('s3_prefix', 'basic-tier/demo-clinic/')
+        'clinic_id': normalized.get('x-clinic-id') or body.get('clinic_id', 'demo-clinic'),
+        'tier': normalized.get('x-tier') or body.get('tier', 'basic'),
+        's3_prefix': normalized.get('x-s3-prefix') or body.get('s3_prefix', 'basic-tier/demo-clinic/')
     }
 
 

@@ -256,12 +256,13 @@ class HealthcareAgent:
         region = os.environ.get("AWS_REGION", "us-east-1")
         mantle_base_url = f"https://bedrock-mantle.{region}.api.aws/v1"
 
-        # Bedrock API key for Mantle authentication
+        # Bedrock API key for Mantle authentication (short-term, auto-refreshed)
+        from aws_bedrock_token_generator import provide_token
         try:
-            api_key = get_ssm_parameter("/app/healthcare/bedrock_api_key")
+            api_key = provide_token(region=region)
         except Exception as e:
             raise RuntimeError(
-                f"Bedrock API key not found in SSM at /app/healthcare/bedrock_api_key: {e}"
+                f"Failed to generate Bedrock API token: {e}"
             )
 
         # Load Bedrock Project ID for cost attribution
