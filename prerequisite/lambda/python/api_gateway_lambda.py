@@ -10,14 +10,22 @@ JWT signature verification is handled by AgentCore Runtime's Inbound JWT Authori
   2. Enrich the payload with tenant context (tier, clinic_id, user_id)
   3. Forward the request with the original Bearer token to AgentCore Runtime
 
-The AgentCore Runtime validates the token before the agent code ever runs.
+Uses the boto3 bedrock-agentcore SDK with bearer token injection via botocore
+event hooks, following the pattern from:
+  https://github.com/awslabs/agentcore-samples/blob/main/01-tutorials/03-AgentCore-identity/10-runtime-inbound-outbound-auth/invoke.py
 """
 
 import json
 import urllib.parse
-import requests
+import boto3
 import os
 from typing import Dict, Any
+
+# Initialize outside handler for connection reuse across Lambda invocations
+agentcore_client = boto3.client(
+    'bedrock-agentcore',
+    region_name=os.environ.get('AWS_REGION', 'us-east-1')
+)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -63,6 +71,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             payload=json.dumps(body),
             session_id=session_id,
             bearer_token=bearer_token,
+            user_id=user_id,
             qualifier=event['queryStringParameters'].get('qualifier', 'DEFAULT')
         )
 
@@ -142,65 +151,96 @@ def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
 
     return tenant_info
 
-def forward_to_agentcore(agent_arn: str, payload: str, session_id: str, 
-                        bearer_token: str, qualifier: str) -> str:
-    """Forward request to AgentCore endpoint"""
-    region = os.environ.get('AWS_REGION', 'us-east-1')
-    escaped_arn = urllib.parse.quote(agent_arn, safe="")
-    url = f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{escaped_arn}/invocations"
-    
-    print(f"Forwarding to URL: {url}")
-    
-    headers = {
-        "Authorization": f"Bearer {bearer_token}",
-        "Content-Type": "application/json",
-        "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": session_id,
-    }
-    
+
+def forward_to_agentcore(agent_arn: str, payload: str, session_id: str,
+                         bearer_token: str, user_id: str, qualifier: str) -> str:
+    """
+    Forward request to AgentCore Runtime using boto3 SDK.
+
+    Uses botocore event hooks to inject the Bearer token alongside SigV4 auth,
+    so AgentCore's Inbound JWT Authorizer can still validate the user's JWT.
+    Pattern from: awslabs/agentcore-samples (10-runtime-inbound-outbound-auth/invoke.py)
+    """
+    print(f"Invoking AgentCore SDK — ARN: {agent_arn}, qualifier: {qualifier}")
+
+    # Register event handler to inject Bearer token into the request.
+    # boto3 doesn't have a native bearerToken param, so we use the botocore
+    # event system to add the Authorization header before the request is sent.
+    def _inject_bearer(request, **kwargs):
+        request.headers["Authorization"] = f"Bearer {bearer_token}"
+
+    agentcore_client.meta.events.register(
+        "before-send.bedrock-agentcore.InvokeAgentRuntime", _inject_bearer
+    )
+
     try:
-        body = json.loads(payload) if isinstance(payload, str) else payload
-    except json.JSONDecodeError:
-        body = {"payload": payload}
-    
-    print(f"Request body keys: {list(body.keys())}")
-    
-    try:
-        response = requests.post(
-            url,
-            params={"qualifier": qualifier},
-            headers=headers,
-            json=body,
-            timeout=30,  # Reduced timeout
-            stream=True,
+        response = agentcore_client.invoke_agent_runtime(
+            agentRuntimeArn=agent_arn,
+            runtimeSessionId=session_id,
+            runtimeUserId=user_id,
+            qualifier=qualifier,
+            payload=payload.encode('utf-8') if isinstance(payload, str) else payload,
         )
-        
-        print(f"Response status: {response.status_code}")
-        print(f"Response headers: {dict(response.headers)}")
-        
-        response.raise_for_status()
-        
-        # Stream response back
+
+        print(f"Response status: {response.get('statusCode')}, "
+              f"content-type: {response.get('contentType', '')}")
+
+        return _parse_streaming_response(response)
+
+    except agentcore_client.exceptions.ThrottlingException:
+        print("Throttled by AgentCore")
+        return "Service is busy, please try again"
+    except agentcore_client.exceptions.ResourceNotFoundException:
+        print(f"Agent not found: {agent_arn}")
+        return f"Agent not found: {agent_arn}"
+    except agentcore_client.exceptions.AccessDeniedException as e:
+        print(f"Access denied: {e}")
+        return "Access denied to agent runtime"
+    except agentcore_client.exceptions.ValidationException as e:
+        print(f"Validation error: {e}")
+        return f"Validation error: {str(e)}"
+    except Exception as e:
+        print(f"SDK error: {type(e).__name__}: {e}")
+        return f"Error: {str(e)}"
+    finally:
+        # Always unregister to avoid leaking the handler to subsequent invocations
+        agentcore_client.meta.events.unregister(
+            "before-send.bedrock-agentcore.InvokeAgentRuntime", _inject_bearer
+        )
+
+
+def _parse_streaming_response(response: dict) -> str:
+    """Parse the streaming response from AgentCore SDK."""
+    content_type = response.get('contentType', '')
+
+    # Handle SSE streaming response
+    if 'text/event-stream' in content_type:
         response_text = ""
-        for line in response.iter_lines(chunk_size=1):
+        for line in response['response'].iter_lines(chunk_size=10):
             if line:
-                line = line.decode("utf-8")
-                if line.startswith("data: "):
-                    line = line[6:]
-                    line = line.replace('"', "")
+                line = line.decode('utf-8')
+                if line.startswith('data: '):
+                    line = line[6:].replace('"', '')
                     response_text += line
                 elif line:
-                    line = line.replace('"', "")
-                    response_text += "\n" + line
-        
+                    response_text += "\n" + line.replace('"', '')
         print(f"Response text length: {len(response_text)}")
         return response_text
-        
-    except requests.exceptions.Timeout:
-        print("Request timed out")
-        return "Request to AgentCore timed out"
-    except requests.exceptions.RequestException as e:
-        print(f"Request exception: {str(e)}")
-        return f"Request error: {str(e)}"
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return f"Unexpected error: {str(e)}"
+
+    # Handle JSON response
+    elif content_type == 'application/json':
+        chunks = []
+        for chunk in response.get('response', []):
+            if isinstance(chunk, bytes):
+                chunks.append(chunk.decode('utf-8'))
+            elif isinstance(chunk, dict):
+                raw = chunk.get('chunk', {}).get('bytes', b'')
+                if raw:
+                    chunks.append(raw.decode('utf-8'))
+        return ''.join(chunks)
+
+    # Fallback: read raw StreamingBody
+    else:
+        raw = response['response'].read().decode('utf-8')
+        print(f"Raw response length: {len(raw)}")
+        return raw

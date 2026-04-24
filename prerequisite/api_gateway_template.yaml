@@ -43,6 +43,18 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AgentCoreInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: InvokeAgentCoreRuntime
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:InvokeAgentRuntime
+                  - bedrock-agentcore:InvokeAgentRuntimeForUser
+                Resource:
+                  - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:runtime/*
 
   # CloudWatch Logs role for API Gateway (account-level setting)
   ApiGatewayCloudWatchRole:
