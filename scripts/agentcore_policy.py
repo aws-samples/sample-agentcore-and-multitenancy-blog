@@ -5,11 +5,12 @@
 """
 AgentCore Policy Management for Healthcare Multi-Tenancy
 
-Creates and manages policy engines with Cedar policies for the premium gateway.
-Implements business hours enforcement on patient_context tool access.
+Creates and manages policy engines with Cedar policies for both gateways.
+- Basic tier:   business hours enforcement (8am-6pm) on patient_context
+- Premium tier: unrestricted 24/7 access to patient_context
 
 Usage:
-    python scripts/agentcore_policy.py create    # Create policy engine + policies, attach to premium gateway
+    python scripts/agentcore_policy.py create    # Create policy engine + policies, attach to both gateways
     python scripts/agentcore_policy.py delete    # Detach and delete policy engine + policies
     python scripts/agentcore_policy.py status    # Show current policy engine status
 """
@@ -98,6 +99,40 @@ when {{
     ]
 
 
+def get_patient_context_permit_policy(gateway_arn: str, target_name: str) -> list:
+    """
+    Generate Cedar policies that permit patient_context access unconditionally (premium tier).
+
+    Premium users have 24/7 access to patient data with no business hours restriction.
+    Similar to clinic_config, we split into two complementary policies to avoid the
+    "overly permissive" rejection from AgentCore's policy validator.
+
+    Returns a list of (name_suffix, cedar_statement, description) tuples.
+    """
+    policy_with_patient = f"""permit(
+  principal is AgentCore::OAuthUser,
+  action == AgentCore::Action::"{target_name}___patient_context",
+  resource == AgentCore::Gateway::"{gateway_arn}"
+)
+when {{
+  context.input has patient_id
+}};"""
+
+    policy_list_patients = f"""permit(
+  principal is AgentCore::OAuthUser,
+  action == AgentCore::Action::"{target_name}___patient_context",
+  resource == AgentCore::Gateway::"{gateway_arn}"
+)
+when {{
+  !(context.input has patient_id)
+}};"""
+
+    return [
+        ("with_patient", policy_with_patient, "Permit patient_context when patient_id is provided (24/7)"),
+        ("list_mode", policy_list_patients, "Permit patient_context in list mode without patient_id (24/7)"),
+    ]
+
+
 def wait_for_policy_engine_ready(policy_engine_id: str, max_wait: int = 120) -> bool:
     """Wait for policy engine to become ACTIVE."""
     click.echo(f"⏳ Waiting for policy engine {policy_engine_id} to become ACTIVE...")
@@ -130,7 +165,12 @@ def get_gateway_target_name(gateway_id: str) -> str:
 
 
 def _create_policies_for_gateway(policy_engine_id: str, gateway_arn: str, target_name: str, tier: str):
-    """Create Cedar policies (business hours + clinic_config permits) for a single gateway.
+    """Create Cedar policies for a single gateway, with tier-appropriate patient_context rules.
+
+    Basic tier:   business hours restriction (8am-6pm) on patient_context
+    Premium tier: unconditional 24/7 permit on patient_context
+
+    Both tiers get clinic_config permits (non-sensitive, always allowed).
 
     Args:
         policy_engine_id: ID of the shared policy engine.
@@ -138,29 +178,58 @@ def _create_policies_for_gateway(policy_engine_id: str, gateway_arn: str, target
         target_name: Gateway target name (e.g., "HealthcareLambda-Basic").
         tier: Tier label used for naming ("basic" or "premium").
     """
-    # Business hours policy for patient_context
-    business_hours_cedar = get_business_hours_cedar_policy(gateway_arn, target_name)
-    policy_name = f"business_hours_patient_access_{tier}"
-    click.echo(f"\n--- Business Hours Policy ({tier} / patient_context) ---")
-    click.echo(business_hours_cedar)
-    click.echo("---")
+    # --- patient_context policies (tier-dependent) ---
+    if tier == "basic":
+        # Basic: restrict patient_context to business hours (8am-6pm)
+        business_hours_cedar = get_business_hours_cedar_policy(gateway_arn, target_name)
+        policy_name = f"business_hours_patient_access_{tier}"
+        click.echo(f"\n--- Business Hours Policy ({tier} / patient_context) ---")
+        click.echo(business_hours_cedar)
+        click.echo("---")
 
-    try:
-        resp = policy_client.create_policy(
-            policyEngineId=policy_engine_id,
-            name=policy_name,
-            definition={"cedar": {"statement": business_hours_cedar}},
-            description=f"Restrict {tier} patient_context access to business hours (8am-6pm)",
-        )
-        click.echo(f"✅ Business hours policy ({tier}) created: {resp['policyId']}")
-        put_ssm_parameter(f"/app/healthcare/agentcore/policy_business_hours_{tier}_id", resp["policyId"])
-    except policy_client.exceptions.ConflictException:
-        click.echo(f"⚠️  Business hours policy ({tier}) already exists, skipping...")
-    except Exception as e:
-        click.echo(f"❌ Failed to create business hours policy ({tier}): {e}", err=True)
-        sys.exit(1)
+        try:
+            resp = policy_client.create_policy(
+                policyEngineId=policy_engine_id,
+                name=policy_name,
+                definition={"cedar": {"statement": business_hours_cedar}},
+                description=f"Restrict {tier} patient_context access to business hours (8am-6pm)",
+            )
+            click.echo(f"✅ Business hours policy ({tier}) created: {resp['policyId']}")
+            put_ssm_parameter(f"/app/healthcare/agentcore/policy_business_hours_{tier}_id", resp["policyId"])
+        except policy_client.exceptions.ConflictException:
+            click.echo(f"⚠️  Business hours policy ({tier}) already exists, skipping...")
+        except Exception as e:
+            click.echo(f"❌ Failed to create business hours policy ({tier}): {e}", err=True)
+            sys.exit(1)
+    else:
+        # Premium: unconditional 24/7 access to patient_context
+        patient_permit_policies = get_patient_context_permit_policy(gateway_arn, target_name)
 
-    # Permit policies for clinic_config (no time restriction)
+        for suffix, cedar_statement, description in patient_permit_policies:
+            policy_name = f"permit_patient_context_{tier}_{suffix}"
+            click.echo(f"\n--- Patient Context Permit Policy ({tier} / {suffix}) ---")
+            click.echo(cedar_statement)
+            click.echo("---")
+
+            try:
+                resp = policy_client.create_policy(
+                    policyEngineId=policy_engine_id,
+                    name=policy_name,
+                    definition={"cedar": {"statement": cedar_statement}},
+                    description=f"{description} ({tier})",
+                )
+                click.echo(f"✅ Patient context permit policy ({tier}/{suffix}) created: {resp['policyId']}")
+                put_ssm_parameter(
+                    f"/app/healthcare/agentcore/policy_patient_context_{tier}_{suffix}_id",
+                    resp["policyId"],
+                )
+            except policy_client.exceptions.ConflictException:
+                click.echo(f"⚠️  Patient context permit policy ({tier}/{suffix}) already exists, skipping...")
+            except Exception as e:
+                click.echo(f"❌ Failed to create patient context permit policy ({tier}/{suffix}): {e}", err=True)
+                sys.exit(1)
+
+    # --- clinic_config permits (both tiers, no time restriction) ---
     clinic_config_policies = get_clinic_config_permit_policy(gateway_arn, target_name)
 
     for suffix, cedar_statement, description in clinic_config_policies:
@@ -249,7 +318,7 @@ def create():
     try:
         resp = policy_client.create_policy_engine(
             name="healthcare_policy_engine",
-            description="Business hours enforcement for healthcare agent tools (all tiers)",
+            description="Cedar policy authorization for healthcare agent tools (business hours for basic, 24/7 for premium)",
         )
         policy_engine_id = resp["policyEngineId"]
         policy_engine_arn = resp["policyEngineArn"]
@@ -292,9 +361,13 @@ def create():
     click.echo(f"Policy Engine: {policy_engine_id}")
     click.echo(f"Mode: ENFORCE")
     click.echo(f"Gateways: basic + premium")
-    click.echo(f"Policies (per gateway):")
-    click.echo(f"  - business_hours_patient_access: patient_context restricted to 8am-6pm")
-    click.echo(f"  - permit_clinic_config: clinic_config always permitted")
+    click.echo(f"Policies:")
+    click.echo(f"  Basic tier:")
+    click.echo(f"    - business_hours_patient_access: patient_context restricted to 8am-6pm")
+    click.echo(f"    - permit_clinic_config: clinic_config always permitted")
+    click.echo(f"  Premium tier:")
+    click.echo(f"    - permit_patient_context: patient_context available 24/7")
+    click.echo(f"    - permit_clinic_config: clinic_config always permitted")
 
 
 @cli.command()
@@ -362,6 +435,9 @@ def delete(confirm):
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_business_hours_{tier}_id")
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_clinic_config_{tier}_with_id_id")
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_clinic_config_{tier}_default_id")
+        # Premium patient_context permit policies
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_patient_context_{tier}_with_patient_id")
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_patient_context_{tier}_list_mode_id")
     # Legacy keys from premium-only setup
     delete_ssm_parameter("/app/healthcare/agentcore/policy_business_hours_id")
     delete_ssm_parameter("/app/healthcare/agentcore/policy_clinic_config_id")

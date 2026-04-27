@@ -181,7 +181,8 @@ def render_document_scope_indicator(clinic_id: str, tier: str):
 def render_policy_status_banner(tier: str):
     """
     Display policy enforcement status for users.
-    Shows business hours restriction on patient data access.
+    Shows business hours restriction for basic tier only.
+    Premium tier sees an always-active status.
 
     Args:
         tier: User's tier (basic or premium)
@@ -197,6 +198,28 @@ def render_policy_status_banner(tier: str):
     is_business_hours = 8 <= current_hour < 18
     time_str = now.strftime("%-I:%M %p ET")
 
+    if tier == "premium":
+        # Premium tier: always active, no business hours restriction
+        st.markdown(
+            f"""
+            <div style="background: linear-gradient(135deg, #1a3a2a 0%, #0f2a1a 100%);
+                        padding: 10px 15px; border-radius: 5px;
+                        border-left: 3px solid #48bb78; margin-bottom: 15px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+                <small style="color: #c6f6d5;">
+                    🛡️ <strong>Policy Status:</strong> Patient data access
+                    <strong style="color: #68d391;">ACTIVE</strong>
+                    &nbsp;·&nbsp; {time_str} &nbsp;·&nbsp; 24/7 access (Premium)
+                    <br>
+                    <em style="color: #9ae6b4;">Premium tier: unrestricted access to patient records and clinical documents</em>
+                </small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
+    # Basic tier: show business hours status
     if is_business_hours:
         # Calculate minutes until 6pm
         closing = now.replace(hour=18, minute=0, second=0, microsecond=0)
@@ -269,21 +292,26 @@ def render_sidebar_user_info(user_claims: Dict[str, Any], auth_manager):
     # Tier features
     render_tier_features_sidebar(user_claims.get('tier', 'basic'))
     
-    # Policy status in sidebar (premium only)
+    # Policy status in sidebar
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🛡️ Access Policies")
     
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    eastern = ZoneInfo("America/New_York")
-    current_hour = datetime.now(eastern).hour
-    is_business_hours = 8 <= current_hour < 18
+    tier = user_claims.get('tier', 'basic')
     
-    if is_business_hours:
-        st.sidebar.markdown("🟢 Patient data: **Available**")
+    if tier == "premium":
+        st.sidebar.markdown("🟢 Patient data: **Available** (24/7)")
     else:
-        st.sidebar.markdown("🔴 Patient data: **Restricted**")
-        st.sidebar.caption("Business hours: 8 AM – 6 PM ET")
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        eastern = ZoneInfo("America/New_York")
+        current_hour = datetime.now(eastern).hour
+        is_business_hours = 8 <= current_hour < 18
+        
+        if is_business_hours:
+            st.sidebar.markdown("🟢 Patient data: **Available**")
+        else:
+            st.sidebar.markdown("🔴 Patient data: **Restricted**")
+            st.sidebar.caption("Business hours: 8 AM – 6 PM ET")
     st.sidebar.markdown("🟢 Clinic config: **Available**")
     st.sidebar.markdown("🟢 Document search: **Available**")
     
