@@ -108,6 +108,9 @@ python scripts/agentcore_gateway.py create-all
 print_step "Creating AgentCore Policy Engine (Business Hours Enforcement)..."
 python scripts/agentcore_policy.py create
 
+print_step "Creating Bedrock Guardrails (Basic and Premium)..."
+python scripts/bedrock_guardrails.py create
+
 print_step "Setting up Cognito Credential Provider..."
 python scripts/cognito_credentials_provider.py create --name healthcare-cognito-provider
 

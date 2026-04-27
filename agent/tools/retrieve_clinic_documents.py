@@ -15,32 +15,34 @@ BUSINESS_HOUR_END = 18
 
 
 @tool
-def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5) -> str:
+def retrieve_clinic_documents(query: str, clinic_id: str, max_results: int = 5, enforce_business_hours: bool = True) -> str:
     """
     Search the knowledge base for clinical documents, filtered to the requesting clinic.
 
     Tenant isolation is enforced via a metadata filter on clinic_id — each clinic
     can only retrieve documents tagged with their own identifier.
 
-    Access is restricted to business hours (8 AM – 6 PM Eastern) to align with
-    the gateway policy on patient_context.
+    Business hours restriction (8 AM – 6 PM Eastern) applies to basic tier only.
+    Premium tier has 24/7 access.
 
     Args:
         query: Question about clinical documents, patient information, or medical procedures.
         clinic_id: Clinic identifier for metadata filtering.
         max_results: Number of results to return (default: 5).
+        enforce_business_hours: Whether to restrict access to business hours (default: True, basic tier).
 
     Returns:
         Formatted string with matching document content.
     """
-    # Enforce business hours — same window as the Cedar policy on patient_context
-    current_hour = datetime.now(EASTERN).hour
-    if not (BUSINESS_HOUR_START <= current_hour < BUSINESS_HOUR_END):
-        return (
-            "🛡️ Access denied by business hours policy. "
-            "Clinical documents are only available between 8:00 AM and 6:00 PM Eastern. "
-            "Please try again during business hours."
-        )
+    # Enforce business hours for basic tier only
+    if enforce_business_hours:
+        current_hour = datetime.now(EASTERN).hour
+        if not (BUSINESS_HOUR_START <= current_hour < BUSINESS_HOUR_END):
+            return (
+                "🛡️ Access denied by business hours policy. "
+                "Clinical documents are only available between 8:00 AM and 6:00 PM Eastern. "
+                "Please try again during business hours."
+            )
 
     region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
     kb_id = os.environ.get("KNOWLEDGE_BASE_ID")

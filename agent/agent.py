@@ -32,6 +32,7 @@ from typing import List, Optional
 
 from .utils import get_ssm_parameter
 from .memory_hook import MemoryHook
+from .guardrail_hook import GuardrailHook, GuardrailInterventionError
 from .tools.retrieve_clinic_documents import retrieve_clinic_documents
 
 from mcp.client.streamable_http import streamablehttp_client
@@ -54,6 +55,8 @@ TIER_CONFIG = {
         "gateway_url_ssm": "/app/healthcare/agentcore/basic_gateway_url",
         "gateway_target": "HealthcareLambda-Basic",
         "web_search": False,
+        "guardrail_id_ssm": "/app/healthcare/guardrails/basic_id",
+        "guardrail_version_ssm": "/app/healthcare/guardrails/basic_version",
     },
     "premium": {
         "default_model": "openai.gpt-oss-120b",
@@ -61,6 +64,8 @@ TIER_CONFIG = {
         "gateway_url_ssm": "/app/healthcare/agentcore/premium_gateway_url",
         "gateway_target": "HealthcareLambda-Premium",
         "web_search": True,
+        "guardrail_id_ssm": "/app/healthcare/guardrails/premium_id",
+        "guardrail_version_ssm": "/app/healthcare/guardrails/premium_version",
     },
 }
 
@@ -197,6 +202,30 @@ def _build_system_prompt(
             "and clinical information (Premium feature)\n"
         )
 
+    if tier == "basic":
+        patient_context_section = (
+            "- patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications)\n"
+            "  * Automatically filtered to your clinic for security\n"
+            "  * IMPORTANT: You MUST include request_hour parameter with the current hour (0-23) from current_time.\n"
+            "    This is required by the business hours policy. Access is only permitted between 8am-6pm.\n"
+            "    Always call current_time first to get the current hour before calling patient_context."
+        )
+        answering_guidelines = (
+            "1. Before accessing patient data, call current_time to get the current hour\n"
+            "2. Include request_hour (0-23) when calling patient_context — access is denied outside 8am-6pm\n"
+            "3. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information"
+        )
+    else:
+        patient_context_section = (
+            "- patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications)\n"
+            "  * Automatically filtered to your clinic for security\n"
+            "  * Available 24/7 for premium tier users — no business hours restriction."
+        )
+        answering_guidelines = (
+            "1. Use patient_context to look up patient information as needed\n"
+            "2. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information"
+        )
+
     return f"""You are a clinical document assistant for a healthcare clinic.
 
 YOUR ASSIGNED CONTEXT:
@@ -209,11 +238,7 @@ AVAILABLE TOOLS:
 - retrieve_clinic_documents: Search knowledge base for clinical documents
   * Automatically filtered to your clinic: {clinic_id}
   * Searches documents under: {s3_prefix}
-- patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications)
-  * Automatically filtered to your clinic for security
-  * IMPORTANT: You MUST include request_hour parameter with the current hour (0-23) from current_time.
-    This is required by the business hours policy. Access is only permitted between 8am-6pm.
-    Always call current_time first to get the current hour before calling patient_context.
+{patient_context_section}
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
 - current_time: Get current date and time
 {web_tool_section}
@@ -223,9 +248,7 @@ SECURITY RULES:
 3. Document searches are restricted to: {s3_prefix}
 
 When answering questions:
-1. Before accessing patient data, call current_time to get the current hour
-2. Include request_hour (0-23) when calling patient_context — access is denied outside 8am-6pm
-3. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information
+{answering_guidelines}
 
 RESPONSE GUIDELINES:
 - Provide concise, clinically relevant information
@@ -362,6 +385,7 @@ class HealthcareAgent:
         # --- Tool registration ---
         # KB retrieval with clinic_id pre-filled for isolation
         clinic_id_captured = clinic_id
+        enforce_hours = tier == "basic"
 
         @tool(
             name="retrieve_clinic_documents",
@@ -374,34 +398,37 @@ class HealthcareAgent:
                 query: Question about clinical documents or patient information.
                 max_results: Number of results to return (default: 5).
             """
-            return retrieve_clinic_documents(query, clinic_id_captured, max_results)
+            return retrieve_clinic_documents(query, clinic_id_captured, max_results, enforce_business_hours=enforce_hours)
 
         # Static gateway tool wrappers — registered statically so the policy engine
         # can enforce at tools/call time with actual arguments (not filtered at list time).
         gateway_ref = self.gateway_client
         gateway_target = config["gateway_target"]
+        enforce_business_hours = tier == "basic"
 
-        @tool(
-            name="patient_context",
-            description=(
-                "Retrieve patient metadata (demographics, conditions, allergies, medications). "
-                "Filtered to your clinic. IMPORTANT: You MUST include request_hour (0-23) from current_time. "
-                "Access is only permitted between 8am-6pm by business hours policy."
-            ),
+        patient_context_desc = (
+            "Retrieve patient metadata (demographics, conditions, allergies, medications). "
+            "Filtered to your clinic. IMPORTANT: You MUST include request_hour (0-23) from current_time. "
+            "Access is only permitted between 8am-6pm by business hours policy."
+            if enforce_business_hours
+            else "Retrieve patient metadata (demographics, conditions, allergies, medications). "
+            "Filtered to your clinic. Available 24/7 for premium tier."
         )
+
+        @tool(name="patient_context", description=patient_context_desc)
         def patient_context(
             patient_id: str = None,
             list_patients: bool = False,
             limit: int = 20,
             request_hour: int = None,
         ) -> str:
-            """Look up patient metadata with clinic isolation and business hours enforcement.
+            """Look up patient metadata with clinic isolation.
 
             Args:
                 patient_id: Unique patient identifier (e.g., P12345).
                 list_patients: If true, returns all patients for the clinic.
                 limit: Max patients to return in list mode.
-                request_hour: Current hour 0-23. Required for business hours policy. Get from current_time.
+                request_hour: Current hour 0-23. Required for basic tier business hours policy. Get from current_time.
             """
             args = {}
             if patient_id is not None:
@@ -409,7 +436,8 @@ class HealthcareAgent:
             if list_patients:
                 args["list_patients"] = list_patients
                 args["limit"] = limit
-            if request_hour is not None:
+            # Only pass request_hour for basic tier — premium bypasses business hours policy
+            if enforce_business_hours and request_hour is not None:
                 args["request_hour"] = request_hour
             try:
                 result = gateway_ref.call_tool_sync(
@@ -420,7 +448,9 @@ class HealthcareAgent:
                 return _extract_gateway_response(result)
             except Exception as e:
                 error_msg = str(e)
-                if "denied" in error_msg.lower() or "policy" in error_msg.lower():
+                if enforce_business_hours and (
+                    "denied" in error_msg.lower() or "policy" in error_msg.lower()
+                ):
                     return (
                         "🛡️ Access denied by business hours policy. "
                         "Patient data is only available between 8:00 AM and 6:00 PM. "
@@ -460,6 +490,21 @@ class HealthcareAgent:
 
         # --- Create Strands Agent ---
         hooks = [memory_hook] if memory_hook else []
+
+        # --- Bedrock Guardrails (tier-specific, via ApplyGuardrail API) ---
+        self.guardrail_hook = None
+        try:
+            guardrail_id = get_ssm_parameter(config["guardrail_id_ssm"])
+            guardrail_version = get_ssm_parameter(config["guardrail_version_ssm"])
+            self.guardrail_hook = GuardrailHook(
+                guardrail_id=guardrail_id,
+                guardrail_version=guardrail_version,
+                tier=tier,
+            )
+            logger.info(f"Guardrail loaded for {tier} tier: {guardrail_id} v{guardrail_version}")
+        except Exception as e:
+            logger.warning(f"Guardrails not available for {tier} tier (non-blocking): {e}")
+
         self.agent = Agent(
             model=self.model,
             system_prompt=self.system_prompt,
@@ -469,14 +514,51 @@ class HealthcareAgent:
 
     def invoke(self, user_query: str) -> str:
         try:
-            return str(self.agent(user_query))
+            # Input guardrail check
+            if self.guardrail_hook:
+                try:
+                    self.guardrail_hook.pre_invoke(self.agent, user_query=user_query)
+                except GuardrailInterventionError as e:
+                    return str(e)
+
+            result = str(self.agent(user_query))
+
+            # Output guardrail check
+            if self.guardrail_hook:
+                result = self.guardrail_hook.post_invoke(self.agent, result)
+                if not isinstance(result, str):
+                    result = str(result)
+
+            return result
+        except GuardrailInterventionError as e:
+            return str(e)
         except Exception as e:
             return f"Error invoking agent: {e}"
 
     async def stream(self, user_query: str):
         try:
+            # Input guardrail check
+            if self.guardrail_hook:
+                try:
+                    self.guardrail_hook.pre_invoke(self.agent, user_query=user_query)
+                except GuardrailInterventionError as e:
+                    yield str(e)
+                    return
+
+            accumulated = ""
             async for event in self.agent.stream_async(user_query):
                 if "data" in event:
+                    accumulated += event["data"]
                     yield event["data"]
+
+            # Output guardrail check on the full accumulated response
+            if self.guardrail_hook and accumulated:
+                checked = self.guardrail_hook.post_invoke(self.agent, accumulated)
+                if isinstance(checked, str) and checked != accumulated:
+                    # Guardrail modified/blocked the output — yield replacement
+                    yield f"\n\n🛡️ {checked}"
+
+        except GuardrailInterventionError as e:
+            yield str(e)
         except Exception as e:
             yield f"We are unable to process your request at the moment. Error: {e}"
