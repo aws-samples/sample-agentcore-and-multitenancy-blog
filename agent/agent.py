@@ -12,13 +12,18 @@ Multi-tenancy concerns addressed:
   1. Data isolation:   KB metadata filtering by clinic_id
   2. Memory isolation: Hierarchical actor_id in MemoryHook
   3. Tier routing:     Model selection per tier via Bedrock Mantle
-  4. Cost attribution: Bedrock Projects for per-tier cost tracking
+  4. Cost attribution: Bedrock Projects for per-tier cost tracking,
+                       structured usage logging for per-clinic attribution
   5. Gateway headers:  X-Tier, X-Clinic-ID, X-S3-Prefix propagated
 
 Cost attribution uses Amazon Bedrock Projects via the Mantle (OpenAI-compatible)
 endpoint. Each tier has a dedicated project whose tags flow into AWS Cost Explorer.
 The Strands OpenAIModel provider connects to bedrock-mantle.{region}.api.aws and
 passes the project ID on every inference request.
+
+Per-clinic cost attribution is achieved via structured JSON usage logs emitted
+after each agent invocation. These logs include clinic_id, tier, model_id, and
+token counts (input/output), and can be queried via CloudWatch Logs Insights.
 """
 
 import json
@@ -277,6 +282,12 @@ class HealthcareAgent:
     ):
         config = TIER_CONFIG.get(tier, TIER_CONFIG["basic"])
 
+        # Store tenant context for per-clinic usage logging
+        self.tier = tier
+        self.clinic_id = clinic_id
+        self.user_id = user_id
+        self.model_id = config["default_model"]
+
         # --- Model selection via Bedrock Mantle + Projects (cost attribution per tier) ---
         region = os.environ.get("AWS_REGION", "us-east-1")
         mantle_base_url = f"https://bedrock-mantle.{region}.api.aws/v1"
@@ -301,7 +312,7 @@ class HealthcareAgent:
                 f"requests will use the default project: {e}"
             )
 
-        model_id = config["default_model"]
+        model_id = self.model_id
 
         client_args = {
             "base_url": mantle_base_url,
@@ -512,6 +523,31 @@ class HealthcareAgent:
             hooks=hooks,
         )
 
+    def _log_usage(self, result) -> None:
+        """Emit structured JSON log with token usage for per-clinic cost attribution.
+
+        The AgentResult.metrics.accumulated_usage dict contains inputTokens,
+        outputTokens, and totalTokens tracked by the Strands SDK across all
+        event loop cycles for this invocation.  These logs land in CloudWatch
+        and can be queried with Logs Insights to compute per-clinic costs.
+        """
+        try:
+            usage = getattr(getattr(result, "metrics", None), "accumulated_usage", None)
+            if not usage:
+                return
+            logger.info(json.dumps({
+                "event": "inference_usage",
+                "tier": self.tier,
+                "clinic_id": self.clinic_id,
+                "user_id": self.user_id,
+                "model_id": self.model_id,
+                "input_tokens": usage.get("inputTokens", 0),
+                "output_tokens": usage.get("outputTokens", 0),
+                "total_tokens": usage.get("totalTokens", 0),
+            }))
+        except Exception as e:
+            logger.warning(f"Failed to log usage metrics: {e}")
+
     def invoke(self, user_query: str) -> str:
         try:
             # Input guardrail check
@@ -521,7 +557,9 @@ class HealthcareAgent:
                 except GuardrailInterventionError as e:
                     return str(e)
 
-            result = str(self.agent(user_query))
+            agent_result = self.agent(user_query)
+            self._log_usage(agent_result)
+            result = str(agent_result)
 
             # Output guardrail check
             if self.guardrail_hook:
@@ -550,6 +588,25 @@ class HealthcareAgent:
                 if "data" in event:
                     accumulated += event["data"]
                     yield event["data"]
+
+            # Log per-clinic usage from the agent's latest metrics
+            try:
+                metrics = getattr(self.agent, "metrics", None)
+                if metrics:
+                    latest = getattr(metrics, "latest_agent_invocation", None)
+                    if latest and hasattr(latest, "usage"):
+                        logger.info(json.dumps({
+                            "event": "inference_usage",
+                            "tier": self.tier,
+                            "clinic_id": self.clinic_id,
+                            "user_id": self.user_id,
+                            "model_id": self.model_id,
+                            "input_tokens": latest.usage.get("inputTokens", 0),
+                            "output_tokens": latest.usage.get("outputTokens", 0),
+                            "total_tokens": latest.usage.get("totalTokens", 0),
+                        }))
+            except Exception as e:
+                logger.warning(f"Failed to log streaming usage metrics: {e}")
 
             # Output guardrail check on the full accumulated response
             if self.guardrail_hook and accumulated:
