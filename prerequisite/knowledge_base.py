@@ -244,6 +244,28 @@ class KnowledgeBasesForAmazonBedrock:
                     Bucket=bucket_name,
                     CreateBucketConfiguration={"LocationConstraint": self.region_name},
                 )
+            # Enforce TLS-only access
+            bucket_policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "EnforceSecureTransport",
+                        "Effect": "Deny",
+                        "Principal": "*",
+                        "Action": "s3:*",
+                        "Resource": [
+                            f"arn:aws:s3:::{bucket_name}",
+                            f"arn:aws:s3:::{bucket_name}/*",
+                        ],
+                        "Condition": {
+                            "Bool": {"aws:SecureTransport": "false"}
+                        },
+                    }
+                ],
+            }
+            self.s3_client.put_bucket_policy(
+                Bucket=bucket_name, Policy=json.dumps(bucket_policy)
+            )
 
     def upload_directory(self, s3_path, bucket_name):
         """

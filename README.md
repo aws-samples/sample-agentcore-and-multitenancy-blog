@@ -1,5 +1,7 @@
 # Multi-Tenant Healthcare Agent with Amazon Bedrock AgentCore
 
+> **⚠️ Disclaimer:** This is sample code for demonstration and educational purposes only. It is not intended for production use. Use at your own risk.
+
 A multi-tenant AI clinical document assistant built on Amazon Bedrock AgentCore, demonstrating common multi-tenancy concerns when building agentic SaaS applications.
 
 ## What It Does

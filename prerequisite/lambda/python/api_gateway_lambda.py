@@ -122,7 +122,11 @@ def extract_tenant_info(event: Dict[str, Any]) -> Dict[str, str]:
     bearer_token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
 
     try:
-        # Decode without verification — AgentCore Runtime validates the signature
+        # SECURITY NOTE: Signature verification is intentionally skipped here.
+        # This Lambda extracts tenant claims and then forwards the original Bearer
+        # token to AgentCore Runtime, whose Inbound JWT Authorizer performs full
+        # signature validation before the agent processes the request. Do NOT copy
+        # this pattern without a downstream verification layer.
         decoded = jwt.decode(bearer_token, options={"verify_signature": False})
 
         if 'custom:tier' in decoded:
