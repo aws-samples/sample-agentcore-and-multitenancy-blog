@@ -161,4 +161,8 @@ Once logged in, try these prompts to explore the agent's capabilities:
 └── config/                        # Deployment configuration templates
 ```
 
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
 
