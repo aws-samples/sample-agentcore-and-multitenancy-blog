@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'FHIR MCP API Gateway — JWT-authenticated proxy to public HAPI FHIR server'
+
+Parameters:
+  LambdaCodeBucket:
+    Type: String
+    Description: S3 bucket containing Lambda code
+  LambdaCodeKey:
+    Type: String
+    Description: S3 key for FHIR Lambda code zip file
+    Default: fhir_mcp_lambda.zip
+  CognitoUserPoolId:
+    Type: String
+    Description: Cognito User Pool ID for JWT validation
+  CognitoRegion:
+    Type: String
+    Description: Region of the Cognito User Pool
+    Default: us-east-1
+
+Resources:
+  # FHIR MCP Lambda Function
+  FhirMcpLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: healthcare-fhir-mcp-proxy
+      Runtime: python3.12
+      Handler: fhir_mcp_lambda.lambda_handler
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Ref LambdaCodeKey
+      Role: !GetAtt FhirLambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          FHIR_BASE_URL: 'https://hapi.fhir.org/baseR4'
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_REGION: !Ref CognitoRegion
+
+  # Lambda Execution Role (minimal — only needs CloudWatch Logs)
+  FhirLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: healthcare-fhir-mcp-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # API Gateway (REST API)
+  FhirApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: healthcare-fhir-mcp-api
+      Description: FHIR MCP API — JWT-authenticated proxy to HAPI FHIR
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Resource: /fhir
+  FhirResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref FhirApiGateway
+      ParentId: !GetAtt FhirApiGateway.RootResourceId
+      PathPart: 'fhir'
+
+  # Method: POST /fhir (with no API Gateway auth — Lambda handles JWT validation)
+  FhirMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref FhirApiGateway
+      ResourceId: !Ref FhirResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FhirMcpLambda.Arn}/invocations'
+
+  # CORS: OPTIONS /fhir
+  FhirOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref FhirApiGateway
+      ResourceId: !Ref FhirResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Lambda Permission for API Gateway
+  FhirLambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FhirMcpLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${FhirApiGateway}/*/*'
+
+  # Deployment
+  FhirApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - FhirMethod
+      - FhirOptionsMethod
+    Properties:
+      RestApiId: !Ref FhirApiGateway
+
+  # Stage
+  FhirApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref FhirApiGateway
+      DeploymentId: !Ref FhirApiDeployment
+      StageName: prod
+
+  # SSM Parameter for FHIR API URL
+  FhirApiUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/fhir/api_url
+      Type: String
+      Value: !Sub 'https://${FhirApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/fhir'
+      Description: FHIR MCP API Gateway endpoint URL
+      Tags:
+        Application: Healthcare
+
+Outputs:
+  FhirApiUrl:
+    Description: FHIR MCP API Gateway endpoint URL
+    Value: !Sub 'https://${FhirApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/fhir'
+    Export:
+      Name: !Sub '${AWS::StackName}-FhirApiUrl'
+  FhirLambdaArn:
+    Description: FHIR MCP Lambda ARN
+    Value: !GetAtt FhirMcpLambda.Arn

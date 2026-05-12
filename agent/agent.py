@@ -39,6 +39,7 @@ from .utils import get_ssm_parameter
 from .memory_hook import MemoryHook
 from .guardrail_hook import GuardrailHook, GuardrailInterventionError
 from .tools.retrieve_clinic_documents import retrieve_clinic_documents
+from .tools.fhir_tools import create_fhir_tools
 
 from mcp.client.streamable_http import streamablehttp_client
 from .streamable_http_sigv4 import streamablehttp_client_with_sigv4
@@ -69,6 +70,7 @@ TIER_CONFIG = {
         "gateway_url_ssm": "/app/healthcare/agentcore/premium_gateway_url",
         "gateway_target": "HealthcareLambda-Premium",
         "web_search": True,
+        "fhir_enabled": True,
         "guardrail_id_ssm": "/app/healthcare/guardrails/premium_id",
         "guardrail_version_ssm": "/app/healthcare/guardrails/premium_version",
     },
@@ -198,6 +200,7 @@ def _build_system_prompt(
     role: str,
     s3_prefix: str,
     web_search_enabled: bool,
+    fhir_enabled: bool = False,
 ) -> str:
     """Build a tier-appropriate system prompt with tenant context baked in."""
     web_tool_section = ""
@@ -205,6 +208,15 @@ def _build_system_prompt(
         web_tool_section = (
             "- web_search: Search the web for current medical research, guidelines, "
             "and clinical information (Premium feature)\n"
+        )
+
+    fhir_tool_section = ""
+    if fhir_enabled:
+        fhir_tool_section = (
+            "- fhir_search_patients: Search for patients in the FHIR EHR system (filtered to your clinic)\n"
+            "- fhir_read_patient: Read detailed patient information from the FHIR EHR by patient ID\n"
+            "- fhir_search_observations: Search lab results and vitals from the FHIR EHR (filtered to your clinic)\n"
+            "  * FHIR tools use On-Behalf-Of token exchange — your identity is securely delegated to the FHIR service\n"
         )
 
     if tier == "basic":
@@ -246,7 +258,7 @@ AVAILABLE TOOLS:
 {patient_context_section}
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
 - current_time: Get current date and time
-{web_tool_section}
+{web_tool_section}{fhir_tool_section}
 SECURITY RULES:
 1. You can ONLY access data for clinic: {clinic_id}
 2. All tools automatically filter to your clinic — you cannot access other clinics' data
@@ -341,6 +353,7 @@ class HealthcareAgent:
             role=role,
             s3_prefix=s3_prefix,
             web_search_enabled=web_search_enabled,
+            fhir_enabled=config.get("fhir_enabled", False),
         )
 
         # --- Gateway client (MCP) with JWT Bearer auth (same token end-to-end) ---
@@ -389,9 +402,15 @@ class HealthcareAgent:
                     )
                 )
 
-            self.gateway_client.start()
+            self._gateway_started = False
         except Exception as e:
             raise RuntimeError(f"Error initializing gateway client: {e}")
+
+        def _ensure_gateway_started():
+            """Lazy-start the gateway MCP client on first tool use (avoids cold start timeout)."""
+            if not self._gateway_started:
+                self.gateway_client.start()
+                self._gateway_started = True
 
         # --- Tool registration ---
         # KB retrieval with clinic_id pre-filled for isolation
@@ -451,6 +470,7 @@ class HealthcareAgent:
             if enforce_business_hours and request_hour is not None:
                 args["request_hour"] = request_hour
             try:
+                _ensure_gateway_started()
                 result = gateway_ref.call_tool_sync(
                     tool_use_id="patient_context_call",
                     name=f"{gateway_target}___patient_context",
@@ -483,6 +503,7 @@ class HealthcareAgent:
             if clinic_id_param is not None:
                 args["clinic_id"] = clinic_id_param
             try:
+                _ensure_gateway_started()
                 result = gateway_ref.call_tool_sync(
                     tool_use_id="clinic_config_call",
                     name=f"{gateway_target}___clinic_config",
@@ -492,10 +513,40 @@ class HealthcareAgent:
             except Exception as e:
                 return f"Error accessing clinic configuration: {e}"
 
+        # --- FHIR EHR tools (premium only — demonstrates OBO auth propagation) ---
+        fhir_tools = []
+        if config.get("fhir_enabled", False):
+            try:
+                fhir_api_url = get_ssm_parameter("/app/healthcare/fhir/api_url")
+                # Token provider: returns the current user's JWT for OBO exchange
+                fhir_token_fn = lambda: TenantContext.get_gateway_token()
+
+                # OBO config — AgentCore Identity brokers the token exchange
+                obo_config = None
+                try:
+                    obo_provider_name = get_ssm_parameter("/app/healthcare/fhir/obo_provider_name")
+                    # Workload name matches the agent runtime name
+                    workload_name = f"healthcare_{tier}"
+                    obo_config = {
+                        "workload_name": workload_name,
+                        "provider_name": obo_provider_name,
+                        "scopes": ["openid", "profile"],
+                    }
+                    logger.info(f"FHIR OBO config: provider={obo_provider_name}, workload={workload_name}")
+                except Exception as e:
+                    logger.warning(f"OBO provider not configured, using raw JWT fallback: {e}")
+
+                fhir_tools = create_fhir_tools(fhir_api_url, fhir_token_fn, obo_config=obo_config)
+                logger.info(f"FHIR EHR tools enabled ({len(fhir_tools)} tools) — API: {fhir_api_url}")
+            except Exception as e:
+                logger.warning(f"FHIR tools not available (non-blocking): {e}")
+
         # Assemble tool list
         all_tools = [retrieve_with_clinic, current_time, patient_context, clinic_config]
         if websearch_tool:
             all_tools.append(websearch_tool)
+        if fhir_tools:
+            all_tools.extend(fhir_tools)
         if tools:
             all_tools.extend(tools)
 

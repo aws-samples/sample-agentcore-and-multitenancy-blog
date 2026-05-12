@@ -73,6 +73,9 @@ python scripts/agentcore_memory.py delete-all --confirm || print_warning "Failed
 print_step "Deleting Cognito credential provider..."
 python scripts/cognito_credentials_provider.py delete --confirm || print_warning "Failed to delete Cognito credential provider"
 
+print_step "Deleting FHIR OBO credential provider..."
+python scripts/fhir_credential_provider.py delete --confirm || print_warning "Failed to delete FHIR OBO credential provider"
+
 # ----- 4. Delete AgentCore Policy Engine -----
 print_step "Deleting AgentCore Policy Engine..."
 python scripts/agentcore_policy.py delete --confirm || print_warning "Failed to delete policy engine"
@@ -93,6 +96,11 @@ print_step "Deleting API Gateway stack: $API_GATEWAY_STACK_NAME..."
 aws cloudformation delete-stack --stack-name "$API_GATEWAY_STACK_NAME" --region "$REGION" 2>/dev/null || print_warning "API Gateway stack may not exist"
 aws cloudformation wait stack-delete-complete --stack-name "$API_GATEWAY_STACK_NAME" --region "$REGION" 2>/dev/null || true
 print_info "API Gateway stack deleted (or did not exist)."
+
+print_step "Deleting FHIR MCP API Gateway stack: HealthcareStackFhirApi..."
+aws cloudformation delete-stack --stack-name "HealthcareStackFhirApi" --region "$REGION" 2>/dev/null || print_warning "FHIR API stack may not exist"
+aws cloudformation wait stack-delete-complete --stack-name "HealthcareStackFhirApi" --region "$REGION" 2>/dev/null || true
+print_info "FHIR API Gateway stack deleted (or did not exist)."
 
 print_step "Deleting Infra stack: $INFRA_STACK_NAME..."
 aws cloudformation delete-stack --stack-name "$INFRA_STACK_NAME" --region "$REGION"
@@ -133,9 +141,11 @@ fi
 print_step "Cleaning up local files..."
 rm -f lambda.zip
 rm -f api_gateway_lambda.zip
+rm -f fhir_mcp_lambda.zip
 rm -f .bedrock_agentcore.yaml
 rm -f .agentcore.yaml
 rm -f credentials/test_users.json
+rm -f credentials/fhir_patient_mapping.json
 print_info "Local files cleaned up."
 
 echo ""

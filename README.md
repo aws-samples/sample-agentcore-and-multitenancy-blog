@@ -50,8 +50,10 @@ Once logged in, try these prompts to explore the agent's capabilities:
 | "What are the current medications patient A is taking?" | Searches current medications | Both |
 | "Get me the latest COVID-19 guidance from CDC" | Uses web search to fetch current CDC guidelines | Premium only |
 | "What are the current treatment protocols for Type 2 diabetes?" | Searches medical literature via web grounding | Premium only |
+| "Search for patients named Smith in the EHR" | Queries FHIR Patient resources scoped to your clinic | Premium only |
+| "Show me lab results from the EHR" | Retrieves Observation resources (labs/vitals) from FHIR | Premium only |
 
-> **Note:** Basic tier users only have access to document search and patient context tools. Web search queries require a Premium tier account.
+> **Note:** Basic tier users only have access to document search and patient context tools. Web search and FHIR EHR queries require a Premium tier account.
 
 ## Cleanup
 
@@ -101,7 +103,7 @@ One `HealthcareAgent` class serves both tiers. Differences are driven by a `TIER
 | Concern | Basic | Premium |
 |---------|-------|---------|
 | Model | Nova Micro | Claude Sonnet |
-| Tools | Document search, patient context | + Web search |
+| Tools | Document search, patient context | + Web search, FHIR EHR |
 | Gateway | HealthcareLambda-Basic | HealthcareLambda-Premium |
 | Inference Profile | Basic cost tag | Premium cost tag |
 
@@ -120,6 +122,35 @@ X-Tier: premium
 X-Clinic-ID: hospital-a
 X-S3-Prefix: premium-tier/hospital-a/
 ```
+
+### 7. FHIR EHR Integration — OBO Token Exchange to External Services
+Premium tier users have access to a FHIR-compliant Electronic Health Record system (HAPI FHIR).
+The agent demonstrates On-Behalf-Of (OBO) token exchange via AgentCore Identity:
+
+1. User authenticates via Cognito → receives JWT
+2. Agent receives the JWT via AgentCore Runtime's Inbound JWT Authorizer
+3. Agent calls `GetWorkloadAccessTokenForJWT` — wraps user identity into a workload token
+4. Agent calls `GetResourceOauth2Token` with `ON_BEHALF_OF_TOKEN_EXCHANGE` flow
+5. AgentCore Identity brokers the exchange with Cognito → returns a scoped OBO token
+6. Agent passes the OBO token to the FHIR API Gateway
+7. FHIR Lambda validates the OBO token and extracts `clinic_id` for tenant scoping
+
+```python
+# agent/tools/fhir_tools.py — OBO token exchange
+workload_token = client.get_workload_access_token_for_jwt(
+    workloadName="healthcare_premium", userToken=user_jwt
+)["workloadAccessToken"]
+
+obo_token = client.get_resource_oauth2_token(
+    resourceCredentialProviderName="healthcare-fhir-obo-provider",
+    oauth2Flow="ON_BEHALF_OF_TOKEN_EXCHANGE",
+    scopes=["openid", "profile"],
+    workloadIdentityToken=workload_token,
+)["accessToken"]
+```
+
+The OBO token carries both the agent's identity and the user's identity — the FHIR
+service knows *who* is asking and *through which agent*, enabling zero-trust authorization.
 
 ## Service Tiers
 
@@ -153,12 +184,16 @@ Once logged in, try these prompts to explore the agent's capabilities:
 │   ├── context.py                 # TenantContext — ContextVar-based tenant state
 │   ├── memory_hook.py             # Strands MemoryHook for AgentCore Memory
 │   └── tools/
-│       └── retrieve_clinic_documents.py  # KB retrieval with clinic filtering
+│       ├── retrieve_clinic_documents.py  # KB retrieval with clinic filtering
+│       └── fhir_tools.py                 # FHIR EHR tools with auth propagation
 ├── app_modules/                   # Streamlit UI
 │   ├── auth.py                    # Cognito OAuth2 PKCE flow
 │   └── chat.py                    # ChatManager (API Gateway path)
 ├── scripts/                       # Deployment scripts
 ├── prerequisite/                  # CloudFormation templates, Lambda code, sample docs
+│   ├── fhir_api_gateway_template.yaml  # FHIR MCP API Gateway CloudFormation
+│   └── lambda/python/
+│       └── fhir_mcp_lambda.py          # FHIR proxy Lambda with JWT validation
 ├── test/                          # Test suite
 └── config/                        # Deployment configuration templates
 ```
