@@ -50,23 +50,46 @@ logger.info("main.py: starting imports...")
 _t0 = time.time()
 
 try:
-    from agent.context import TenantContext
-    logger.info(f"main.py: imported TenantContext ({time.time()-_t0:.2f}s)")
-    from agent.agent_task import agent_task
-    logger.info(f"main.py: imported agent_task ({time.time()-_t0:.2f}s)")
-    from agent.streaming_queue import StreamingQueue
-    logger.info(f"main.py: imported StreamingQueue ({time.time()-_t0:.2f}s)")
     from bedrock_agentcore.runtime import BedrockAgentCoreApp
     logger.info(f"main.py: imported BedrockAgentCoreApp ({time.time()-_t0:.2f}s)")
-    from bedrock_agentcore.memory import MemorySessionManager
-    logger.info(f"main.py: imported MemorySessionManager ({time.time()-_t0:.2f}s)")
-    from scripts.utils import get_ssm_parameter
-    logger.info(f"main.py: imported scripts.utils ({time.time()-_t0:.2f}s)")
-    from opentelemetry import baggage, context as otel_context
-    logger.info(f"main.py: all imports done ({time.time()-_t0:.2f}s)")
 except Exception as e:
     logger.error(f"main.py: IMPORT FAILED: {e}\n{traceback.format_exc()}")
     raise
+
+# Heavy imports deferred to first invocation to stay within 30s runtime init deadline.
+# AgentCore requires app = BedrockAgentCoreApp() + app.run() to complete within 30s.
+# strands, mcp, opentelemetry, boto3, etc. are imported lazily inside invoke().
+_lazy_imports_done = False
+TenantContext = None
+agent_task = None
+StreamingQueue = None
+MemorySessionManager = None
+get_ssm_parameter = None
+baggage = None
+otel_context = None
+
+
+def _do_lazy_imports():
+    global _lazy_imports_done, TenantContext, agent_task, StreamingQueue
+    global MemorySessionManager, get_ssm_parameter, baggage, otel_context
+    if _lazy_imports_done:
+        return
+    _t1 = time.time()
+    from agent.context import TenantContext as _TC
+    from agent.agent_task import agent_task as _at
+    from agent.streaming_queue import StreamingQueue as _SQ
+    from bedrock_agentcore.memory import MemorySessionManager as _MSM
+    from scripts.utils import get_ssm_parameter as _gsp
+    from opentelemetry import baggage as _bag, context as _ctx
+    TenantContext = _TC
+    agent_task = _at
+    StreamingQueue = _SQ
+    MemorySessionManager = _MSM
+    get_ssm_parameter = _gsp
+    baggage = _bag
+    otel_context = _ctx
+    _lazy_imports_done = True
+    logger.info(f"main.py: lazy imports done ({time.time()-_t1:.2f}s)")
 
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
@@ -106,6 +129,10 @@ logger.info(f"main.py: app created ({time.time()-_t0:.2f}s)")
 
 @app.entrypoint
 async def invoke(payload, context=None):
+    # Lazy-import heavy dependencies on first request (not at module level)
+    # This keeps runtime initialization under the 30s deadline.
+    _do_lazy_imports()
+
     # Lazy-load KB IDs on first request (avoids blocking runtime init)
     _ensure_kb_ids()
 

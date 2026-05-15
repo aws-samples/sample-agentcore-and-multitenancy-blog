@@ -44,7 +44,7 @@ BLOCKED_OUTPUT_MESSAGE = (
     "Please try a different question."
 )
 
-# Content filters — block harmful content at high thresholds
+# Content filters — block harmful content + prompt attacks
 CONTENT_FILTERS = [
     {"type": "HATE", "inputStrength": "HIGH", "outputStrength": "HIGH"},
     {"type": "INSULTS", "inputStrength": "HIGH", "outputStrength": "HIGH"},
@@ -54,61 +54,13 @@ CONTENT_FILTERS = [
     {"type": "PROMPT_ATTACK", "inputStrength": "HIGH", "outputStrength": "NONE"},
 ]
 
-# Denied topics — the agent retrieves records, it should not practice medicine
-DENIED_TOPICS = [
-    {
-        "name": "medical-diagnosis",
-        "definition": (
-            "Providing specific medical diagnoses, interpreting test results to "
-            "conclude a disease or condition, or telling a patient what condition "
-            "they have based on symptoms or lab values."
-        ),
-        "examples": [
-            "Based on your lab results, you have diabetes.",
-            "These symptoms indicate you have pneumonia.",
-            "Your cholesterol levels mean you have heart disease.",
-        ],
-        "type": "DENY",
-    },
-    {
-        "name": "treatment-prescription",
-        "definition": (
-            "Recommending specific treatments, prescribing medications, suggesting "
-            "dosages, or advising on whether to start, stop, or change medications."
-        ),
-        "examples": [
-            "You should take 500mg of metformin twice daily.",
-            "I recommend starting chemotherapy immediately.",
-            "Stop taking your blood pressure medication.",
-        ],
-        "type": "DENY",
-    },
-    {
-        "name": "legal-advice",
-        "definition": (
-            "Providing legal opinions, malpractice assessments, or advice on "
-            "healthcare regulations and compliance matters."
-        ),
-        "examples": [
-            "You have grounds for a malpractice lawsuit.",
-            "This treatment violates HIPAA regulations.",
-            "The clinic is liable for this outcome.",
-        ],
-        "type": "DENY",
-    },
-]
-
-# PII entities to filter (shared baseline)
+# PII entities to filter — financial/identity data that should never appear
 SHARED_PII_ENTITIES = [
     {"type": "US_SOCIAL_SECURITY_NUMBER", "action": "ANONYMIZE"},
     {"type": "CREDIT_DEBIT_CARD_NUMBER", "action": "ANONYMIZE"},
     {"type": "CREDIT_DEBIT_CARD_CVV", "action": "ANONYMIZE"},
     {"type": "CREDIT_DEBIT_CARD_EXPIRY", "action": "ANONYMIZE"},
     {"type": "INTERNATIONAL_BANK_ACCOUNT_NUMBER", "action": "ANONYMIZE"},
-    {"type": "DRIVER_ID", "action": "ANONYMIZE"},
-    {"type": "US_PASSPORT_NUMBER", "action": "ANONYMIZE"},
-    {"type": "PIN", "action": "ANONYMIZE"},
-    {"type": "IP_ADDRESS", "action": "ANONYMIZE"},
 ]
 
 # Word filter — profanity
@@ -125,50 +77,17 @@ CONTEXTUAL_GROUNDING_FILTERS = [
     {"type": "RELEVANCE", "threshold": 0.7, "action": "BLOCK"},
 ]
 
-# Additional PII entities for premium (more sensitive clinical data)
-PREMIUM_EXTRA_PII = [
-    {"type": "EMAIL", "action": "ANONYMIZE"},
-    {"type": "PHONE", "action": "ANONYMIZE"},
-    {"type": "NAME", "action": "ANONYMIZE"},
-    {"type": "ADDRESS", "action": "ANONYMIZE"},
-]
-
-# Regex filters for premium — mask medical record numbers and DEA numbers
-PREMIUM_REGEX_FILTERS = [
-    {
-        "name": "medical-record-number",
-        "description": "Medical Record Number (MRN) patterns",
-        "pattern": r"\bMRN[-:\s]?\d{6,10}\b",
-        "action": "ANONYMIZE",
-    },
-    {
-        "name": "dea-number",
-        "description": "DEA registration number pattern",
-        "pattern": r"\b[A-Z]{2}\d{7}\b",
-        "action": "ANONYMIZE",
-    },
-    {
-        "name": "npi-number",
-        "description": "National Provider Identifier (NPI) pattern",
-        "pattern": r"\bNPI[-:\s]?\d{10}\b",
-        "action": "ANONYMIZE",
-    },
-]
-
 
 def _build_guardrail_config(tier: str) -> dict:
     """Build the CreateGuardrail request body for a given tier."""
     config = {
         "name": f"healthcare-{tier}-guardrail",
-        "description": f"Healthcare {tier.title()} tier guardrail — content safety, denied topics, PII filtering"
+        "description": f"Healthcare {tier.title()} tier guardrail — content safety, PII masking, profanity filter"
         + (", contextual grounding" if tier == "premium" else ""),
         "blockedInputMessaging": BLOCKED_INPUT_MESSAGE,
         "blockedOutputsMessaging": BLOCKED_OUTPUT_MESSAGE,
         "contentPolicyConfig": {
             "filtersConfig": CONTENT_FILTERS,
-        },
-        "topicPolicyConfig": {
-            "topicsConfig": DENIED_TOPICS,
         },
         "wordPolicyConfig": {
             "managedWordListsConfig": MANAGED_WORD_LISTS,
@@ -183,21 +102,13 @@ def _build_guardrail_config(tier: str) -> dict:
     }
 
     if tier == "premium":
-        # Add contextual grounding
+        # Add contextual grounding for hallucination detection
         config["contextualGroundingPolicyConfig"] = {
             "filtersConfig": CONTEXTUAL_GROUNDING_FILTERS,
         }
         config["description"] = (
-            "Healthcare Premium tier guardrail — content safety, denied topics, "
-            "PII filtering, contextual grounding, sensitive info regex"
-        )
-        # Add extra PII entities
-        config["sensitiveInformationPolicyConfig"]["piiEntitiesConfig"].extend(
-            PREMIUM_EXTRA_PII
-        )
-        # Add regex filters
-        config["sensitiveInformationPolicyConfig"]["regexesConfig"] = (
-            PREMIUM_REGEX_FILTERS
+            "Healthcare Premium tier guardrail — content safety, "
+            "PII masking, profanity filter, contextual grounding"
         )
 
     return config
@@ -322,14 +233,11 @@ def create():
     click.echo()
     click.echo("Shared policies (both tiers):")
     click.echo("  - Content filters (hate, insults, sexual, violence, misconduct, prompt attack)")
-    click.echo("  - Denied topics (medical diagnosis, treatment prescription, legal advice)")
-    click.echo("  - PII anonymization (SSN, credit cards, driver ID, passport)")
+    click.echo("  - PII anonymization (SSN, credit/debit cards, bank accounts)")
     click.echo("  - Profanity word filter")
     click.echo()
     click.echo("Premium-only policies:")
     click.echo("  - Contextual grounding (threshold: 0.8 grounding, 0.7 relevance)")
-    click.echo("  - Additional PII (email, phone, name, address)")
-    click.echo("  - Regex filters (MRN, DEA number, NPI number)")
 
 
 @cli.command()
