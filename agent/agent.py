@@ -42,7 +42,6 @@ from .tools.retrieve_clinic_documents import retrieve_clinic_documents
 
 from mcp.client.streamable_http import streamablehttp_client
 from .streamable_http_sigv4 import streamablehttp_client_with_sigv4
-from .streamable_http_bearer import streamablehttp_client_with_bearer
 from .context import TenantContext
 from strands import Agent, tool
 from strands_tools import current_time
@@ -355,51 +354,31 @@ class HealthcareAgent:
             fhir_enabled=config.get("fhir_enabled", False),
         )
 
-        # --- Gateway client (MCP) with JWT Bearer auth (same token end-to-end) ---
+        # --- Gateway client (MCP) with SigV4 auth (AWS_IAM authorizer) ---
+        # The Runtime's execution role signs requests to the gateway.
+        # Cedar policies use AgentCore::IamEntity as the principal.
         gateway_url = get_ssm_parameter(config["gateway_url_ssm"])
         region = os.environ.get("AWS_REGION", "us-east-1")
         logger.info(f"Gateway MCP URL: {gateway_url}")
 
         try:
-            gateway_token = TenantContext.get_gateway_token()
+            import boto3
+            session = boto3.Session()
+            credentials = session.get_credentials().get_frozen_credentials()
 
-            if gateway_token:
-                # Use the user's JWT for gateway auth (CUSTOM_JWT authorizer).
-                # Same token validated by Runtime's Inbound JWT Authorizer —
-                # no second app client or managed credential needed.
-                logger.info("Using Bearer token auth for gateway (CUSTOM_JWT)")
-                self.gateway_client = MCPClient(
-                    lambda: streamablehttp_client_with_bearer(
-                        url=gateway_url,
-                        token=gateway_token,
-                        headers={
-                            "X-Tier": tier,
-                            "X-Clinic-ID": clinic_id,
-                            "X-S3-Prefix": s3_prefix,
-                        },
-                    )
+            self.gateway_client = MCPClient(
+                lambda: streamablehttp_client_with_sigv4(
+                    url=gateway_url,
+                    credentials=credentials,
+                    service="bedrock-agentcore",
+                    region=region,
+                    headers={
+                        "X-Tier": tier,
+                        "X-Clinic-ID": clinic_id,
+                        "X-S3-Prefix": s3_prefix,
+                    },
                 )
-            else:
-                # Fallback to SigV4 (Workload Identity) if no JWT available
-                # (e.g., local dev, direct invocation without Bearer token)
-                logger.info("No gateway token available, falling back to SigV4 auth")
-                import boto3
-                session = boto3.Session()
-                credentials = session.get_credentials().get_frozen_credentials()
-
-                self.gateway_client = MCPClient(
-                    lambda: streamablehttp_client_with_sigv4(
-                        url=gateway_url,
-                        credentials=credentials,
-                        service="bedrock-agentcore",
-                        region=region,
-                        headers={
-                            "X-Tier": tier,
-                            "X-Clinic-ID": clinic_id,
-                            "X-S3-Prefix": s3_prefix,
-                        },
-                    )
-                )
+            )
 
             self._gateway_started = False
         except Exception as e:
