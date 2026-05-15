@@ -102,18 +102,18 @@ One `HealthcareAgent` class serves both tiers. Differences are driven by a `TIER
 
 | Concern | Basic | Premium |
 |---------|-------|---------|
-| Model | Nova Micro | Claude Sonnet |
+| Model | Mistral Ministral 8B | GPT-OSS 120B |
 | Tools | Document search, patient context | + Web search, FHIR EHR |
-| Gateway | HealthcareLambda-Basic | HealthcareLambda-Premium |
-| Inference Profile | Basic cost tag | Premium cost tag |
+| Guardrails | Tier-specific (ApplyGuardrail API) | Tier-specific (ApplyGuardrail API) |
+| Access Policy | Business hours (8am–6pm) | 24/7 |
 
 ### 4. Authentication & Tenant Identity — Cognito JWT
 Amazon Cognito issues JWTs with custom attributes (`custom:tier`, `custom:clinic_id`). The API Gateway Lambda extracts these claims and forwards them to the agent as payload fields.
 
-### 5. Cost Attribution — OpenTelemetry Baggage + Inference Profiles
+### 5. Cost Attribution — Bedrock Projects + Structured Usage Logging
 Per-tenant cost tracking via:
-- OpenTelemetry baggage propagation (`tier`, `clinic_id`, `actor_id`)
-- Bedrock inference profiles with tier-specific tags
+- **Bedrock Projects**: Each tier has a dedicated project whose tags flow into AWS Cost Explorer. The agent connects to the inference endpoint and passes the project ID on every inference request.
+- **Structured usage logs**: After each invocation, the agent emits a JSON log with `clinic_id`, `tier`, `model_id`, and token counts. These logs can be queried via CloudWatch Logs Insights for per-clinic cost attribution.
 
 ### 6. Gateway Header Propagation
 Tenant context flows through AgentCore Gateway via headers:
@@ -123,55 +123,26 @@ X-Clinic-ID: hospital-a
 X-S3-Prefix: premium-tier/hospital-a/
 ```
 
-### 7. FHIR EHR Integration — OBO Token Exchange to External Services
+### 7. FHIR EHR Integration — Agent-Scoped Credential (Token Translation)
 Premium tier users have access to a FHIR-compliant Electronic Health Record system (HAPI FHIR).
-The agent demonstrates On-Behalf-Of (OBO) token exchange via AgentCore Identity:
+The agent demonstrates agent-side token translation for secure downstream access:
 
 1. User authenticates via Cognito → receives JWT
 2. Agent receives the JWT via AgentCore Runtime's Inbound JWT Authorizer
-3. Agent calls `GetWorkloadAccessTokenForJWT` — wraps user identity into a workload token
-4. Agent calls `GetResourceOauth2Token` with `ON_BEHALF_OF_TOKEN_EXCHANGE` flow
-5. AgentCore Identity brokers the exchange with Cognito → returns a scoped OBO token
-6. Agent passes the OBO token to the FHIR API Gateway
-7. FHIR Lambda validates the OBO token and extracts `clinic_id` for tenant scoping
+3. Agent decodes the JWT to extract user claims (`sub`, `clinic_id`, `role`)
+4. Agent mints a new short-lived JWT (60s TTL) signed with a KMS key, containing:
+   - Original user identity (`sub`)
+   - Tenant scope (`clinic_id`)
+   - Agent identity (`iss: healthcare-agent`)
+   - Target audience (`aud: fhir-api`)
+   - Restricted scopes (`fhir:read`)
+5. Agent passes the translated token as Bearer to the FHIR API Gateway
+6. FHIR Lambda validates the agent-signed token and extracts `clinic_id` for tenant scoping
 
-```python
-# agent/tools/fhir_tools.py — OBO token exchange
-workload_token = client.get_workload_access_token_for_jwt(
-    workloadName="healthcare_premium", userToken=user_jwt
-)["workloadAccessToken"]
+This avoids forwarding the raw user JWT end-to-end. The agent acts as a credential
+boundary — minting scoped, short-lived tokens that carry both user identity and
+tenant context, without requiring an IdP-mediated OBO exchange.
 
-obo_token = client.get_resource_oauth2_token(
-    resourceCredentialProviderName="healthcare-fhir-obo-provider",
-    oauth2Flow="ON_BEHALF_OF_TOKEN_EXCHANGE",
-    scopes=["openid", "profile"],
-    workloadIdentityToken=workload_token,
-)["accessToken"]
-```
-
-The OBO token carries both the agent's identity and the user's identity — the FHIR
-service knows *who* is asking and *through which agent*, enabling zero-trust authorization.
-
-## Service Tiers
-
-- **Basic** — Primary care clinics (A–D). Document search, summarization via Nova Micro.
-- **Premium** — Specialty care orgs (Hospitals A–B, Clinics E–F). All basic features plus web search for medical research, Claude Sonnet model.
-
-
-### Example Chat Queries
-
-Once logged in, try these prompts to explore the agent's capabilities:
-
-| Prompt | What It Does | Tier |
-|--------|-------------|------|
-| "List out all patient info" | Retrieves patient metadata for your clinic from DynamoDB | Both |
-| "Show me all available documents" | Searches the Knowledge Base for all clinical documents scoped to your clinic | Both |
-| "Summarize the latest lab results for patient John Smith" | Retrieves and summarizes lab result documents filtered by patient | Both |
-| "What prescriptions were issued last month?" | Searches prescription documents with date-based context | Both |
-| "Get me the latest COVID-19 guidance from CDC" | Uses web search to fetch current CDC guidelines | Premium only |
-| "What are the current treatment protocols for Type 2 diabetes?" | Searches medical literature via web grounding | Premium only |
-
-> **Note:** Basic tier users only have access to document search and patient context tools. Web search queries require a Premium tier account.
 
 ## Project Structure
 
