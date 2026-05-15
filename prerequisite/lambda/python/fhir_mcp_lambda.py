@@ -5,15 +5,21 @@
 FHIR MCP Lambda — Proxies FHIR requests to a public HAPI FHIR server
 with JWT-based authentication and tenant-scoped data isolation.
 
-Demonstrates inbound-to-outbound auth propagation:
-  1. Agent passes user's JWT as Bearer token when calling this Lambda (via API Gateway)
-  2. This Lambda validates the JWT against Cognito JWKS
-  3. Extracts clinic_id from token claims to scope FHIR queries
-  4. Forwards requests to the public HAPI FHIR server (https://hapi.fhir.org/baseR4)
+Supports two token types:
+  1. Cognito JWT (RS256) — Direct user token, validated against Cognito JWKS
+  2. Agent-translated JWT (HS256) — Short-lived, scoped token minted by the agent,
+     validated via KMS HMAC key or shared secret
+
+The agent-translated token flow:
+  1. Agent receives user's Cognito JWT (validated by Runtime's Inbound JWT Authorizer)
+  2. Agent mints a new short-lived JWT with restricted scopes and tenant claims
+  3. Agent signs it with a KMS HMAC key
+  4. This Lambda validates the signature, checks expiry/audience/scope
+  5. Extracts clinic_id from the translated token to scope FHIR queries
 
 The HAPI server is a trusted backend (no auth required on its side).
 This Lambda is the auth enforcement boundary — it won't serve data
-unless the caller presents a valid JWT with the correct tenant claims.
+unless the caller presents a valid token with the correct tenant claims.
 """
 
 import json
@@ -32,9 +38,27 @@ COGNITO_REGION = os.environ.get("COGNITO_REGION", os.environ.get("AWS_REGION", "
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID", "")
 COGNITO_JWKS_URL = os.environ.get("COGNITO_JWKS_URL", "")
 
+# Agent token translation config
+FHIR_SIGNING_KEY_ID = os.environ.get("FHIR_SIGNING_KEY_ID", "")
+FHIR_SIGNING_SECRET = os.environ.get("FHIR_SIGNING_SECRET", "")
+AGENT_TOKEN_ISSUER = "healthcare-agent"
+AGENT_TOKEN_AUDIENCE = "fhir-api"
+
 # Cache JWKS keys (Lambda container reuse)
 _jwks_cache = {"keys": None, "fetched_at": 0}
 JWKS_CACHE_TTL = 3600  # 1 hour
+
+# Cache KMS client
+_kms_client = None
+
+
+def _get_kms_client():
+    """Get or create KMS client for HMAC verification."""
+    global _kms_client
+    if _kms_client is None:
+        import boto3
+        _kms_client = boto3.client("kms", region_name=COGNITO_REGION)
+    return _kms_client
 
 
 def _get_jwks_url() -> str:
@@ -74,13 +98,18 @@ def _fetch_jwks() -> dict:
 
 def validate_jwt(token: str) -> Dict[str, Any]:
     """
-    Validate JWT and extract claims.
+    Validate JWT and extract claims. Supports two token types:
 
-    Performs full signature verification against Cognito JWKS when configured.
-    Falls back to decode-only mode (for local dev) if JWKS is unavailable.
+    1. Agent-translated tokens (HS256, iss=healthcare-agent):
+       - Verified via KMS HMAC key or shared secret
+       - Checks exp, aud, iss, and required claims (clinic_id, sub)
+
+    2. Cognito tokens (RS256):
+       - Verified against Cognito JWKS
+       - Falls back to decode-only mode if JWKS unavailable
 
     Returns:
-        Dict with decoded claims including custom:clinic_id, custom:tier, etc.
+        Dict with decoded claims.
 
     Raises:
         ValueError: If token is invalid or expired.
@@ -88,16 +117,115 @@ def validate_jwt(token: str) -> Dict[str, Any]:
     if not token:
         raise ValueError("No token provided")
 
+    # Peek at the header to determine token type
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+    except Exception as e:
+        raise ValueError(f"Malformed token header: {e}")
+
+    alg = unverified_header.get("alg", "")
+
+    # --- Agent-translated token (HS256) ---
+    if alg == "HS256":
+        return _validate_agent_token(token, unverified_header)
+
+    # --- Cognito token (RS256) ---
+    return _validate_cognito_token(token, unverified_header)
+
+
+def _validate_agent_token(token: str, header: dict) -> Dict[str, Any]:
+    """
+    Validate an agent-translated HS256 token.
+
+    Verification order:
+      1. KMS HMAC key (if FHIR_SIGNING_KEY_ID configured)
+      2. Shared secret (if FHIR_SIGNING_SECRET configured)
+      3. Reject if neither is configured
+    """
+    import base64
+    import hashlib
+    import hmac as hmac_mod
+
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise ValueError("Invalid token format")
+
+    signing_input = f"{parts[0]}.{parts[1]}".encode("utf-8")
+
+    # Decode signature
+    sig_padded = parts[2] + "=" * (4 - len(parts[2]) % 4) if len(parts[2]) % 4 else parts[2]
+    try:
+        provided_sig = base64.urlsafe_b64decode(sig_padded)
+    except Exception:
+        raise ValueError("Invalid token signature encoding")
+
+    # Verify signature
+    verified = False
+
+    if FHIR_SIGNING_KEY_ID:
+        # Verify with KMS
+        try:
+            client = _get_kms_client()
+            client.verify_mac(
+                KeyId=FHIR_SIGNING_KEY_ID,
+                Message=signing_input,
+                MacAlgorithm="HMAC_SHA_256",
+                Mac=provided_sig,
+            )
+            verified = True
+        except client.exceptions.KMSInvalidMacException:
+            raise ValueError("Token signature verification failed (KMS)")
+        except Exception as e:
+            print(f"WARNING: KMS verification error: {e}, trying shared secret fallback")
+
+    if not verified and FHIR_SIGNING_SECRET:
+        # Verify with shared secret
+        expected_sig = hmac_mod.HMAC(
+            FHIR_SIGNING_SECRET.encode("utf-8"), signing_input, hashlib.sha256
+        ).digest()
+        if not hmac_mod.compare_digest(provided_sig, expected_sig):
+            raise ValueError("Token signature verification failed (HMAC)")
+        verified = True
+
+    if not verified:
+        raise ValueError("No signing key configured to verify agent token")
+
+    # Decode payload
+    payload_padded = parts[1] + "=" * (4 - len(parts[1]) % 4) if len(parts[1]) % 4 else parts[1]
+    try:
+        decoded = json.loads(base64.urlsafe_b64decode(payload_padded))
+    except Exception as e:
+        raise ValueError(f"Failed to decode token payload: {e}")
+
+    # Validate claims
+    now = int(time.time())
+
+    if decoded.get("exp", 0) < now:
+        raise ValueError("Agent token has expired")
+
+    if decoded.get("iss") != AGENT_TOKEN_ISSUER:
+        raise ValueError(f"Invalid issuer: expected '{AGENT_TOKEN_ISSUER}', got '{decoded.get('iss')}'")
+
+    if decoded.get("aud") != AGENT_TOKEN_AUDIENCE:
+        raise ValueError(f"Invalid audience: expected '{AGENT_TOKEN_AUDIENCE}', got '{decoded.get('aud')}'")
+
+    if not decoded.get("sub"):
+        raise ValueError("Token missing required 'sub' claim")
+
+    if not decoded.get("clinic_id"):
+        raise ValueError("Token missing required 'clinic_id' claim")
+
+    print(f"✅ [fhir_mcp] Agent token validated — sub: {decoded.get('sub')}, scope: {decoded.get('scope', 'N/A')}")
+    return decoded
+
+
+def _validate_cognito_token(token: str, header: dict) -> Dict[str, Any]:
+    """Validate a Cognito RS256 token against JWKS."""
     jwks = _fetch_jwks()
 
     if jwks:
-        # Full verification mode
         try:
-            # Get the key ID from the token header
-            unverified_header = jwt.get_unverified_header(token)
-            kid = unverified_header.get("kid")
-
-            # Find the matching key
+            kid = header.get("kid")
             rsa_key = None
             for key in jwks.get("keys", []):
                 if key.get("kid") == kid:
@@ -107,14 +235,13 @@ def validate_jwt(token: str) -> Dict[str, Any]:
             if not rsa_key:
                 raise ValueError(f"Key ID {kid} not found in JWKS")
 
-            # Verify and decode
             decoded = jwt.decode(
                 token,
                 rsa_key,
                 algorithms=["RS256"],
                 options={
                     "verify_exp": True,
-                    "verify_aud": False,  # Cognito ID tokens use 'aud', access tokens use 'client_id'
+                    "verify_aud": False,
                 },
             )
             return decoded
@@ -134,17 +261,22 @@ def validate_jwt(token: str) -> Dict[str, Any]:
 
 
 def extract_clinic_id(claims: Dict[str, Any]) -> str:
-    """Extract clinic_id from JWT claims."""
-    clinic_id = claims.get("custom:clinic_id", "")
+    """Extract clinic_id from JWT claims (supports both Cognito and agent token formats)."""
+    # Agent-translated tokens use top-level 'clinic_id'
+    clinic_id = claims.get("clinic_id", "")
     if not clinic_id:
-        # Fallback to other possible claim locations
-        clinic_id = claims.get("clinic_id", "demo-clinic")
+        # Cognito tokens use 'custom:clinic_id'
+        clinic_id = claims.get("custom:clinic_id", "demo-clinic")
     return clinic_id
 
 
 def extract_tier(claims: Dict[str, Any]) -> str:
-    """Extract tier from JWT claims."""
-    return claims.get("custom:tier", "basic")
+    """Extract tier from JWT claims (supports both Cognito and agent token formats)."""
+    # Agent-translated tokens use top-level 'tier'
+    tier = claims.get("tier", "")
+    if not tier:
+        tier = claims.get("custom:tier", "basic")
+    return tier
 
 
 # --- FHIR Operations ---

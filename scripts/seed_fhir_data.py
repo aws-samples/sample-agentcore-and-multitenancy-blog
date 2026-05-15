@@ -116,8 +116,35 @@ OBSERVATION_TEMPLATES = [
 ]
 
 
-def create_patient(base_url: str, patient_data: dict) -> str:
-    """Create a Patient resource and return its ID."""
+def find_existing_patient(base_url: str, patient_data: dict) -> str | None:
+    """Search for an existing patient by name and clinic tag. Returns ID if found."""
+    resp = requests.get(
+        f"{base_url}/Patient",
+        params={
+            "given": patient_data["given"],
+            "family": patient_data["family"],
+            "_tag": f"clinic|{patient_data['clinic_id']}",
+        },
+        timeout=15,
+    )
+    if resp.status_code == 200:
+        bundle = resp.json()
+        if bundle.get("total", 0) > 0 and bundle.get("entry"):
+            return bundle["entry"][0]["resource"]["id"]
+    return None
+
+
+def create_patient(base_url: str, patient_data: dict) -> tuple[str, bool]:
+    """Create a Patient resource and return (ID, already_existed).
+
+    If a matching patient already exists on the server, reuses it
+    instead of creating a duplicate.
+    """
+    # Check if patient already exists
+    existing_id = find_existing_patient(base_url, patient_data)
+    if existing_id:
+        return existing_id, True
+
     resource = {
         "resourceType": "Patient",
         "meta": {
@@ -142,11 +169,30 @@ def create_patient(base_url: str, patient_data: dict) -> str:
     )
     resp.raise_for_status()
     created = resp.json()
-    return created["id"]
+    return created["id"], False
 
 
-def create_observation(base_url: str, patient_id: str, clinic_id: str, template: dict) -> str:
-    """Create an Observation resource linked to a patient."""
+def create_observation(base_url: str, patient_id: str, clinic_id: str, template: dict) -> tuple[str, bool]:
+    """Create an Observation resource linked to a patient. Returns (ID, already_existed).
+
+    Checks for existing observations with the same code for this patient
+    to avoid duplicates on re-runs.
+    """
+    # Check if this observation already exists for the patient
+    search_resp = requests.get(
+        f"{base_url}/Observation",
+        params={
+            "patient": f"Patient/{patient_id}",
+            "code": f"{template['code_system']}|{template['code']}",
+            "_tag": f"clinic|{clinic_id}",
+        },
+        timeout=15,
+    )
+    if search_resp.status_code == 200:
+        bundle = search_resp.json()
+        if bundle.get("total", 0) > 0 and bundle.get("entry"):
+            return bundle["entry"][0]["resource"]["id"], True
+
     resource = {
         "resourceType": "Observation",
         "meta": {
@@ -192,7 +238,7 @@ def create_observation(base_url: str, patient_id: str, clinic_id: str, template:
     )
     resp.raise_for_status()
     created = resp.json()
-    return created["id"]
+    return created["id"], False
 
 
 @click.command()
@@ -213,25 +259,40 @@ def seed(base_url, dry_run):
 
     created_patients = []
     created_observations = 0
+    reused_patients = 0
+    reused_observations = 0
 
     for patient_data in PATIENTS:
         try:
-            patient_id = create_patient(base_url, patient_data)
+            patient_id, existed = create_patient(base_url, patient_data)
             created_patients.append({
                 "id": patient_id,
                 "name": f"{patient_data['given']} {patient_data['family']}",
                 "clinic_id": patient_data["clinic_id"],
             })
-            click.echo(
-                f"  ✅ Patient: {patient_data['given']} {patient_data['family']} "
-                f"(ID: {patient_id}, clinic: {patient_data['clinic_id']})"
-            )
+
+            if existed:
+                reused_patients += 1
+                click.echo(
+                    f"  ♻️  Patient (existing): {patient_data['given']} {patient_data['family']} "
+                    f"(ID: {patient_id}, clinic: {patient_data['clinic_id']})"
+                )
+            else:
+                click.echo(
+                    f"  ✅ Patient (created): {patient_data['given']} {patient_data['family']} "
+                    f"(ID: {patient_id}, clinic: {patient_data['clinic_id']})"
+                )
 
             # Create observations for this patient
             for template in OBSERVATION_TEMPLATES:
-                obs_id = create_observation(base_url, patient_id, patient_data["clinic_id"], template)
-                created_observations += 1
-                click.echo(f"     📊 Observation: {template['display']} (ID: {obs_id})")
+                obs_id, obs_existed = create_observation(base_url, patient_id, patient_data["clinic_id"], template)
+                if obs_existed:
+                    reused_observations += 1
+                else:
+                    created_observations += 1
+                click.echo(
+                    f"     {'♻️ ' if obs_existed else '📊'} Observation: {template['display']} (ID: {obs_id})"
+                )
 
             # Be nice to the public server
             time.sleep(0.5)
@@ -242,7 +303,8 @@ def seed(base_url, dry_run):
 
     click.echo("")
     click.echo(f"🎉 Seeding complete!")
-    click.echo(f"   Created {len(created_patients)} patients, {created_observations} observations")
+    click.echo(f"   Patients: {len(created_patients) - reused_patients} created, {reused_patients} reused")
+    click.echo(f"   Observations: {created_observations} created, {reused_observations} reused")
     click.echo("")
 
     # Output a mapping file for reference

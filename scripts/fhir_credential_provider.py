@@ -39,6 +39,30 @@ identity_client = boto3.client(
 
 PROVIDER_NAME = "healthcare-fhir-obo-provider"
 SSM_PROVIDER_NAME = "/app/healthcare/fhir/obo_provider_name"
+WORKLOAD_IDENTITY_NAME = "healthcare_premium"
+
+
+def ensure_workload_identity() -> str:
+    """
+    Create the workload identity required for OBO token exchange.
+
+    GetWorkloadAccessTokenForJWT requires a workload identity in the same
+    account as the agent runtime. Without this, the OBO flow fails with:
+    "Workload Identity does not belong to caller account"
+    """
+    try:
+        click.echo(f"⚙️  Ensuring workload identity '{WORKLOAD_IDENTITY_NAME}' exists...")
+        response = identity_client.create_workload_identity(
+            name=WORKLOAD_IDENTITY_NAME,
+        )
+        click.echo(f"✅ Created workload identity: {WORKLOAD_IDENTITY_NAME}")
+        click.echo(f"   ARN: {response.get('workloadIdentityArn', 'N/A')}")
+    except identity_client.exceptions.ConflictException:
+        click.echo(f"ℹ️  Workload identity '{WORKLOAD_IDENTITY_NAME}' already exists")
+    except Exception as e:
+        click.echo(f"❌ Failed to create workload identity: {e}", err=True)
+        sys.exit(1)
+    return WORKLOAD_IDENTITY_NAME
 
 
 def create_fhir_obo_provider() -> dict:
@@ -102,10 +126,15 @@ def create_fhir_obo_provider() -> dict:
 
         return response
 
-    except identity_client.exceptions.ConflictException:
-        click.echo(f"ℹ️  Provider '{PROVIDER_NAME}' already exists")
-        put_ssm_parameter(SSM_PROVIDER_NAME, PROVIDER_NAME)
-        return {"name": PROVIDER_NAME}
+    except (identity_client.exceptions.ConflictException, ClientError) as e:
+        error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
+        error_msg = str(e)
+        if "already exists" in error_msg.lower() or error_code in ("ConflictException", "ValidationException"):
+            click.echo(f"ℹ️  Provider '{PROVIDER_NAME}' already exists")
+            put_ssm_parameter(SSM_PROVIDER_NAME, PROVIDER_NAME)
+            return {"name": PROVIDER_NAME}
+        click.echo(f"❌ Error creating FHIR OBO provider: {error_msg}", err=True)
+        sys.exit(1)
 
     except Exception as e:
         click.echo(f"❌ Error creating FHIR OBO provider: {str(e)}", err=True)
@@ -113,7 +142,7 @@ def create_fhir_obo_provider() -> dict:
 
 
 def delete_fhir_obo_provider():
-    """Delete the FHIR OBO credential provider."""
+    """Delete the FHIR OBO credential provider and workload identity."""
     try:
         click.echo(f"🗑️  Deleting FHIR OBO credential provider: {PROVIDER_NAME}")
         identity_client.delete_oauth2_credential_provider(name=PROVIDER_NAME)
@@ -121,6 +150,13 @@ def delete_fhir_obo_provider():
         delete_ssm_parameter(SSM_PROVIDER_NAME)
     except Exception as e:
         click.echo(f"⚠️  Could not delete provider: {e}")
+
+    try:
+        click.echo(f"🗑️  Deleting workload identity: {WORKLOAD_IDENTITY_NAME}")
+        identity_client.delete_workload_identity(name=WORKLOAD_IDENTITY_NAME)
+        click.echo("✅ Workload identity deleted")
+    except Exception as e:
+        click.echo(f"⚠️  Could not delete workload identity: {e}")
 
 
 @click.group()
@@ -134,6 +170,7 @@ def create():
     """Create the FHIR OBO credential provider."""
     click.echo(f"🚀 Creating FHIR OBO credential provider")
     click.echo(f"📍 Region: {REGION}")
+    ensure_workload_identity()
     create_fhir_obo_provider()
     click.echo("🎉 Done!")
 

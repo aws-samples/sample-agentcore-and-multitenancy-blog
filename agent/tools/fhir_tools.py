@@ -4,106 +4,181 @@
 """
 FHIR tool wrappers for the Healthcare Agent.
 
-Uses AgentCore Identity's On-Behalf-Of (OBO) token exchange to obtain
-a scoped access token for the FHIR resource server. The flow:
+Uses agent-side token translation to create a scoped, short-lived JWT
+for the FHIR resource server. The flow:
 
   1. Agent has the user's inbound JWT (validated by Runtime's Inbound JWT Authorizer)
-  2. Calls GetWorkloadAccessTokenForJWT → wraps user identity into a workload token
-  3. Calls GetResourceOauth2Token with ON_BEHALF_OF_TOKEN_EXCHANGE → gets OBO token
-  4. Passes the OBO token as Bearer to the FHIR API Gateway
+  2. Agent decodes the JWT to extract user claims (sub, clinic_id, role)
+  3. Agent mints a new short-lived JWT signed with a KMS key, containing:
+     - Original user identity (sub)
+     - Tenant scope (clinic_id)
+     - Agent identity (iss)
+     - Target audience (FHIR API)
+     - Restricted scopes (fhir:read)
+     - Short TTL (60 seconds)
+  4. Agent passes the translated token as Bearer to the FHIR API Gateway
 
-The OBO token carries both the agent's identity and the user's identity,
-enabling the FHIR service to enforce fine-grained, zero-trust authorization.
+This avoids forwarding the raw user JWT end-to-end while maintaining
+cryptographic tenant isolation at the FHIR layer.
 
 Demonstrates:
-  - On-Behalf-Of token exchange (RFC 8693) via AgentCore Identity
-  - Inbound-to-outbound auth propagation with scoped tokens
-  - Tenant isolation at the FHIR layer (clinic-scoped queries)
-  - MCP composability (agent calls multiple downstream services)
+  - Agent-side token translation (no IdP dependency for exchange)
+  - Scope restriction without OBO grant type support
+  - Tenant isolation via signed claims
+  - KMS-based token signing for non-repudiation
 """
 
+import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
+import time
 from typing import Optional
 
 import boto3
 import requests
 from strands import tool
 
+from ..context import TenantContext
+
 logger = logging.getLogger(__name__)
 
-# Cache the AgentCore client (reused across tool invocations)
-_agentcore_client = None
+# Cache KMS client
+_kms_client = None
 
 
-def _get_agentcore_client():
-    """Get or create the bedrock-agentcore client for identity operations."""
-    global _agentcore_client
-    if _agentcore_client is None:
+def _get_kms_client():
+    """Get or create the KMS client for token signing."""
+    global _kms_client
+    if _kms_client is None:
         region = os.environ.get("AWS_REGION", "us-east-1")
-        _agentcore_client = boto3.client("bedrock-agentcore", region_name=region)
-    return _agentcore_client
+        _kms_client = boto3.client("kms", region_name=region)
+    return _kms_client
 
 
-def _exchange_token_obo(
+def _base64url_encode(data: bytes) -> str:
+    """Base64url encode without padding."""
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
+
+
+def _decode_jwt_claims(jwt_token: str) -> Optional[dict]:
+    """Decode JWT payload without verification (claims extraction only)."""
+    try:
+        parts = jwt_token.split(".")
+        if len(parts) != 3:
+            return None
+        payload = parts[1]
+        # Add padding
+        padding = 4 - len(payload) % 4
+        if padding != 4:
+            payload += "=" * padding
+        decoded = base64.urlsafe_b64decode(payload)
+        return json.loads(decoded)
+    except Exception as e:
+        logger.warning(f"Failed to decode JWT claims: {e}")
+        return None
+
+
+def _sign_with_kms(message: bytes, key_id: str) -> Optional[bytes]:
+    """Sign a message using KMS HMAC key."""
+    try:
+        client = _get_kms_client()
+        response = client.generate_mac(
+            KeyId=key_id,
+            Message=message,
+            MacAlgorithm="HMAC_SHA_256",
+        )
+        return response["Mac"]
+    except Exception as e:
+        logger.error(f"KMS signing failed: {e}")
+        return None
+
+
+def _sign_with_secret(message: bytes, secret: str) -> bytes:
+    """Sign a message using HMAC-SHA256 with a shared secret (fallback)."""
+    return hmac.HMAC(secret.encode("utf-8"), message, hashlib.sha256).digest()
+
+
+def _mint_fhir_token(
     user_jwt: str,
-    workload_name: str,
-    provider_name: str,
-    scopes: list[str],
+    signing_key_id: str = None,
+    signing_secret: str = None,
+    ttl_seconds: int = 60,
 ) -> Optional[str]:
     """
-    Perform On-Behalf-Of token exchange via AgentCore Identity.
+    Mint a short-lived, scoped JWT for the FHIR API.
 
-    Steps:
-      1. GetWorkloadAccessTokenForJWT — wraps user JWT into workload access token
-      2. GetResourceOauth2Token — exchanges workload token for scoped OBO token
+    Extracts user identity from the inbound JWT and creates a new token
+    with restricted scope and short TTL, signed by the agent.
 
     Args:
         user_jwt: The inbound user JWT (from Cognito)
-        workload_name: Registered workload name in AgentCore Identity
-        provider_name: The OBO credential provider name
-        scopes: OAuth scopes to request for the FHIR resource server
+        signing_key_id: KMS key ID for signing (preferred)
+        signing_secret: Shared secret for HMAC signing (fallback)
+        ttl_seconds: Token lifetime in seconds (default: 60)
 
     Returns:
-        The OBO access token, or None if exchange fails.
+        A signed JWT string for the FHIR API, or None on failure.
     """
-    client = _get_agentcore_client()
-
-    try:
-        # Step 1: Get workload access token (wraps user identity)
-        workload_response = client.get_workload_access_token_for_jwt(
-            workloadName=workload_name,
-            userToken=user_jwt,
-        )
-        workload_token = workload_response["workloadAccessToken"]
-        logger.info("OBO Step 1: Obtained workload access token")
-
-        # Step 2: Exchange for OBO token targeting FHIR resource server
-        obo_response = client.get_resource_oauth2_token(
-            resourceCredentialProviderName=provider_name,
-            oauth2Flow="ON_BEHALF_OF_TOKEN_EXCHANGE",
-            scopes=scopes,
-            workloadIdentityToken=workload_token,
-        )
-
-        access_token = obo_response.get("accessToken")
-        if access_token:
-            logger.info("OBO Step 2: Obtained scoped OBO token for FHIR")
-            return access_token
-
-        # Check if authorization is still in progress
-        session_status = obo_response.get("sessionStatus")
-        if session_status == "IN_PROGRESS":
-            logger.warning("OBO token exchange requires user authorization (unexpected for OBO flow)")
-            return None
-
-        logger.warning(f"OBO token exchange returned no access token. Status: {session_status}")
+    # Extract claims from inbound JWT
+    claims = _decode_jwt_claims(user_jwt)
+    if not claims:
+        logger.error("Cannot mint FHIR token: failed to decode inbound JWT")
         return None
 
-    except Exception as e:
-        logger.error(f"OBO token exchange failed: {e}")
+    now = int(time.time())
+
+    # Build the translated token payload
+    payload = {
+        # User identity (from original token)
+        "sub": claims.get("sub", "unknown"),
+        "email": claims.get("email", ""),
+        "username": claims.get("cognito:username", claims.get("username", "")),
+        # Tenant context
+        "clinic_id": TenantContext.get_clinic_id() or claims.get("custom:clinic_id", "unknown"),
+        "tier": TenantContext.get_tier() or "premium",
+        "role": TenantContext.get_role() or claims.get("custom:role", "user"),
+        # Token metadata
+        "iss": "healthcare-agent",
+        "aud": "fhir-api",
+        "iat": now,
+        "exp": now + ttl_seconds,
+        # Restricted scopes for FHIR
+        "scope": "fhir:read.patients fhir:read.observations",
+    }
+
+    # Build JWT
+    header = {"alg": "HS256", "typ": "JWT"}
+    if signing_key_id:
+        header["kid"] = signing_key_id
+
+    header_b64 = _base64url_encode(json.dumps(header, separators=(",", ":")).encode())
+    payload_b64 = _base64url_encode(json.dumps(payload, separators=(",", ":")).encode())
+    signing_input = f"{header_b64}.{payload_b64}".encode("utf-8")
+
+    # Sign with KMS (preferred) or shared secret (fallback)
+    if signing_key_id:
+        signature = _sign_with_kms(signing_input, signing_key_id)
+        if not signature:
+            logger.warning("KMS signing failed, falling back to shared secret")
+            if signing_secret:
+                signature = _sign_with_secret(signing_input, signing_secret)
+            else:
+                return None
+    elif signing_secret:
+        signature = _sign_with_secret(signing_input, signing_secret)
+    else:
+        logger.error("No signing key or secret configured for token translation")
         return None
+
+    token = f"{header_b64}.{payload_b64}.{_base64url_encode(signature)}"
+    logger.info(
+        f"Minted FHIR token: sub={payload['sub']}, clinic={payload['clinic_id']}, "
+        f"ttl={ttl_seconds}s, scope={payload['scope']}"
+    )
+    return token
 
 
 def _call_fhir_api(fhir_api_url: str, token: str, tool_name: str, params: dict) -> dict:
@@ -112,7 +187,7 @@ def _call_fhir_api(fhir_api_url: str, token: str, tool_name: str, params: dict) 
 
     Args:
         fhir_api_url: The FHIR API Gateway endpoint URL
-        token: OBO access token (or fallback user JWT)
+        token: Translated agent-signed token (or fallback user JWT)
         tool_name: FHIR tool to invoke
         params: Tool parameters
 
@@ -147,40 +222,56 @@ def _call_fhir_api(fhir_api_url: str, token: str, tool_name: str, params: dict) 
 
 def create_fhir_tools(fhir_api_url: str, get_token_fn, obo_config: dict = None):
     """
-    Create FHIR tool functions with OBO token exchange.
+    Create FHIR tool functions with agent-side token translation.
 
     Args:
         fhir_api_url: The FHIR MCP API Gateway endpoint URL
         get_token_fn: Callable that returns the current user's JWT
-        obo_config: OBO configuration dict with keys:
-            - workload_name: Registered workload name
-            - provider_name: OBO credential provider name
-            - scopes: List of scopes to request
-            If None, falls back to passing the raw JWT (dev mode).
+        obo_config: Legacy OBO config (ignored — kept for backward compatibility).
+            Token translation config is loaded from SSM/env instead:
+            - FHIR_SIGNING_KEY_ID: KMS key ID for token signing
+            - FHIR_SIGNING_SECRET: Shared secret fallback (dev/test only)
 
     Returns:
         List of tool functions to register with the agent
     """
+    # Token translation config
+    signing_key_id = os.environ.get("FHIR_SIGNING_KEY_ID")
+    signing_secret = os.environ.get("FHIR_SIGNING_SECRET")
+
+    if not signing_key_id and not signing_secret:
+        # Try SSM as last resort
+        try:
+            from ..utils import get_ssm_parameter
+            signing_key_id = get_ssm_parameter("/app/healthcare/fhir/signing_key_id")
+        except Exception:
+            # Generate a deterministic secret from the FHIR API URL as dev fallback
+            signing_secret = hashlib.sha256(
+                f"fhir-token-signing-{fhir_api_url}".encode()
+            ).hexdigest()
+            logger.warning(
+                "No KMS key or signing secret configured for FHIR token translation. "
+                "Using derived secret (acceptable for dev, not for production)."
+            )
 
     def _get_fhir_token() -> Optional[str]:
-        """Get a token for FHIR access — OBO exchange or fallback to raw JWT."""
+        """Get a translated token for FHIR access."""
         user_jwt = get_token_fn()
         if not user_jwt:
             return None
 
-        # Attempt OBO token exchange if configured
-        if obo_config:
-            obo_token = _exchange_token_obo(
-                user_jwt=user_jwt,
-                workload_name=obo_config["workload_name"],
-                provider_name=obo_config["provider_name"],
-                scopes=obo_config.get("scopes", ["openid"]),
-            )
-            if obo_token:
-                return obo_token
-            logger.warning("OBO exchange failed, falling back to raw JWT")
+        # Mint a scoped, short-lived token for the FHIR API
+        translated_token = _mint_fhir_token(
+            user_jwt=user_jwt,
+            signing_key_id=signing_key_id,
+            signing_secret=signing_secret,
+            ttl_seconds=60,
+        )
+        if translated_token:
+            return translated_token
 
-        # Fallback: pass raw JWT (works but less secure — no scope restriction)
+        # Fallback: pass raw JWT (log warning — should not happen in production)
+        logger.warning("Token translation failed, falling back to raw JWT")
         return user_jwt
 
     @tool(
@@ -188,7 +279,7 @@ def create_fhir_tools(fhir_api_url: str, get_token_fn, obo_config: dict = None):
         description=(
             "Search for patients in the FHIR electronic health record system. "
             "Results are automatically filtered to your clinic. "
-            "Uses On-Behalf-Of token exchange for secure downstream access. "
+            "Uses scoped token translation for secure downstream access. "
             "Use this to find patients by name or list all patients in the EHR."
         ),
     )

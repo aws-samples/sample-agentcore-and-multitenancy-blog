@@ -168,6 +168,12 @@ Resources:
                   - bedrock-agentcore:InvokeGateway
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
+              - Sid: BedrockGuardrailAccess
+                Effect: Allow
+                Action:
+                  - bedrock:ApplyGuardrail
+                Resource:
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:guardrail/*
               - Sid: BedrockMantleAccess
                 Effect: Allow
                 Action:
@@ -178,6 +184,14 @@ Resources:
                 Resource:
                   - !Sub arn:aws:bedrock-mantle:${AWS::Region}:${AWS::AccountId}:project/*
                   - "*"
+              - Sid: FhirTokenSigning
+                Effect: Allow
+                Action:
+                  - kms:GenerateMac
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    kms:MacAlgorithm: HMAC_SHA_256
 
   GatewayAgentCoreRole:
     Type: AWS::IAM::Role
@@ -213,10 +227,14 @@ Resources:
                 Action:
                   - bedrock-agentcore:AuthorizeAction
                   - bedrock-agentcore:PartiallyAuthorizeActions
-                  - bedrock-agentcore:CheckAuthorizePermissions
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:policy-engine/*
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
+              - Sid: PolicyEnginePreflightCheck
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:CheckAuthorizePermissions
+                Resource: "*"
 
   # TVM (Token Vending Machine) role for ABAC-scoped memory access.
   # The agent execution role assumes this role per-request with session tags

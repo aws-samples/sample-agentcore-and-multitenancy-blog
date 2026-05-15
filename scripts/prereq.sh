@@ -155,12 +155,16 @@ FHIR_TEMPLATE_FILE="prerequisite/fhir_api_gateway_template.yaml"
 echo "🔧 Starting deployment of FHIR MCP API Gateway stack..."
 if [ -f "$FHIR_LAMBDA_ZIP_FILE" ]; then
   # Get Cognito User Pool ID for JWT validation
-  COGNITO_USER_POOL_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/user_pool_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+  COGNITO_USER_POOL_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/userpool_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
   if [ -z "$COGNITO_USER_POOL_ID" ]; then
     echo "⚠️  Cognito User Pool ID not found in SSM, FHIR JWT validation will use fallback mode"
     COGNITO_USER_POOL_ID="not-configured"
   fi
 
+  deploy_stack "$FHIR_STACK_NAME" "$FHIR_TEMPLATE_FILE" \
+    --parameter-overrides \
+      LambdaCodeBucket="$FULL_BUCKET_NAME" \
+      LambdaCodeKey="$FHIR_LAMBDA_ZIP_FILE" \
   deploy_stack "$FHIR_STACK_NAME" "$FHIR_TEMPLATE_FILE" \
     --parameter-overrides \
       LambdaCodeBucket="$FULL_BUCKET_NAME" \
@@ -176,9 +180,46 @@ else
   echo "⚠️  Skipping FHIR API Gateway stack deployment (Lambda code not found)"
 fi
 
-echo "🏥 Checking for healthcare documents..."
-# Check if directories contain files
-if [ -z "$(ls -A prerequisite/basic-documents 2>/dev/null)" ] || \
+# ----- Create KMS HMAC key for FHIR token translation -----
+echo "🔑 Creating KMS HMAC key for FHIR token translation..."
+EXISTING_KEY_ID=$(aws ssm get-parameter --name /app/healthcare/fhir/signing_key_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+if [ -n "$EXISTING_KEY_ID" ] && [ "$EXISTING_KEY_ID" != "None" ]; then
+  echo "ℹ️  FHIR signing key already exists: $EXISTING_KEY_ID"
+  FHIR_SIGNING_KEY_ID="$EXISTING_KEY_ID"
+else
+  FHIR_SIGNING_KEY_ID=$(aws kms create-key \
+    --key-spec HMAC_256 \
+    --key-usage GENERATE_VERIFY_MAC \
+    --description "FHIR token translation signing key — used by healthcare agent to mint scoped tokens" \
+    --tags TagKey=Application,TagValue=Healthcare TagKey=Purpose,TagValue=FhirTokenTranslation \
+    --query 'KeyMetadata.KeyId' --output text)
+  echo "✅ Created KMS HMAC key: $FHIR_SIGNING_KEY_ID"
+
+  # Create an alias for easier identification
+  aws kms create-alias \
+    --alias-name alias/healthcare-fhir-signing \
+    --target-key-id "$FHIR_SIGNING_KEY_ID" 2>/dev/null || true
+
+  # Store in SSM for the agent runtime
+  aws ssm put-parameter \
+    --name /app/healthcare/fhir/signing_key_id \
+    --value "$FHIR_SIGNING_KEY_ID" \
+    --type String \
+    --overwrite
+  echo "🔐 Stored signing key ID in SSM: /app/healthcare/fhir/signing_key_id"
+fi
+
+# Update FHIR stack with the signing key
+if [ -n "$FHIR_SIGNING_KEY_ID" ] && [ "$FHIR_SIGNING_KEY_ID" != "None" ]; then
+  echo "🔄 Updating FHIR stack with signing key..."
+  deploy_stack "$FHIR_STACK_NAME" "$FHIR_TEMPLATE_FILE" \
+    --parameter-overrides \
+      LambdaCodeBucket="$FULL_BUCKET_NAME" \
+      LambdaCodeKey="$FHIR_LAMBDA_ZIP_FILE" \
+      CognitoUserPoolId="$COGNITO_USER_POOL_ID" \
+      CognitoRegion="$REGION" \
+      FhirSigningKeyId="$FHIR_SIGNING_KEY_ID"
+fi [ -z "$(ls -A prerequisite/basic-documents 2>/dev/null)" ] || \
    [ -z "$(ls -A prerequisite/premium-documents 2>/dev/null)" ]; then
   echo "📝 Generating synthetic healthcare documents..."
   echo "   Using Claude Sonnet 4.5 (~213 documents, estimated cost: ~$1.67)"

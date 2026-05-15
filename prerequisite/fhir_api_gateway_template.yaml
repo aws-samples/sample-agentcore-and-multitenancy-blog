@@ -16,6 +16,10 @@ Parameters:
     Type: String
     Description: Region of the Cognito User Pool
     Default: us-east-1
+  FhirSigningKeyId:
+    Type: String
+    Description: KMS HMAC key ID for verifying agent-translated tokens
+    Default: ''
 
 Resources:
   # FHIR MCP Lambda Function
@@ -36,8 +40,9 @@ Resources:
           FHIR_BASE_URL: 'https://hapi.fhir.org/baseR4'
           COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
           COGNITO_REGION: !Ref CognitoRegion
+          FHIR_SIGNING_KEY_ID: !Ref FhirSigningKeyId
 
-  # Lambda Execution Role (minimal — only needs CloudWatch Logs)
+  # Lambda Execution Role
   FhirLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -51,6 +56,18 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: FhirTokenVerification
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:VerifyMac
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    kms:MacAlgorithm: HMAC_SHA_256
 
   # API Gateway (REST API)
   FhirApiGateway:

@@ -37,17 +37,36 @@ import os
 import logging
 import asyncio
 import uuid
+import time
+import traceback
 
 if "AWS_REGION" not in os.environ:
     os.environ["AWS_REGION"] = "us-east-1"
 
-from agent.context import TenantContext
-from agent.agent_task import agent_task
-from agent.streaming_queue import StreamingQueue
-from bedrock_agentcore.runtime import BedrockAgentCoreApp
-from bedrock_agentcore.memory import MemorySessionManager
-from scripts.utils import get_ssm_parameter
-from opentelemetry import baggage, context as otel_context
+logging.basicConfig(level=logging.INFO, force=True)
+logger = logging.getLogger(__name__)
+logger.info("main.py: starting imports...")
+
+_t0 = time.time()
+
+try:
+    from agent.context import TenantContext
+    logger.info(f"main.py: imported TenantContext ({time.time()-_t0:.2f}s)")
+    from agent.agent_task import agent_task
+    logger.info(f"main.py: imported agent_task ({time.time()-_t0:.2f}s)")
+    from agent.streaming_queue import StreamingQueue
+    logger.info(f"main.py: imported StreamingQueue ({time.time()-_t0:.2f}s)")
+    from bedrock_agentcore.runtime import BedrockAgentCoreApp
+    logger.info(f"main.py: imported BedrockAgentCoreApp ({time.time()-_t0:.2f}s)")
+    from bedrock_agentcore.memory import MemorySessionManager
+    logger.info(f"main.py: imported MemorySessionManager ({time.time()-_t0:.2f}s)")
+    from scripts.utils import get_ssm_parameter
+    logger.info(f"main.py: imported scripts.utils ({time.time()-_t0:.2f}s)")
+    from opentelemetry import baggage, context as otel_context
+    logger.info(f"main.py: all imports done ({time.time()-_t0:.2f}s)")
+except Exception as e:
+    logger.error(f"main.py: IMPORT FAILED: {e}\n{traceback.format_exc()}")
+    raise
 
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
@@ -56,29 +75,40 @@ os.environ["DEFAULT_TIMEZONE"] = "America/New_York"
 # Default tier (overridden per-request from payload)
 AGENT_TIER = os.environ.get("AGENT_TIER", "basic")
 
-# Load both KB IDs at startup so the correct one can be selected per-request
+# KB IDs loaded lazily on first request to avoid blocking runtime initialization
 KB_IDS = {}
-for _tier in ("basic", "premium"):
-    try:
-        KB_IDS[_tier] = get_ssm_parameter(f"/app/healthcare/knowledge_base/{_tier}_kb_id")
-    except Exception:
-        KB_IDS[_tier] = ""
+_kb_ids_loaded = False
 
-# Default to basic until a request arrives with tenant context
-os.environ["KNOWLEDGE_BASE_ID"] = KB_IDS.get(AGENT_TIER, KB_IDS.get("basic", ""))
 
-logging.basicConfig(level=logging.INFO)
+def _ensure_kb_ids():
+    global _kb_ids_loaded
+    if _kb_ids_loaded:
+        return
+    _kb_ids_loaded = True
+    for _tier in ("basic", "premium"):
+        try:
+            KB_IDS[_tier] = get_ssm_parameter(f"/app/healthcare/knowledge_base/{_tier}_kb_id")
+        except Exception:
+            KB_IDS[_tier] = ""
+    os.environ["KNOWLEDGE_BASE_ID"] = KB_IDS.get(AGENT_TIER, KB_IDS.get("basic", ""))
+    logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.get('premium')}")
+
+
+logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
-logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.get('premium')}")
-
+logger.info(f"main.py: creating BedrockAgentCoreApp... ({time.time()-_t0:.2f}s)")
 app = BedrockAgentCoreApp()
+logger.info(f"main.py: app created ({time.time()-_t0:.2f}s)")
 
 
 
 
 @app.entrypoint
 async def invoke(payload, context=None):
+    # Lazy-load KB IDs on first request (avoids blocking runtime init)
+    _ensure_kb_ids()
+
     # Initialize streaming queue
     if not TenantContext.get_response_queue():
         TenantContext.set_response_queue(StreamingQueue())

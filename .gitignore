@@ -1,6 +1,12 @@
 # macOS
 .DS_Store
 
+# Security scan reports
+.ash/
+.pcsr/
+.threatmodel/
+.gitleaksignore
+
 .bedrock_agentcore.yaml
 .bedrock_agentcore/
 

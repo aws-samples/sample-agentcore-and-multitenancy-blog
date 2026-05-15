@@ -76,6 +76,16 @@ python scripts/cognito_credentials_provider.py delete --confirm || print_warning
 print_step "Deleting FHIR OBO credential provider..."
 python scripts/fhir_credential_provider.py delete --confirm || print_warning "Failed to delete FHIR OBO credential provider"
 
+print_step "Scheduling FHIR signing KMS key for deletion..."
+FHIR_KEY_ID=$(aws ssm get-parameter --name /app/healthcare/fhir/signing_key_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+if [ -n "$FHIR_KEY_ID" ] && [ "$FHIR_KEY_ID" != "None" ]; then
+    aws kms schedule-key-deletion --key-id "$FHIR_KEY_ID" --pending-window-in-days 7 2>/dev/null || print_warning "Could not schedule KMS key deletion"
+    aws kms delete-alias --alias-name alias/healthcare-fhir-signing 2>/dev/null || true
+    print_info "KMS key $FHIR_KEY_ID scheduled for deletion (7-day waiting period)"
+else
+    print_info "No FHIR signing key found in SSM"
+fi
+
 # ----- 4. Delete AgentCore Policy Engine -----
 print_step "Deleting AgentCore Policy Engine..."
 python scripts/agentcore_policy.py delete --confirm || print_warning "Failed to delete policy engine"
@@ -83,6 +93,10 @@ python scripts/agentcore_policy.py delete --confirm || print_warning "Failed to 
 # ----- 5. Delete AgentCore Gateways -----
 print_step "Deleting AgentCore Gateways (basic and premium)..."
 python scripts/agentcore_gateway.py delete-all --confirm || print_warning "Failed to delete gateways"
+
+# ----- 5b. Delete Bedrock Guardrails -----
+print_step "Deleting Bedrock Guardrails (basic and premium)..."
+python scripts/bedrock_guardrails.py delete --confirm || print_warning "Failed to delete guardrails"
 
 # ----- 6. Delete Knowledge Bases (basic and premium) -----
 print_step "Deleting Basic tier Knowledge Base..."
