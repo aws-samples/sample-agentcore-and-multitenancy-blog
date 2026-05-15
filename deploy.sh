@@ -114,11 +114,14 @@ python scripts/bedrock_guardrails.py create
 print_step "Setting up Cognito Credential Provider..."
 python scripts/cognito_credentials_provider.py create --name healthcare-cognito-provider
 
+print_step "Setting up FHIR OBO Credential Provider (On-Behalf-Of token exchange)..."
+python scripts/fhir_credential_provider.py create
+
 print_step "Creating Memory Resources (Basic and Premium)..."
 python scripts/agentcore_memory.py create-all
 
 print_step "Enabling Memory Observability for cost tracking..."
-python scripts/setup_memory_observability.py enable-all
+python scripts/setup_memory_observability.py enable-all || print_warning "Memory observability setup had issues — this is non-blocking. You can retry with: python scripts/setup_memory_observability.py enable-all"
 
 print_step "Verifying Memory Observability configuration..."
 python scripts/setup_memory_observability.py verify-all || echo -e "${YELLOW}[WARNING]${NC} Memory observability verification incomplete — deliveries may take time to propagate. This is non-blocking."
@@ -199,6 +202,9 @@ if [ $? -eq 0 ]; then
 else
     print_warning "Some test users may have failed to create. Check output above."
 fi
+
+print_step "Seeding FHIR server with clinic-scoped synthetic data..."
+python scripts/seed_fhir_data.py || print_warning "FHIR seeding failed (non-blocking). You can retry with: python scripts/seed_fhir_data.py"
 
 print_step "Deploying basic tier agent to AWS..."
 agentcore deploy --agent healthcare_basic

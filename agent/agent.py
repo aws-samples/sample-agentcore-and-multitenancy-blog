@@ -69,6 +69,7 @@ TIER_CONFIG = {
         "gateway_url_ssm": "/app/healthcare/agentcore/premium_gateway_url",
         "gateway_target": "HealthcareLambda-Premium",
         "web_search": True,
+        "fhir_enabled": True,
         "guardrail_id_ssm": "/app/healthcare/guardrails/premium_id",
         "guardrail_version_ssm": "/app/healthcare/guardrails/premium_version",
     },
@@ -198,6 +199,7 @@ def _build_system_prompt(
     role: str,
     s3_prefix: str,
     web_search_enabled: bool,
+    fhir_enabled: bool = False,
 ) -> str:
     """Build a tier-appropriate system prompt with tenant context baked in."""
     web_tool_section = ""
@@ -205,6 +207,15 @@ def _build_system_prompt(
         web_tool_section = (
             "- web_search: Search the web for current medical research, guidelines, "
             "and clinical information (Premium feature)\n"
+        )
+
+    fhir_tool_section = ""
+    if fhir_enabled:
+        fhir_tool_section = (
+            "- fhir_search_patients: Search for patients in the FHIR EHR system (filtered to your clinic)\n"
+            "- fhir_read_patient: Read detailed patient information from the FHIR EHR by patient ID\n"
+            "- fhir_search_observations: Search lab results and vitals from the FHIR EHR (filtered to your clinic)\n"
+            "  * FHIR tools use On-Behalf-Of token exchange — your identity is securely delegated to the FHIR service\n"
         )
 
     if tier == "basic":
@@ -246,7 +257,7 @@ AVAILABLE TOOLS:
 {patient_context_section}
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
 - current_time: Get current date and time
-{web_tool_section}
+{web_tool_section}{fhir_tool_section}
 SECURITY RULES:
 1. You can ONLY access data for clinic: {clinic_id}
 2. All tools automatically filter to your clinic — you cannot access other clinics' data
@@ -341,6 +352,7 @@ class HealthcareAgent:
             role=role,
             s3_prefix=s3_prefix,
             web_search_enabled=web_search_enabled,
+            fhir_enabled=config.get("fhir_enabled", False),
         )
 
         # --- Gateway client (MCP) with JWT Bearer auth (same token end-to-end) ---
@@ -389,9 +401,15 @@ class HealthcareAgent:
                     )
                 )
 
-            self.gateway_client.start()
+            self._gateway_started = False
         except Exception as e:
             raise RuntimeError(f"Error initializing gateway client: {e}")
+
+        def _ensure_gateway_started():
+            """Lazy-start the gateway MCP client on first tool use (avoids cold start timeout)."""
+            if not self._gateway_started:
+                self.gateway_client.start()
+                self._gateway_started = True
 
         # --- Tool registration ---
         # KB retrieval with clinic_id pre-filled for isolation
@@ -451,6 +469,7 @@ class HealthcareAgent:
             if enforce_business_hours and request_hour is not None:
                 args["request_hour"] = request_hour
             try:
+                _ensure_gateway_started()
                 result = gateway_ref.call_tool_sync(
                     tool_use_id="patient_context_call",
                     name=f"{gateway_target}___patient_context",
@@ -483,6 +502,7 @@ class HealthcareAgent:
             if clinic_id_param is not None:
                 args["clinic_id"] = clinic_id_param
             try:
+                _ensure_gateway_started()
                 result = gateway_ref.call_tool_sync(
                     tool_use_id="clinic_config_call",
                     name=f"{gateway_target}___clinic_config",
@@ -492,10 +512,103 @@ class HealthcareAgent:
             except Exception as e:
                 return f"Error accessing clinic configuration: {e}"
 
+        # --- FHIR EHR tools (premium only — demonstrates OBO auth propagation) ---
+        # Deferred initialization: SSM lookups and tool creation happen on first
+        # FHIR tool invocation to avoid adding cold start latency.
+        fhir_tools = []
+        if config.get("fhir_enabled", False):
+            _fhir_initialized = False
+            _fhir_delegate_tools = {}  # name -> callable, populated on first use
+            tier_captured = tier
+
+            def _ensure_fhir_initialized():
+                nonlocal _fhir_initialized, _fhir_delegate_tools
+                if _fhir_initialized:
+                    return
+                _fhir_initialized = True
+                try:
+                    from .tools.fhir_tools import create_fhir_tools
+
+                    fhir_api_url = get_ssm_parameter("/app/healthcare/fhir/api_url")
+                    fhir_token_fn = lambda: TenantContext.get_gateway_token()
+
+                    real_tools = create_fhir_tools(fhir_api_url, fhir_token_fn)
+                    for t in real_tools:
+                        _fhir_delegate_tools[t.tool_name] = t
+                    logger.info(f"FHIR EHR tools initialized ({len(real_tools)} tools) — API: {fhir_api_url}")
+                except Exception as e:
+                    logger.warning(f"FHIR tools not available: {e}")
+
+            # Thin wrappers registered at init time (no SSM calls) — delegate on first use
+            @tool(
+                name="fhir_search_patients",
+                description=(
+                    "Search for patients in the FHIR electronic health record system. "
+                    "Results are automatically filtered to your clinic. "
+                    "Uses On-Behalf-Of token exchange for secure downstream access."
+                ),
+            )
+            def fhir_search_patients(name: str = None, limit: int = 10) -> str:
+                """Search for patients in the FHIR EHR system.
+
+                Args:
+                    name: Patient name to search for (optional — omit to list all).
+                    limit: Maximum number of results (default: 10).
+                """
+                _ensure_fhir_initialized()
+                delegate = _fhir_delegate_tools.get("fhir_search_patients")
+                if not delegate:
+                    return "FHIR tools are not available"
+                return delegate(name=name, limit=limit)
+
+            @tool(
+                name="fhir_read_patient",
+                description=(
+                    "Read detailed information about a specific patient from the FHIR EHR system. "
+                    "Requires the patient's FHIR resource ID."
+                ),
+            )
+            def fhir_read_patient(patient_id: str) -> str:
+                """Read a specific patient's full record from FHIR.
+
+                Args:
+                    patient_id: The FHIR Patient resource ID.
+                """
+                _ensure_fhir_initialized()
+                delegate = _fhir_delegate_tools.get("fhir_read_patient")
+                if not delegate:
+                    return "FHIR tools are not available"
+                return delegate(patient_id=patient_id)
+
+            @tool(
+                name="fhir_search_observations",
+                description=(
+                    "Search for clinical observations (lab results, vitals, measurements) "
+                    "in the FHIR EHR system. Results are filtered to your clinic."
+                ),
+            )
+            def fhir_search_observations(patient_id: str = None, category: str = None, limit: int = 10) -> str:
+                """Search for observations (labs, vitals) in the FHIR system.
+
+                Args:
+                    patient_id: Filter by specific patient FHIR ID (optional).
+                    category: Filter by category — 'laboratory' or 'vital-signs' (optional).
+                    limit: Maximum number of results (default: 10).
+                """
+                _ensure_fhir_initialized()
+                delegate = _fhir_delegate_tools.get("fhir_search_observations")
+                if not delegate:
+                    return "FHIR tools are not available"
+                return delegate(patient_id=patient_id, category=category, limit=limit)
+
+            fhir_tools = [fhir_search_patients, fhir_read_patient, fhir_search_observations]
+
         # Assemble tool list
         all_tools = [retrieve_with_clinic, current_time, patient_context, clinic_config]
         if websearch_tool:
             all_tools.append(websearch_tool)
+        if fhir_tools:
+            all_tools.extend(fhir_tools)
         if tools:
             all_tools.extend(tools)
 
@@ -583,11 +696,11 @@ class HealthcareAgent:
                     yield str(e)
                     return
 
+            # Buffer the full response so output guardrail can filter before sending
             accumulated = ""
             async for event in self.agent.stream_async(user_query):
                 if "data" in event:
                     accumulated += event["data"]
-                    yield event["data"]
 
             # Log per-clinic usage from the agent's latest metrics
             try:
@@ -612,8 +725,11 @@ class HealthcareAgent:
             if self.guardrail_hook and accumulated:
                 checked = self.guardrail_hook.post_invoke(self.agent, accumulated)
                 if isinstance(checked, str) and checked != accumulated:
-                    # Guardrail modified/blocked the output — yield replacement
-                    yield f"\n\n🛡️ {checked}"
+                    yield checked
+                else:
+                    yield accumulated
+            else:
+                yield accumulated
 
         except GuardrailInterventionError as e:
             yield str(e)

@@ -67,7 +67,7 @@ class AuthManager:
             f'<meta http-equiv="refresh" content="0;url={logout_url}">',
             unsafe_allow_html=True,
         )
-        st.rerun()
+        st.stop()
 
     def handle_oauth_callback(self):
         query_params = st.query_params

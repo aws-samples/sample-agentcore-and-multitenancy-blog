@@ -1,12 +1,12 @@
-# Healthcare Multi-Tenant AgentCore — all dependencies
+# Healthcare Multi-Tenant AgentCore — RUNTIME ONLY dependencies
+# This file is used for AgentCore deployment. Dev/test/frontend deps excluded.
 
 # Core AgentCore dependencies
 bedrock-agentcore>=1.2.1
-bedrock-agentcore-starter-toolkit>=0.2.10
 
 # AWS SDK
-boto3>=1.42.42
-botocore>=1.42.42
+boto3>=1.43.6
+botocore>=1.43.6
 
 # AI agents and tools
 strands-agents>=1.24.0
@@ -18,21 +18,6 @@ openai>=1.82.0
 # Bedrock API key generation (short-term token auto-refresh)
 aws-bedrock-token-generator
 
-# Google APIs
-google-api-python-client>=2.189.0
-google-auth>=2.48.0
-google-auth-httplib2
-google-auth-oauthlib
-
-# Search and database
-opensearch-py>=3.1.0
-
-# Data processing
-pandas>=2.3.3,<3.0.0
-
-# Configuration and serialization
-PyYAML>=6.0.3
-
 # MCP and data validation
 fastmcp
 pydantic
@@ -41,18 +26,9 @@ pydantic
 requests
 requests-aws4auth>=1.3.1
 
-# CLI and utilities
-click>=8.3.1
-retrying>=1.4.2
+# Configuration and serialization
+PyYAML>=6.0.3
 
-# Web interface
-streamlit>=1.54.0
-streamlit-cookies-controller>=0.0.4
-
-# Development and testing
-pytest>=9.0.2
-pytest-cov>=7.0.0
-black>=26.1.0
-flake8>=7.3.0
-mypy>=1.19.1
-pre-commit>=4.5.1
+# OpenTelemetry (required by strands observability)
+opentelemetry-api
+opentelemetry-sdk

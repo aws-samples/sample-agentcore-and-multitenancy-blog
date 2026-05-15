@@ -37,17 +37,59 @@ import os
 import logging
 import asyncio
 import uuid
+import time
+import traceback
 
 if "AWS_REGION" not in os.environ:
     os.environ["AWS_REGION"] = "us-east-1"
 
-from agent.context import TenantContext
-from agent.agent_task import agent_task
-from agent.streaming_queue import StreamingQueue
-from bedrock_agentcore.runtime import BedrockAgentCoreApp
-from bedrock_agentcore.memory import MemorySessionManager
-from scripts.utils import get_ssm_parameter
-from opentelemetry import baggage, context as otel_context
+logging.basicConfig(level=logging.INFO, force=True)
+logger = logging.getLogger(__name__)
+logger.info("main.py: starting imports...")
+
+_t0 = time.time()
+
+try:
+    from bedrock_agentcore.runtime import BedrockAgentCoreApp
+    logger.info(f"main.py: imported BedrockAgentCoreApp ({time.time()-_t0:.2f}s)")
+except Exception as e:
+    logger.error(f"main.py: IMPORT FAILED: {e}\n{traceback.format_exc()}")
+    raise
+
+# Heavy imports deferred to first invocation to stay within 30s runtime init deadline.
+# AgentCore requires app = BedrockAgentCoreApp() + app.run() to complete within 30s.
+# strands, mcp, opentelemetry, boto3, etc. are imported lazily inside invoke().
+_lazy_imports_done = False
+TenantContext = None
+agent_task = None
+StreamingQueue = None
+MemorySessionManager = None
+get_ssm_parameter = None
+baggage = None
+otel_context = None
+
+
+def _do_lazy_imports():
+    global _lazy_imports_done, TenantContext, agent_task, StreamingQueue
+    global MemorySessionManager, get_ssm_parameter, baggage, otel_context
+    if _lazy_imports_done:
+        return
+    _t1 = time.time()
+    from agent.context import TenantContext as _TC
+    from agent.agent_task import agent_task as _at
+    from agent.streaming_queue import StreamingQueue as _SQ
+    from bedrock_agentcore.memory import MemorySessionManager as _MSM
+    from scripts.utils import get_ssm_parameter as _gsp
+    from opentelemetry import baggage as _bag, context as _ctx
+    TenantContext = _TC
+    agent_task = _at
+    StreamingQueue = _SQ
+    MemorySessionManager = _MSM
+    get_ssm_parameter = _gsp
+    baggage = _bag
+    otel_context = _ctx
+    _lazy_imports_done = True
+    logger.info(f"main.py: lazy imports done ({time.time()-_t1:.2f}s)")
 
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["STRANDS_TOOL_CONSOLE_MODE"] = "enabled"
@@ -56,29 +98,44 @@ os.environ["DEFAULT_TIMEZONE"] = "America/New_York"
 # Default tier (overridden per-request from payload)
 AGENT_TIER = os.environ.get("AGENT_TIER", "basic")
 
-# Load both KB IDs at startup so the correct one can be selected per-request
+# KB IDs loaded lazily on first request to avoid blocking runtime initialization
 KB_IDS = {}
-for _tier in ("basic", "premium"):
-    try:
-        KB_IDS[_tier] = get_ssm_parameter(f"/app/healthcare/knowledge_base/{_tier}_kb_id")
-    except Exception:
-        KB_IDS[_tier] = ""
+_kb_ids_loaded = False
 
-# Default to basic until a request arrives with tenant context
-os.environ["KNOWLEDGE_BASE_ID"] = KB_IDS.get(AGENT_TIER, KB_IDS.get("basic", ""))
 
-logging.basicConfig(level=logging.INFO)
+def _ensure_kb_ids():
+    global _kb_ids_loaded
+    if _kb_ids_loaded:
+        return
+    _kb_ids_loaded = True
+    for _tier in ("basic", "premium"):
+        try:
+            KB_IDS[_tier] = get_ssm_parameter(f"/app/healthcare/knowledge_base/{_tier}_kb_id")
+        except Exception:
+            KB_IDS[_tier] = ""
+    os.environ["KNOWLEDGE_BASE_ID"] = KB_IDS.get(AGENT_TIER, KB_IDS.get("basic", ""))
+    logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.get('premium')}")
+
+
+logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
-logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.get('premium')}")
-
+logger.info(f"main.py: creating BedrockAgentCoreApp... ({time.time()-_t0:.2f}s)")
 app = BedrockAgentCoreApp()
+logger.info(f"main.py: app created ({time.time()-_t0:.2f}s)")
 
 
 
 
 @app.entrypoint
 async def invoke(payload, context=None):
+    # Lazy-import heavy dependencies on first request (not at module level)
+    # This keeps runtime initialization under the 30s deadline.
+    _do_lazy_imports()
+
+    # Lazy-load KB IDs on first request (avoids blocking runtime init)
+    _ensure_kb_ids()
+
     # Initialize streaming queue
     if not TenantContext.get_response_queue():
         TenantContext.set_response_queue(StreamingQueue())

@@ -119,6 +119,28 @@ def create_delivery_destination(name: str, destination_type: str, destination_ar
         raise click.ClickException(f"❌ Failed to create delivery destination: {e}")
 
 
+def ensure_xray_cloudwatch_logs_destination() -> None:
+    """
+    Ensure X-Ray trace segment destination includes CloudWatch Logs.
+    
+    AWS requires CloudWatch Logs to be enabled as a trace segment destination
+    before X-Ray delivery destinations can be used with CloudWatch Logs deliveries.
+    See: https://docs.aws.amazon.com/xray/latest/api/API_UpdateTraceSegmentDestination.html
+    """
+    try:
+        xray_client = boto3.client("xray", region_name=REGION)
+        xray_client.update_trace_segment_destination(Destination="CloudWatchLogs")
+        click.echo("✅ Enabled CloudWatch Logs as X-Ray trace segment destination")
+    except ClientError as e:
+        # If already enabled or not supported, log and continue
+        error_code = e.response["Error"]["Code"]
+        if error_code == "InvalidRequestException":
+            click.echo("ℹ️  CloudWatch Logs already enabled as X-Ray trace segment destination")
+        else:
+            click.echo(f"⚠️  Could not update X-Ray trace segment destination: {e}")
+            click.echo("   Traces delivery to X-Ray may fail. This is non-blocking.")
+
+
 def create_delivery(source_name: str, destination_arn: str) -> dict:
     """Create delivery to connect source to destination."""
     try:
@@ -199,8 +221,12 @@ def enable_memory_observability(memory_id: str, tier: str = None) -> dict:
         destination_arn=log_group_arn
     )
     
-    # Step 5: Create delivery destination for X-Ray
-    click.echo("\n📥 Step 5: Creating delivery destination for X-Ray...")
+    # Step 5: Enable CloudWatch Logs as X-Ray trace segment destination (prerequisite)
+    click.echo("\n🔧 Step 5: Ensuring X-Ray trace segment destination is configured...")
+    ensure_xray_cloudwatch_logs_destination()
+    
+    # Step 5b: Create delivery destination for X-Ray
+    click.echo("\n📥 Step 5b: Creating delivery destination for X-Ray...")
     traces_destination = create_delivery_destination(
         name=f"{memory_id}-traces-destination",
         destination_type="XRAY"
@@ -213,10 +239,16 @@ def enable_memory_observability(memory_id: str, tier: str = None) -> dict:
         destination_arn=logs_destination["arn"]
     )
     
-    traces_delivery = create_delivery(
-        source_name=traces_source["name"],
-        destination_arn=traces_destination["arn"]
-    )
+    # Traces delivery is best-effort — X-Ray config issues should not block deployment
+    traces_delivery = None
+    try:
+        traces_delivery = create_delivery(
+            source_name=traces_source["name"],
+            destination_arn=traces_destination["arn"]
+        )
+    except Exception as e:
+        click.echo(f"⚠️  Traces delivery to X-Ray failed (non-blocking): {e}")
+        click.echo("   Logs delivery is active. Traces can be configured later.")
     
     # Summary
     result = {
