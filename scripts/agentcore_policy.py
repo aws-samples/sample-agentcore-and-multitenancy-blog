@@ -48,7 +48,7 @@ def get_business_hours_cedar_policy(gateway_arn: str, target_name: str) -> str:
         target_name: Name of the gateway target (e.g., "HealthcareLambda-Premium")
     """
     return f"""permit(
-  principal is AgentCore::OAuthUser,
+  principal is AgentCore::IamEntity,
   action == AgentCore::Action::"{target_name}___patient_context",
   resource == AgentCore::Gateway::"{gateway_arn}"
 )
@@ -76,7 +76,7 @@ def get_clinic_config_permit_policy(gateway_arn: str, target_name: str) -> str:
     Action format: TargetName___ToolName (triple underscore per AgentCore schema)
     """
     policy_with_id = f"""permit(
-  principal is AgentCore::OAuthUser,
+  principal is AgentCore::IamEntity,
   action == AgentCore::Action::"{target_name}___clinic_config",
   resource == AgentCore::Gateway::"{gateway_arn}"
 )
@@ -85,7 +85,7 @@ when {{
 }};"""
 
     policy_without_id = f"""permit(
-  principal is AgentCore::OAuthUser,
+  principal is AgentCore::IamEntity,
   action == AgentCore::Action::"{target_name}___clinic_config",
   resource == AgentCore::Gateway::"{gateway_arn}"
 )
@@ -110,7 +110,7 @@ def get_patient_context_permit_policy(gateway_arn: str, target_name: str) -> lis
     Returns a list of (name_suffix, cedar_statement, description) tuples.
     """
     policy_with_patient = f"""permit(
-  principal is AgentCore::OAuthUser,
+  principal is AgentCore::IamEntity,
   action == AgentCore::Action::"{target_name}___patient_context",
   resource == AgentCore::Gateway::"{gateway_arn}"
 )
@@ -119,7 +119,7 @@ when {{
 }};"""
 
     policy_list_patients = f"""permit(
-  principal is AgentCore::OAuthUser,
+  principal is AgentCore::IamEntity,
   action == AgentCore::Action::"{target_name}___patient_context",
   resource == AgentCore::Gateway::"{gateway_arn}"
 )
