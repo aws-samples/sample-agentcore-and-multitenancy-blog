@@ -58,7 +58,7 @@ except Exception as e:
 
 # Heavy imports deferred to first invocation to stay within 30s runtime init deadline.
 # AgentCore requires app = BedrockAgentCoreApp() + app.run() to complete within 30s.
-# strands, mcp, opentelemetry, boto3, etc. are imported lazily inside invoke().
+# strands, opentelemetry, boto3, etc. are imported lazily inside invoke().
 _lazy_imports_done = False
 TenantContext = None
 agent_task = None

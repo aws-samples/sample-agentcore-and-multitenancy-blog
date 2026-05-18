@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT-0
 
 """
-FHIR MCP Lambda — Proxies FHIR requests to a public HAPI FHIR server
+FHIR Lambda — Proxies FHIR requests to a public HAPI FHIR server
 with JWT-based authentication and tenant-scoped data isolation.
 
 Supports two token types:
@@ -215,7 +215,7 @@ def _validate_agent_token(token: str, header: dict) -> Dict[str, Any]:
     if not decoded.get("clinic_id"):
         raise ValueError("Token missing required 'clinic_id' claim")
 
-    print(f"✅ [fhir_mcp] Agent token validated — sub: {decoded.get('sub')}, scope: {decoded.get('scope', 'N/A')}")
+    print(f"✅ [fhir] Agent token validated — sub: {decoded.get('sub')}, scope: {decoded.get('scope', 'N/A')}")
     return decoded
 
 
@@ -430,13 +430,13 @@ def fhir_search_observations(clinic_id: str, patient_id: str = None, category: s
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    FHIR MCP Lambda handler.
+    FHIR Lambda handler.
 
     Validates JWT, extracts tenant context, routes to FHIR operations.
     Called via API Gateway with Bearer token authentication.
     """
     try:
-        print(f"📋 [fhir_mcp] Received event: {json.dumps(event, indent=2, default=str)}")
+        print(f"📋 [fhir] Received event: {json.dumps(event, indent=2, default=str)}")
 
         # --- Step 1: Extract and validate JWT ---
         auth_header = event.get("headers", {}).get("Authorization", "")
@@ -451,15 +451,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         try:
             claims = validate_jwt(token)
-            print(f"✅ [fhir_mcp] JWT validated — sub: {claims.get('sub', 'unknown')}")
+            print(f"✅ [fhir] JWT validated — sub: {claims.get('sub', 'unknown')}")
         except ValueError as e:
-            print(f"❌ [fhir_mcp] JWT validation failed: {e}")
+            print(f"❌ [fhir] JWT validation failed: {e}")
             return _error_response(401, f"Authentication failed: {e}")
 
         # --- Step 2: Extract tenant context from claims ---
         clinic_id = extract_clinic_id(claims)
         tier = extract_tier(claims)
-        print(f"🏥 [fhir_mcp] Tenant context — clinic: {clinic_id}, tier: {tier}")
+        print(f"🏥 [fhir] Tenant context — clinic: {clinic_id}, tier: {tier}")
 
         # --- Step 3: Parse request body and route to FHIR operation ---
         body = event.get("body", "{}")
@@ -469,7 +469,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         tool_name = body.get("tool", "")
         params = body.get("params", {})
 
-        print(f"🔧 [fhir_mcp] Tool: {tool_name}, Params: {json.dumps(params)}")
+        print(f"🔧 [fhir] Tool: {tool_name}, Params: {json.dumps(params)}")
 
         # Route to appropriate FHIR operation
         if tool_name == "fhir_search_patients":
@@ -509,7 +509,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        print(f"❌ [fhir_mcp] Unhandled error: {e}")
+        print(f"❌ [fhir] Unhandled error: {e}")
         import traceback
         traceback.print_exc()
         return _error_response(500, f"Internal server error: {str(e)}")
