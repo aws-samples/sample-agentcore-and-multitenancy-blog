@@ -18,7 +18,7 @@ openai>=1.82.0
 # Bedrock API key generation (short-term token auto-refresh)
 aws-bedrock-token-generator
 
-# Data validation
+# MCP and data validation
 fastmcp
 pydantic
 
