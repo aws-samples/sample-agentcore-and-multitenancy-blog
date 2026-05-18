@@ -183,7 +183,7 @@ def _mint_fhir_token(
 
 def _call_fhir_api(fhir_api_url: str, token: str, tool_name: str, params: dict) -> dict:
     """
-    Call the FHIR MCP API Gateway with Bearer token auth.
+    Call the FHIR API Gateway with Bearer token auth.
 
     Args:
         fhir_api_url: The FHIR API Gateway endpoint URL
@@ -225,7 +225,7 @@ def create_fhir_tools(fhir_api_url: str, get_token_fn, obo_config: dict = None):
     Create FHIR tool functions with agent-side token translation.
 
     Args:
-        fhir_api_url: The FHIR MCP API Gateway endpoint URL
+        fhir_api_url: The FHIR API Gateway endpoint URL
         get_token_fn: Callable that returns the current user's JWT
         obo_config: Legacy OBO config (ignored — kept for backward compatibility).
             Token translation config is loaded from SSM/env instead:

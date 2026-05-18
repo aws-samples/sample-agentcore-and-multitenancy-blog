@@ -33,7 +33,7 @@ pandas>=2.3.3,<3.0.0
 # Configuration and serialization
 PyYAML>=6.0.3
 
-# MCP and data validation
+# Data validation
 fastmcp
 pydantic
 

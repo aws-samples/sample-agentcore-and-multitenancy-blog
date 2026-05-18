@@ -111,7 +111,7 @@ aws cloudformation delete-stack --stack-name "$API_GATEWAY_STACK_NAME" --region 
 aws cloudformation wait stack-delete-complete --stack-name "$API_GATEWAY_STACK_NAME" --region "$REGION" 2>/dev/null || true
 print_info "API Gateway stack deleted (or did not exist)."
 
-print_step "Deleting FHIR MCP API Gateway stack: HealthcareStackFhirApi..."
+print_step "Deleting FHIR API Gateway stack: HealthcareStackFhirApi..."
 aws cloudformation delete-stack --stack-name "HealthcareStackFhirApi" --region "$REGION" 2>/dev/null || print_warning "FHIR API stack may not exist"
 aws cloudformation wait stack-delete-complete --stack-name "HealthcareStackFhirApi" --region "$REGION" 2>/dev/null || true
 print_info "FHIR API Gateway stack deleted (or did not exist)."
@@ -155,7 +155,7 @@ fi
 print_step "Cleaning up local files..."
 rm -f lambda.zip
 rm -f api_gateway_lambda.zip
-rm -f fhir_mcp_lambda.zip
+rm -f fhir_lambda.zip
 rm -f .bedrock_agentcore.yaml
 rm -f .agentcore.yaml
 rm -f credentials/test_users.json

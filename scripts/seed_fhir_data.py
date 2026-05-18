@@ -6,13 +6,13 @@
 Seed HAPI FHIR server with synthetic patient data tagged by clinic.
 
 Creates Patient and Observation resources on the public HAPI FHIR server
-(https://hapi.fhir.org/baseR4) with clinic-scoped tags so the FHIR MCP
+(https://hapi.fhir.org/baseR4) with clinic-scoped tags so the FHIR
 Lambda can demonstrate tenant isolation.
 
 Each resource is tagged with:
   meta.tag = [{"system": "clinic", "code": "<clinic_id>"}]
 
-This allows the FHIR MCP Lambda to filter by _tag=clinic|<clinic_id>.
+This allows the FHIR Lambda to filter by _tag=clinic|<clinic_id>.
 
 Usage:
     python scripts/seed_fhir_data.py

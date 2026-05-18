@@ -162,9 +162,9 @@ tenant context, without requiring an IdP-mediated OBO exchange.
 │   └── chat.py                    # ChatManager (API Gateway path)
 ├── scripts/                       # Deployment scripts
 ├── prerequisite/                  # CloudFormation templates, Lambda code, sample docs
-│   ├── fhir_api_gateway_template.yaml  # FHIR MCP API Gateway CloudFormation
+│   ├── fhir_api_gateway_template.yaml  # FHIR API Gateway CloudFormation
 │   └── lambda/python/
-│       └── fhir_mcp_lambda.py          # FHIR proxy Lambda with JWT validation
+│       └── fhir_lambda.py               # FHIR proxy Lambda with JWT validation
 ├── test/                          # Test suite
 └── config/                        # Deployment configuration templates
 ```
