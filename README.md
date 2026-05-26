@@ -50,10 +50,8 @@ Once logged in, try these prompts to explore the agent's capabilities:
 | "What are the current medications patient A is taking?" | Searches current medications | Both |
 | "Get me the latest COVID-19 guidance from CDC" | Uses web search to fetch current CDC guidelines | Premium only |
 | "What are the current treatment protocols for Type 2 diabetes?" | Searches medical literature via web grounding | Premium only |
-| "Search for patients named Smith in the EHR" | Queries FHIR Patient resources scoped to your clinic | Premium only |
-| "Show me lab results from the EHR" | Retrieves Observation resources (labs/vitals) from FHIR | Premium only |
 
-> **Note:** Basic tier users only have access to document search and patient context tools. Web search and FHIR EHR queries require a Premium tier account.
+> **Note:** Basic tier users only have access to document search and patient context tools. Web search requires a Premium tier account.
 
 ## Cleanup
 
@@ -103,7 +101,7 @@ One `HealthcareAgent` class serves both tiers. Differences are driven by a `TIER
 | Concern | Basic | Premium |
 |---------|-------|---------|
 | Model | Mistral Ministral 8B | GPT-OSS 120B |
-| Tools | Document search, patient context | + Web search, FHIR EHR |
+| Tools | Document search, patient context | + Web search |
 | Guardrails | Tier-specific (ApplyGuardrail API) | Tier-specific (ApplyGuardrail API) |
 | Access Policy | Business hours (8am–6pm) | 24/7 |
 
@@ -123,27 +121,6 @@ X-Clinic-ID: hospital-a
 X-S3-Prefix: premium-tier/hospital-a/
 ```
 
-### 7. FHIR EHR Integration — Agent-Scoped Credential (Token Translation)
-Premium tier users have access to a FHIR-compliant Electronic Health Record system (HAPI FHIR).
-The agent demonstrates agent-side token translation for secure downstream access:
-
-1. User authenticates via Cognito → receives JWT
-2. Agent receives the JWT via AgentCore Runtime's Inbound JWT Authorizer
-3. Agent decodes the JWT to extract user claims (`sub`, `clinic_id`, `role`)
-4. Agent mints a new short-lived JWT (60s TTL) signed with a KMS key, containing:
-   - Original user identity (`sub`)
-   - Tenant scope (`clinic_id`)
-   - Agent identity (`iss: healthcare-agent`)
-   - Target audience (`aud: fhir-api`)
-   - Restricted scopes (`fhir:read`)
-5. Agent passes the translated token as Bearer to the FHIR API Gateway
-6. FHIR Lambda validates the agent-signed token and extracts `clinic_id` for tenant scoping
-
-This avoids forwarding the raw user JWT end-to-end. The agent acts as a credential
-boundary — minting scoped, short-lived tokens that carry both user identity and
-tenant context, without requiring an IdP-mediated OBO exchange.
-
-
 ## Project Structure
 
 ```
@@ -155,16 +132,13 @@ tenant context, without requiring an IdP-mediated OBO exchange.
 │   ├── context.py                 # TenantContext — ContextVar-based tenant state
 │   ├── memory_hook.py             # Strands MemoryHook for AgentCore Memory
 │   └── tools/
-│       ├── retrieve_clinic_documents.py  # KB retrieval with clinic filtering
-│       └── fhir_tools.py                 # FHIR EHR tools with auth propagation
+│       └── retrieve_clinic_documents.py  # KB retrieval with clinic filtering
 ├── app_modules/                   # Streamlit UI
 │   ├── auth.py                    # Cognito OAuth2 PKCE flow
 │   └── chat.py                    # ChatManager (API Gateway path)
 ├── scripts/                       # Deployment scripts
 ├── prerequisite/                  # CloudFormation templates, Lambda code, sample docs
-│   ├── fhir_api_gateway_template.yaml  # FHIR API Gateway CloudFormation
-│   └── lambda/python/
-│       └── fhir_lambda.py               # FHIR proxy Lambda with JWT validation
+│   └── lambda/python/             # Lambda function code
 ├── test/                          # Test suite
 └── config/                        # Deployment configuration templates
 ```

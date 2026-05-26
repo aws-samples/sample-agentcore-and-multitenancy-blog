@@ -73,19 +73,6 @@ python scripts/agentcore_memory.py delete-all --confirm || print_warning "Failed
 print_step "Deleting Cognito credential provider..."
 python scripts/cognito_credentials_provider.py delete --confirm || print_warning "Failed to delete Cognito credential provider"
 
-print_step "Deleting FHIR OBO credential provider..."
-python scripts/fhir_credential_provider.py delete --confirm || print_warning "Failed to delete FHIR OBO credential provider"
-
-print_step "Scheduling FHIR signing KMS key for deletion..."
-FHIR_KEY_ID=$(aws ssm get-parameter --name /app/healthcare/fhir/signing_key_id --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-if [ -n "$FHIR_KEY_ID" ] && [ "$FHIR_KEY_ID" != "None" ]; then
-    aws kms schedule-key-deletion --key-id "$FHIR_KEY_ID" --pending-window-in-days 7 2>/dev/null || print_warning "Could not schedule KMS key deletion"
-    aws kms delete-alias --alias-name alias/healthcare-fhir-signing 2>/dev/null || true
-    print_info "KMS key $FHIR_KEY_ID scheduled for deletion (7-day waiting period)"
-else
-    print_info "No FHIR signing key found in SSM"
-fi
-
 # ----- 4. Delete AgentCore Policy Engine -----
 print_step "Deleting AgentCore Policy Engine..."
 python scripts/agentcore_policy.py delete --confirm || print_warning "Failed to delete policy engine"
@@ -110,11 +97,6 @@ print_step "Deleting API Gateway stack: $API_GATEWAY_STACK_NAME..."
 aws cloudformation delete-stack --stack-name "$API_GATEWAY_STACK_NAME" --region "$REGION" 2>/dev/null || print_warning "API Gateway stack may not exist"
 aws cloudformation wait stack-delete-complete --stack-name "$API_GATEWAY_STACK_NAME" --region "$REGION" 2>/dev/null || true
 print_info "API Gateway stack deleted (or did not exist)."
-
-print_step "Deleting FHIR API Gateway stack: HealthcareStackFhirApi..."
-aws cloudformation delete-stack --stack-name "HealthcareStackFhirApi" --region "$REGION" 2>/dev/null || print_warning "FHIR API stack may not exist"
-aws cloudformation wait stack-delete-complete --stack-name "HealthcareStackFhirApi" --region "$REGION" 2>/dev/null || true
-print_info "FHIR API Gateway stack deleted (or did not exist)."
 
 print_step "Deleting Infra stack: $INFRA_STACK_NAME..."
 aws cloudformation delete-stack --stack-name "$INFRA_STACK_NAME" --region "$REGION"
@@ -155,7 +137,6 @@ fi
 print_step "Cleaning up local files..."
 rm -f lambda.zip
 rm -f api_gateway_lambda.zip
-rm -f fhir_lambda.zip
 rm -f .bedrock_agentcore.yaml
 rm -f .agentcore.yaml
 rm -f credentials/test_users.json
