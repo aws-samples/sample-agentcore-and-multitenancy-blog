@@ -101,7 +101,19 @@ def create_gateway(gateway_name: str, api_spec: List, tier: str = "basic") -> di
             name=gateway_name,
             roleArn=execution_role_arn,
             protocolType="MCP",
-            authorizerType="AWS_IAM",
+            authorizerType="CUSTOM_JWT",
+            authorizerConfiguration={
+                "customJWTAuthorizer": {
+                    "discoveryUrl": get_ssm_parameter(
+                        "/app/healthcare/agentcore/cognito_discovery_url"
+                    ),
+                    "allowedAudience": [
+                        get_ssm_parameter(
+                            "/app/healthcare/agentcore/web_client_id"
+                        )
+                    ],
+                }
+            },
             description=f"Healthcare Clinical Document Processing Gateway - {tier.title()} Tier",
         )
 

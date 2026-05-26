@@ -184,15 +184,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:bedrock-mantle:${AWS::Region}:${AWS::AccountId}:project/*
                   - "*"
-              - Sid: FhirTokenSigning
-                Effect: Allow
-                Action:
-                  - kms:GenerateMac
-                Resource: "*"
-                Condition:
-                  StringEquals:
-                    kms:MacAlgorithm: HMAC_SHA_256
-
   GatewayAgentCoreRole:
     Type: AWS::IAM::Role
     Properties:
