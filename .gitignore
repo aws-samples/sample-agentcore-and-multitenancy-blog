@@ -10,8 +10,10 @@
 .bedrock_agentcore.yaml
 .bedrock_agentcore/
 
-# Kiro IDE
-.kiro/
+# Kiro IDE (except specs which are shared for review)
+.kiro/*
+!.kiro/specs/
+!.kiro/specs/**
 
 # Credentials directory (contains test user passwords)
 credentials/
