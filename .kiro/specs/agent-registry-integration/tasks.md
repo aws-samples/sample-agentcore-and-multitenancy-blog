@@ -6,8 +6,8 @@ This plan implements dynamic MCP gateway endpoint discovery from the AWS Agent R
 
 ## Tasks
 
-- [ ] 1. Create DiscoveryClient module with core resolution logic
-  - [ ] 1.1 Create `agent/discovery_client.py` with DiscoveryClient class, class-level cache, `__init__`, `resolve`, and `clear_cache` methods
+- [x] 1. Create DiscoveryClient module with core resolution logic
+  - [x] 1.1 Create `agent/discovery_client.py` with DiscoveryClient class, class-level cache, `__init__`, `resolve`, and `clear_cache` methods
     - Implement `__init__` accepting optional `region` parameter (defaults to `AWS_REGION` env var or `"us-east-1"`)
     - Implement `resolve(tier)` that checks TIER_CONFIG validity, checks class-level cache, queries Agent Registry via `boto3` `bedrock_agentcore` client's `list_registry_records`, filters/selects records by tier and most recent `updated_at`, caches successful registry results, and falls back to SSM on failure
     - Implement `clear_cache()` classmethod to reset the class-level `_cache` dict
@@ -60,11 +60,11 @@ This plan implements dynamic MCP gateway endpoint discovery from the AWS Agent R
     - Assert subsequent `resolve()` call re-attempts the Agent Registry lookup
     - **Validates: Requirements 7.3, 7.4, 7.5**
 
-- [ ] 2. Checkpoint - Verify DiscoveryClient module
+- [x] 2. Checkpoint - Verify DiscoveryClient module
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. Create RegistryPublisher deployment script
-  - [ ] 3.1 Create `scripts/registry_publisher.py` with `create_or_get_registry`, `publish_record`, and `main` functions
+- [x] 3. Create RegistryPublisher deployment script
+  - [x] 3.1 Create `scripts/registry_publisher.py` with `create_or_get_registry`, `publish_record`, and `main` functions
     - Implement `create_or_get_registry(client, registry_name)`: attempt `create_registry` with name `"healthcare-mcp-registry"`; if `ConflictException`, list registries and find existing ID; poll for READY state up to 120 seconds; exit non-zero with error log if creation fails or timeout exceeded
     - Implement `publish_record(client, registry_id, tier, gateway_url)`: create a registry record with `descriptorType="MCP"` and `inlineContent` JSON containing `tier`, `endpoint_url`, and `updated_at` (ISO 8601 UTC); if `ConflictException`, update existing record; exit non-zero with error log if publishing fails
     - Implement `main()`: read gateway URLs from SSM at `/app/healthcare/agentcore/{tier}_gateway_url` for both basic and premium; call `create_or_get_registry`; call `publish_record` for each tier; store registry ID as SSM parameter at `/app/healthcare/agentcore/registry_id`
@@ -81,8 +81,8 @@ This plan implements dynamic MCP gateway endpoint discovery from the AWS Agent R
     - Test SSM read failure for gateway URL: exits non-zero with error log
     - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.7, 5.8_
 
-- [ ] 4. Integrate DiscoveryClient into HealthcareAgent initialization
-  - [ ] 4.1 Modify `agent/agent.py` to use DiscoveryClient for gateway URL resolution
+- [x] 4. Integrate DiscoveryClient into HealthcareAgent initialization
+  - [x] 4.1 Modify `agent/agent.py` to use DiscoveryClient for gateway URL resolution
     - Replace `gateway_url = get_ssm_parameter(config["gateway_url_ssm"])` with `DiscoveryClient().resolve(tier)`
     - Add import: `from .discovery_client import DiscoveryClient`
     - Ensure the resolved URL is passed to `MCPClient` with the same bearer token and headers (X-Tier, X-Clinic-ID, X-S3-Prefix) as before
@@ -95,14 +95,14 @@ This plan implements dynamic MCP gateway endpoint discovery from the AWS Agent R
     - Test that headers and bearer token are still correctly passed to MCPClient
     - _Requirements: 6.1, 6.2, 6.5_
 
-- [ ] 5. Update deploy.sh to invoke RegistryPublisher
-  - [ ] 5.1 Add registry publishing step to `deploy.sh` after gateway creation and before agent configuration
+- [x] 5. Update deploy.sh to invoke RegistryPublisher
+  - [x] 5.1 Add registry publishing step to `deploy.sh` after gateway creation and before agent configuration
     - Add `print_step "Publishing MCP gateway records to Agent Registry..."` followed by `python scripts/registry_publisher.py`
     - Place the new step after the `agentcore_gateway.py create-all` step and before the `agentcore configure` steps
     - Ensure the script exits on failure (existing `set -e` handles this)
     - _Requirements: 5.1_
 
-- [ ] 6. Final checkpoint - Ensure all tests pass
+- [x] 6. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
