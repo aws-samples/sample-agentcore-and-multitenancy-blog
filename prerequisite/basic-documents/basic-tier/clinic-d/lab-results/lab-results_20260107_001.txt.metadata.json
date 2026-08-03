@@ -1,7 +1,22 @@
 {
   "metadataAttributes": {
-    "clinic_id": "clinic-d",
-    "tier": "basic-tier",
-    "document_type": "lab-results"
+    "clinic_id": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "clinic-d"
+      }
+    },
+    "tier": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "basic-tier"
+      }
+    },
+    "document_type": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "lab-results"
+      }
+    }
   }
 }

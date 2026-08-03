@@ -196,6 +196,15 @@ Resources:
                 - bedrock-agentcore.amazonaws.com
             Action:
               - sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                # The gateway service assumes this role from multiple AgentCore
+                # resource contexts: the gateway itself (target invocation) and
+                # the policy engine (validation during attach). Scope to all
+                # AgentCore resources in this account rather than just gateway/*.
+                aws:SourceArn: !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*
       Policies:
         - PolicyName: BedrockAgentPolicy
           PolicyDocument:
@@ -207,6 +216,18 @@ Resources:
                   - lambda:InvokeFunction
                 Resource:
                   - !GetAtt HealthCareAILambda.Arn
+              - Sid: ValidateKnowledgeBase
+                Effect: Allow
+                Action:
+                  - bedrock:GetKnowledgeBase
+                Resource:
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*
+              - Sid: RetrieveFromKnowledgeBase
+                Effect: Allow
+                Action:
+                  - bedrock:Retrieve
+                Resource:
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*
               - Sid: PolicyEngineAccess
                 Effect: Allow
                 Action:

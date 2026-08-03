@@ -1,7 +1,22 @@
 {
   "metadataAttributes": {
-    "clinic_id": "hospital-b",
-    "tier": "premium-tier",
-    "document_type": "imaging-studies"
+    "clinic_id": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "hospital-b"
+      }
+    },
+    "tier": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "premium-tier"
+      }
+    },
+    "document_type": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "imaging-studies"
+      }
+    }
   }
 }
