@@ -8,6 +8,8 @@ Registry Publisher: Creates the Agent Registry and publishes MCP gateway records
 This script is invoked by deploy.sh after gateways are created and before agents
 are configured. It ensures the Agent Registry exists, publishes records for both
 basic and premium tiers, and stores the registry ID in SSM Parameter Store.
+
+Uses the agent-registry-control client (new namespace as of Aug 2026).
 """
 
 import json
@@ -20,7 +22,7 @@ from datetime import datetime, timezone
 import boto3
 from botocore.exceptions import ClientError
 
-from utils import get_aws_region, get_ssm_parameter, put_ssm_parameter
+from utils import get_aws_region, get_ssm_parameter, put_ssm_parameter, REGISTRY_ID_SSM_PATH
 
 # Configure logging
 logging.basicConfig(
@@ -32,7 +34,6 @@ logger = logging.getLogger(__name__)
 REGION = get_aws_region()
 
 REGISTRY_NAME = "healthcare-mcp-registry"
-REGISTRY_ID_SSM_PATH = "/app/healthcare/agentcore/registry_id"
 
 TIER_CONFIGS = [
     {
@@ -50,17 +51,14 @@ TIER_CONFIGS = [
 ]
 
 
+def _registry_id_from_arn(arn: str) -> str:
+    """Extract the registry ID from an ARN like arn:aws:agent-registry:region:account:registry/ID."""
+    return arn.rsplit("/", 1)[-1]
+
+
 def create_or_get_registry(client, registry_name: str) -> str:
     """
     Create the Agent Registry if it doesn't exist, wait for READY state.
-
-    Attempts to create a new registry with the given name. If a ConflictException
-    is raised (registry already exists), lists registries and finds the existing ID.
-    Polls the registry status up to 120 seconds waiting for it to reach READY state.
-
-    Args:
-        client: boto3 client for bedrock-agent-core-control.
-        registry_name: Name for the registry resource.
 
     Returns:
         The registry ID.
@@ -72,8 +70,9 @@ def create_or_get_registry(client, registry_name: str) -> str:
 
     try:
         logger.info(f"Creating registry '{registry_name}'...")
-        response = client.create_registry(registryName=registry_name)
-        registry_id = response["registryId"]
+        response = client.create_registry(name=registry_name)
+        registry_arn = response["registryArn"]
+        registry_id = _registry_id_from_arn(registry_arn)
         logger.info(f"Registry creation initiated. ID: {registry_id}")
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code", "")
@@ -104,20 +103,12 @@ def create_or_get_registry(client, registry_name: str) -> str:
 
 
 def _find_existing_registry(client, registry_name: str) -> str | None:
-    """List registries and find the one matching the given name.
-
-    Args:
-        client: boto3 client for bedrock-agent-core-control.
-        registry_name: Name of the registry to find.
-
-    Returns:
-        The registry ID if found, None otherwise.
-    """
+    """List registries and find the one matching the given name."""
     try:
         response = client.list_registries()
         registries = response.get("registries", [])
         for registry in registries:
-            if registry.get("registryName") == registry_name:
+            if registry.get("name") == registry_name:
                 return registry.get("registryId")
     except Exception as e:
         logger.error(f"Failed to list registries: {e}")
@@ -125,16 +116,7 @@ def _find_existing_registry(client, registry_name: str) -> str | None:
 
 
 def _wait_for_registry_ready(client, registry_id: str, max_wait_seconds: int = 120) -> bool:
-    """Poll registry status until it reaches READY state.
-
-    Args:
-        client: boto3 client for bedrock-agent-core-control.
-        registry_id: The registry ID to check.
-        max_wait_seconds: Maximum time to wait in seconds.
-
-    Returns:
-        True if registry reached READY state, False if timeout or error.
-    """
+    """Poll registry status until it reaches READY state."""
     logger.info(f"Waiting for registry '{registry_id}' to reach READY state...")
     start_time = time.time()
 
@@ -146,11 +128,10 @@ def _wait_for_registry_ready(client, registry_id: str, max_wait_seconds: int = 1
             if status == "READY":
                 logger.info(f"Registry '{registry_id}' is READY.")
                 return True
-            elif status in ("FAILED", "DELETING"):
+            elif status in ("CREATE_FAILED", "DELETE_FAILED", "DELETING"):
                 logger.error(f"Registry '{registry_id}' entered '{status}' state.")
                 return False
             else:
-                # Still creating or updating, wait and retry
                 time.sleep(5)
         except Exception as e:
             logger.error(f"Error checking registry status: {e}")
@@ -159,37 +140,42 @@ def _wait_for_registry_ready(client, registry_id: str, max_wait_seconds: int = 1
     return False
 
 
+def _find_existing_record(client, registry_id: str, record_name: str) -> str | None:
+    """Find an existing record by name and return its recordId."""
+    try:
+        response = client.list_registry_records(
+            registryId=registry_id,
+            filters=[{"name": "name", "values": [record_name]}],
+        )
+        records = response.get("registryRecords", [])
+        for record in records:
+            if record.get("name") == record_name:
+                return record.get("recordId")
+    except Exception as e:
+        logger.warning(f"Failed to search for existing record '{record_name}': {e}")
+    return None
+
+
 def publish_record(client, registry_id: str, tier: str, gateway_url: str,
                    record_name: str, description: str) -> None:
     """
     Publish or update a registry record for the given tier.
 
-    Creates a registry record with descriptorType="MCP" and inlineContent JSON
-    containing tier, endpoint_url, and updated_at (ISO 8601 UTC). If the record
-    already exists (ConflictException), updates the existing record instead.
-
-    Args:
-        client: boto3 client for bedrock-agent-core-control.
-        registry_id: The Agent Registry ID.
-        tier: The tier identifier ("basic" or "premium").
-        gateway_url: The MCP gateway HTTPS URL.
-        record_name: The name for the registry record.
-        description: The description for the registry record.
+    Uses the new agent-registry schema: recordType="MCP", descriptors.mcpServer.data
+    contains a JSON string with tier, endpoint_url, and updated_at.
 
     Raises:
         SystemExit: If record publishing fails.
     """
-    inline_content = json.dumps({
+    record_data = json.dumps({
         "tier": tier,
         "endpoint_url": gateway_url,
         "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     })
 
     descriptors = {
-        "mcp": {
-            "server": {
-                "inlineContent": inline_content,
-            }
+        "custom": {
+            "data": record_data,
         }
     }
 
@@ -197,25 +183,28 @@ def publish_record(client, registry_id: str, tier: str, gateway_url: str,
         logger.info(f"Publishing registry record '{record_name}' for tier '{tier}'...")
         client.create_registry_record(
             registryId=registry_id,
-            recordName=record_name,
+            name=record_name,
             description=description,
-            descriptorType="MCP",
+            recordType="CUSTOM",
             descriptors=descriptors,
         )
         logger.info(f"Successfully published record '{record_name}'.")
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code", "")
         if error_code == "ConflictException":
-            logger.info(
-                f"Record '{record_name}' already exists. Updating..."
-            )
+            logger.info(f"Record '{record_name}' already exists. Updating...")
             try:
+                record_id = _find_existing_record(client, registry_id, record_name)
+                if not record_id:
+                    logger.error(f"Could not find existing record '{record_name}' to update.")
+                    sys.exit(1)
                 client.update_registry_record(
                     registryId=registry_id,
-                    recordName=record_name,
-                    description=description,
-                    descriptorType="MCP",
-                    descriptors=descriptors,
+                    recordId=record_id,
+                    name=record_name,
+                    description={"optionalValue": description},
+                    recordType="CUSTOM",
+                    descriptors={"optionalValue": {"custom": {"optionalValue": {"data": {"optionalValue": record_data}}}}},
                 )
                 logger.info(f"Successfully updated record '{record_name}'.")
             except Exception as update_error:
@@ -224,27 +213,56 @@ def publish_record(client, registry_id: str, tier: str, gateway_url: str,
                 )
                 sys.exit(1)
         else:
-            logger.error(
-                f"Failed to publish registry record for tier '{tier}': {e}"
-            )
+            logger.error(f"Failed to publish registry record for tier '{tier}': {e}")
             sys.exit(1)
     except Exception as e:
-        logger.error(
-            f"Failed to publish registry record for tier '{tier}': {e}"
-        )
+        logger.error(f"Failed to publish registry record for tier '{tier}': {e}")
         sys.exit(1)
 
 
-def main():
-    """CLI entrypoint: create registry and publish both tier records.
+def _submit_records_for_approval(client, registry_id: str) -> None:
+    """Submit all DRAFT records for approval (auto-approval will approve them).
 
-    Reads gateway URLs from SSM Parameter Store, creates or finds the Agent Registry,
-    publishes records for basic and premium tiers, and stores the registry ID in SSM.
+    Waits briefly for records to transition from CREATING to DRAFT.
     """
+    import time
+    # Wait for records to finish creating
+    time.sleep(5)
+
+    try:
+        response = client.list_registry_records(registryId=registry_id)
+        records = response.get("registryRecords", [])
+        for record in records:
+            if record.get("status") == "DRAFT":
+                record_id = record.get("recordId")
+                record_name = record.get("name", record_id)
+                try:
+                    client.submit_registry_record_for_approval(
+                        registryId=registry_id, recordId=record_id
+                    )
+                    logger.info(f"Submitted record '{record_name}' for approval.")
+                except ClientError as e:
+                    logger.warning(f"Could not submit record '{record_name}' for approval: {e}")
+            elif record.get("status") == "CREATING":
+                logger.info(f"Record '{record.get('name')}' still creating, waiting...")
+                time.sleep(5)
+                # Retry this record
+                try:
+                    client.submit_registry_record_for_approval(
+                        registryId=registry_id, recordId=record.get("recordId")
+                    )
+                    logger.info(f"Submitted record '{record.get('name')}' for approval.")
+                except ClientError as e:
+                    logger.warning(f"Could not submit record '{record.get('name')}' for approval: {e}")
+    except Exception as e:
+        logger.warning(f"Could not submit records for approval: {e}")
+
+
+def main():
+    """CLI entrypoint: create registry and publish both tier records."""
     logger.info("Starting Agent Registry publishing...")
 
-    # Create the bedrock-agent-core-control client
-    client = boto3.client("bedrock-agent-core-control", region_name=REGION)
+    client = boto3.client("agent-registry-control", region_name=REGION)
 
     # Read gateway URLs from SSM for each tier
     tier_urls = {}
@@ -265,6 +283,19 @@ def main():
     # Create or get the Agent Registry
     registry_id = create_or_get_registry(client, REGISTRY_NAME)
 
+    # Ensure auto-approval is enabled so records become discoverable immediately
+    try:
+        client.update_registry(
+            registryId=registry_id,
+            name=REGISTRY_NAME,
+            approvalConfiguration={"optionalValue": {"autoApprovalRules": ["APPROVE_ALL"]}},
+        )
+        logger.info("Registry auto-approval enabled.")
+        # Wait for registry to return to READY after update
+        _wait_for_registry_ready(client, registry_id, max_wait_seconds=120)
+    except ClientError as e:
+        logger.warning(f"Could not set auto-approval (may already be set): {e}")
+
     # Publish records for each tier
     for tier_config in TIER_CONFIGS:
         tier = tier_config["tier"]
@@ -277,6 +308,9 @@ def main():
             record_name=tier_config["record_name"],
             description=tier_config["description"],
         )
+
+    # Submit records for approval (auto-approval will approve them immediately)
+    _submit_records_for_approval(client, registry_id)
 
     # Store registry ID as SSM parameter
     try:

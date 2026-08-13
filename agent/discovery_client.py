@@ -7,6 +7,8 @@ Discovery client for resolving MCP gateway endpoints from the AWS Agent Registry
 The DiscoveryClient queries the Agent Registry for records matching a given tier,
 caches successful registry lookups for process lifetime, and falls back to SSM
 Parameter Store when the registry is unavailable.
+
+Uses the agent-registry data plane client (new namespace as of Aug 2026).
 """
 
 import json
@@ -24,18 +26,12 @@ from botocore.exceptions import (
     CredentialRetrievalError,
 )
 
-from .utils import get_ssm_parameter
+from .utils import get_ssm_parameter, REGISTRY_ID_SSM_PATH
 
 logger = logging.getLogger(__name__)
 
-
-def _get_tier_config():
-    """Late import of TIER_CONFIG to avoid circular imports with agent.py."""
-    from .agent import TIER_CONFIG
-    return TIER_CONFIG
-
-# SSM path where the Agent Registry ID is stored
-REGISTRY_ID_SSM_PATH = "/app/healthcare/agentcore/registry_id"
+# Valid tier identifiers for registry record filtering
+VALID_TIERS = ("basic", "premium")
 
 
 class DiscoveryClient:
@@ -46,6 +42,8 @@ class DiscoveryClient:
     """
 
     _cache: dict = {}
+    _client = None
+    _client_region: str | None = None
 
     def __init__(self, region: str | None = None):
         """
@@ -53,34 +51,38 @@ class DiscoveryClient:
             region: AWS region. Defaults to AWS_REGION env var or "us-east-1".
         """
         self._region = region or os.environ.get("AWS_REGION", "us-east-1")
-        self._client = boto3.client(
-            "bedrock-agent-core-control",
-            region_name=self._region,
-            config=Config(
-                read_timeout=5,
-                connect_timeout=5,
-            ),
-        )
 
-    def resolve(self, tier: str) -> str:
+        # Reuse a class-level boto3 client if region matches
+        if DiscoveryClient._client is None or DiscoveryClient._client_region != self._region:
+            DiscoveryClient._client = boto3.client(
+                "agent-registry",
+                region_name=self._region,
+                config=Config(
+                    read_timeout=5,
+                    connect_timeout=5,
+                ),
+            )
+            DiscoveryClient._client_region = self._region
+
+    def resolve(self, tier: str, fallback_ssm_path: str) -> str:
         """
         Resolve the MCP gateway URL for the given tier.
 
         Args:
-            tier: One of the tiers defined in TIER_CONFIG ("basic" or "premium").
+            tier: Service tier identifier ("basic" or "premium").
+            fallback_ssm_path: SSM parameter path for the gateway URL, used as
+                fallback when the registry is unavailable.
 
         Returns:
             A fully-qualified HTTPS URL string.
 
         Raises:
-            ValueError: If tier is not in TIER_CONFIG.
+            ValueError: If tier is not a valid tier identifier.
             RuntimeError: If both registry and SSM lookups fail.
         """
-        # Validate tier immediately without making API calls
-        tier_config = _get_tier_config()
-        if tier not in tier_config:
+        if tier not in VALID_TIERS:
             raise ValueError(
-                f"Invalid tier '{tier}'. Must be one of: {list(tier_config.keys())}"
+                f"Invalid tier '{tier}'. Must be one of: {list(VALID_TIERS)}"
             )
 
         # Check class-level cache
@@ -92,60 +94,52 @@ class DiscoveryClient:
         try:
             url = self._query_registry(tier)
             if url:
-                # Cache successful registry result
                 DiscoveryClient._cache[tier] = url
                 return url
-            # No matching records found — treat as registry failure for fallback
             registry_failure_reason = f"No matching registry records found for tier '{tier}'"
         except (ReadTimeoutError, ConnectTimeoutError) as e:
             registry_failure_reason = f"Registry timeout: {e}"
             logger.warning(
                 f"Agent Registry timeout for tier '{tier}': {e}. "
-                f"Falling back to SSM parameter: {tier_config[tier]['gateway_url_ssm']}"
+                f"Falling back to SSM parameter: {fallback_ssm_path}"
             )
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             if error_code in ("AccessDeniedException", "AccessDenied"):
-                # Log role ARN for access denied
-                role_arn = self._get_role_arn()
-                registry_failure_reason = (
-                    f"AccessDenied: Role '{role_arn}' lacks permission to query the Agent Registry"
-                )
+                registry_failure_reason = f"AccessDenied: {e}"
                 logger.error(
-                    f"Agent Registry access denied for tier '{tier}': "
-                    f"Role '{role_arn}' lacks permission. "
-                    f"Falling back to SSM parameter: {tier_config[tier]['gateway_url_ssm']}"
+                    f"Agent Registry access denied for tier '{tier}': {e}. "
+                    f"Falling back to SSM parameter: {fallback_ssm_path}"
                 )
             else:
                 registry_failure_reason = f"Registry ClientError ({error_code}): {e}"
                 logger.warning(
                     f"Agent Registry error for tier '{tier}': {e}. "
-                    f"Falling back to SSM parameter: {tier_config[tier]['gateway_url_ssm']}"
+                    f"Falling back to SSM parameter: {fallback_ssm_path}"
                 )
         except (NoCredentialsError, CredentialRetrievalError) as e:
             registry_failure_reason = f"Credential failure: {e}"
             logger.error(
                 f"Agent Registry credential failure for tier '{tier}': {e}. "
-                f"Falling back to SSM parameter: {tier_config[tier]['gateway_url_ssm']}"
+                f"Falling back to SSM parameter: {fallback_ssm_path}"
             )
         except Exception as e:
             registry_failure_reason = f"Unexpected registry error: {e}"
             logger.warning(
                 f"Agent Registry unexpected error for tier '{tier}': {e}. "
-                f"Falling back to SSM parameter: {tier_config[tier]['gateway_url_ssm']}"
+                f"Falling back to SSM parameter: {fallback_ssm_path}"
             )
 
-        # If we reach here, log the fallback warning (if not already logged above with specific detail)
+        # If we reach here, log the fallback warning (if not already logged above)
         if registry_failure_reason and "Falling back" not in (registry_failure_reason or ""):
             logger.warning(
                 f"Agent Registry lookup failed for tier '{tier}': {registry_failure_reason}. "
-                f"Falling back to SSM parameter: {tier_config[tier]['gateway_url_ssm']}"
+                f"Falling back to SSM parameter: {fallback_ssm_path}"
             )
 
         # Fallback to SSM
-        ssm_path = tier_config[tier]["gateway_url_ssm"]
         try:
-            url = get_ssm_parameter(ssm_path)
+            url = get_ssm_parameter(fallback_ssm_path)
             # Do NOT cache SSM fallback results
             return url
         except Exception as ssm_error:
@@ -158,19 +152,45 @@ class DiscoveryClient:
     def _query_registry(self, tier: str) -> str | None:
         """Query the Agent Registry for records matching the given tier.
 
+        Uses the agent-registry data plane: list records, then batch_get for
+        full details including descriptors.
+
         Returns:
             The endpoint URL from the best matching record, or None if no valid matches.
-        """
-        # Read registry ID from SSM
-        registry_id = get_ssm_parameter(REGISTRY_ID_SSM_PATH)
 
-        # Query registry records
-        response = self._client.list_registry_records(registryId=registry_id)
-        records = response.get("registryRecords", [])
+        Raises:
+            RuntimeError: If the registry ID cannot be read from SSM.
+        """
+        try:
+            registry_id = get_ssm_parameter(REGISTRY_ID_SSM_PATH)
+        except Exception as e:
+            raise RuntimeError(
+                f"Registry ID not found in SSM at '{REGISTRY_ID_SSM_PATH}'. "
+                f"Has the registry been published via registry_publisher.py? Error: {e}"
+            )
+
+        # List record summaries
+        response = DiscoveryClient._client.list_discoverable_registry_records(
+            registryId=registry_id
+        )
+        record_summaries = response.get("registryRecords", [])
+
+        if not record_summaries:
+            return None
+
+        # Get full record details (with descriptors) via batch_get
+        record_ids = [r["recordId"] for r in record_summaries if "recordId" in r]
+        if not record_ids:
+            return None
+
+        batch_response = DiscoveryClient._client.batch_get_discoverable_registry_record(
+            entries=[{"registryId": registry_id, "recordIds": record_ids}]
+        )
+        full_records = batch_response.get("registryRecords", [])
 
         # Parse and filter records
         valid_records = []
-        for record in records:
+        for record in full_records:
             parsed = self._parse_record(record)
             if parsed is None:
                 continue
@@ -181,20 +201,17 @@ class DiscoveryClient:
         if not valid_records:
             return None
 
-        # Select the record with the most recent updated_at
-        # If tied, select first in list (stable sort preserves original order)
-        best_url = max(valid_records, key=lambda r: r[1])[0]
-
-        # Handle ties: find the max timestamp, then pick the first record with that timestamp
+        # Select the first record with the most recent updated_at (tie-break: list order)
         max_timestamp = max(r[1] for r in valid_records)
         for endpoint_url, updated_at in valid_records:
             if updated_at == max_timestamp:
                 return endpoint_url
 
-        return best_url
-
     def _parse_record(self, record: dict) -> tuple | None:
         """Parse a registry record and validate its fields.
+
+        Expects the agent-registry schema where descriptor data lives at
+        descriptors.custom.data (JSON string).
 
         Returns:
             A tuple of (tier, endpoint_url, updated_at) if valid, or None if invalid.
@@ -202,22 +219,20 @@ class DiscoveryClient:
         record_id = record.get("recordId", record.get("name", "unknown"))
 
         try:
-            # Navigate to inlineContent
             descriptors = record.get("descriptors", {})
-            mcp = descriptors.get("mcp", {})
-            server = mcp.get("server", {})
-            inline_content_str = server.get("inlineContent", "")
+            custom = descriptors.get("custom", {})
+            data_str = custom.get("data", "")
 
-            if not inline_content_str:
+            if not data_str:
                 logger.warning(
-                    f"Registry record '{record_id}' has no inlineContent, skipping."
+                    f"Registry record '{record_id}' has no custom.data, skipping."
                 )
                 return None
 
-            content = json.loads(inline_content_str)
-        except (json.JSONDecodeError, TypeError) as e:
+            content = json.loads(data_str)
+        except (json.JSONDecodeError, TypeError, AttributeError) as e:
             logger.warning(
-                f"Registry record '{record_id}' has invalid inlineContent JSON: {e}, skipping."
+                f"Registry record '{record_id}' has invalid custom.data JSON: {e}, skipping."
             )
             return None
 
@@ -244,7 +259,7 @@ class DiscoveryClient:
             return None
 
         # Validate tier value
-        if tier not in ("basic", "premium"):
+        if tier not in VALID_TIERS:
             logger.warning(
                 f"Registry record '{record_id}' has invalid tier '{tier}', skipping."
             )
@@ -272,15 +287,6 @@ class DiscoveryClient:
             return None
 
         return (tier, endpoint_url, updated_at)
-
-    def _get_role_arn(self) -> str:
-        """Retrieve the current IAM role ARN for error logging."""
-        try:
-            sts = boto3.client("sts", region_name=self._region)
-            identity = sts.get_caller_identity()
-            return identity.get("Arn", "unknown")
-        except Exception:
-            return "unknown"
 
     @classmethod
     def clear_cache(cls) -> None:

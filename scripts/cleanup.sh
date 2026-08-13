@@ -77,6 +77,29 @@ python scripts/cognito_credentials_provider.py delete --confirm || print_warning
 print_step "Deleting AgentCore Policy Engine..."
 python scripts/agentcore_policy.py delete --confirm || print_warning "Failed to delete policy engine"
 
+# ----- 4b. Delete Agent Registry -----
+print_step "Deleting Agent Registry..."
+python -c "
+import boto3, sys
+ssm = boto3.client('ssm')
+try:
+    registry_id = ssm.get_parameter(Name='/app/healthcare/agentcore/registry_id')['Parameter']['Value']
+except:
+    print('No Agent Registry found (SSM parameter missing).')
+    sys.exit(0)
+
+client = boto3.client('agent-registry-control')
+try:
+    records = client.list_registry_records(registryId=registry_id).get('registryRecords', [])
+    for r in records:
+        print(f\"  Deleting record: {r['name']}\")
+        client.delete_registry_record(registryId=registry_id, recordId=r['recordId'])
+    client.delete_registry(registryId=registry_id)
+    print(f'Agent Registry {registry_id} deleted.')
+except Exception as e:
+    print(f'Warning: Could not delete Agent Registry: {e}')
+" || print_warning "Agent Registry cleanup had issues"
+
 # ----- 5. Delete AgentCore Gateways -----
 print_step "Deleting AgentCore Gateways (basic and premium)..."
 python scripts/agentcore_gateway.py delete-all --confirm || print_warning "Failed to delete gateways"

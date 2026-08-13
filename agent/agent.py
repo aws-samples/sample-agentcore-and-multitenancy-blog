@@ -347,7 +347,7 @@ class HealthcareAgent:
         # The user's JWT (validated by the Runtime's Inbound JWT Authorizer) is
         # forwarded to the Gateway, which validates it against the same Cognito pool.
         discovery = DiscoveryClient()
-        gateway_url = discovery.resolve(tier)
+        gateway_url = discovery.resolve(tier, config["gateway_url_ssm"])
         logger.info(f"Gateway MCP URL: {gateway_url}")
 
         try:
