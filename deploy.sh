@@ -105,6 +105,9 @@ print_warning "Please ensure all resource names are prefixed with 'healthcare'"
 print_step "Creating AgentCore Gateways (Basic and Premium)..."
 python scripts/agentcore_gateway.py create-all
 
+print_step "Publishing MCP gateway records to Agent Registry..."
+python scripts/registry_publisher.py
+
 print_step "Creating AgentCore Policy Engine (Business Hours Enforcement)..."
 python scripts/agentcore_policy.py create
 

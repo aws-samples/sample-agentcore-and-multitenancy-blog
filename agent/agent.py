@@ -36,6 +36,7 @@ from html import unescape
 from typing import List, Optional
 
 from .utils import get_ssm_parameter
+from .discovery_client import DiscoveryClient
 from .memory_hook import MemoryHook
 from .guardrail_hook import GuardrailHook, GuardrailInterventionError
 from .tools.retrieve_clinic_documents import retrieve_clinic_documents
@@ -345,8 +346,8 @@ class HealthcareAgent:
         # --- Gateway client (MCP) with Bearer token auth (CUSTOM_JWT authorizer) ---
         # The user's JWT (validated by the Runtime's Inbound JWT Authorizer) is
         # forwarded to the Gateway, which validates it against the same Cognito pool.
-        gateway_url = get_ssm_parameter(config["gateway_url_ssm"])
-        region = os.environ.get("AWS_REGION", "us-east-1")
+        discovery = DiscoveryClient()
+        gateway_url = discovery.resolve(tier, config["gateway_url_ssm"])
         logger.info(f"Gateway MCP URL: {gateway_url}")
 
         try:
