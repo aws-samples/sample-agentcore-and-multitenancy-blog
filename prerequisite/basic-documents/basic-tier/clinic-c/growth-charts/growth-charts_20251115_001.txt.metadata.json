@@ -1,7 +1,22 @@
 {
   "metadataAttributes": {
-    "clinic_id": "clinic-c",
-    "tier": "basic-tier",
-    "document_type": "growth-charts"
+    "clinic_id": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "clinic-c"
+      }
+    },
+    "tier": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "basic-tier"
+      }
+    },
+    "document_type": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "growth-charts"
+      }
+    }
   }
 }

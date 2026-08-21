@@ -214,13 +214,15 @@ def save_documents_locally(documents, base_path):
         with open(doc_path, 'w') as f:
             f.write(doc['content'])
         
-        # Create Bedrock KB metadata sidecar file
+        # Create Bedrock KB metadata sidecar file.
+        # Managed Knowledge Bases require the typed metadata format:
+        # each attribute is { "value": { "type": "STRING", "stringValue": ... } }.
         metadata_path = doc_dir / f"{doc['filename']}.metadata.json"
         metadata = {
             "metadataAttributes": {
-                "clinic_id": doc['clinic_id'],
-                "tier": doc['tier'],
-                "document_type": doc['document_type']
+                "clinic_id": {"value": {"type": "STRING", "stringValue": doc['clinic_id']}},
+                "tier": {"value": {"type": "STRING", "stringValue": doc['tier']}},
+                "document_type": {"value": {"type": "STRING", "stringValue": doc['document_type']}},
             }
         }
         with open(metadata_path, 'w', encoding='utf-8') as f:

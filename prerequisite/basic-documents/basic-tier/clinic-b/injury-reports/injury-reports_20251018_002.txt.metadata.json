@@ -1,7 +1,22 @@
 {
   "metadataAttributes": {
-    "clinic_id": "clinic-b",
-    "tier": "basic-tier",
-    "document_type": "injury-reports"
+    "clinic_id": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "clinic-b"
+      }
+    },
+    "tier": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "basic-tier"
+      }
+    },
+    "document_type": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "injury-reports"
+      }
+    }
   }
 }
