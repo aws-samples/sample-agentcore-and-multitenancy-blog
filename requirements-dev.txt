@@ -5,8 +5,10 @@ bedrock-agentcore>=1.2.1
 bedrock-agentcore-starter-toolkit>=0.2.10
 
 # AWS SDK
-boto3>=1.43.6
-botocore>=1.43.6
+# 1.43.61+ required for the AgentCore Gateway managed KB connector target
+# (targetConfiguration.mcp.connector). Older SDKs reject 'connector'.
+boto3>=1.43.61
+botocore>=1.43.61
 
 # AI agents and tools
 strands-agents>=1.24.0

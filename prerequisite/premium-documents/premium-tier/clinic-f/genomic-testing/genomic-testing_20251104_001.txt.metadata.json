@@ -1,7 +1,22 @@
 {
   "metadataAttributes": {
-    "clinic_id": "clinic-f",
-    "tier": "premium-tier",
-    "document_type": "genomic-testing"
+    "clinic_id": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "clinic-f"
+      }
+    },
+    "tier": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "premium-tier"
+      }
+    },
+    "document_type": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "genomic-testing"
+      }
+    }
   }
 }

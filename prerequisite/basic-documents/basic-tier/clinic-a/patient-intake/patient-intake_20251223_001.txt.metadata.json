@@ -1,7 +1,22 @@
 {
   "metadataAttributes": {
-    "clinic_id": "clinic-a",
-    "tier": "basic-tier",
-    "document_type": "patient-intake"
+    "clinic_id": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "clinic-a"
+      }
+    },
+    "tier": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "basic-tier"
+      }
+    },
+    "document_type": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "patient-intake"
+      }
+    }
   }
 }

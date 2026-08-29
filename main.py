@@ -98,24 +98,10 @@ os.environ["DEFAULT_TIMEZONE"] = "America/New_York"
 # Default tier (overridden per-request from payload)
 AGENT_TIER = os.environ.get("AGENT_TIER", "basic")
 
-# KB IDs loaded lazily on first request to avoid blocking runtime initialization
-KB_IDS = {}
-_kb_ids_loaded = False
-
-
-def _ensure_kb_ids():
-    global _kb_ids_loaded
-    if _kb_ids_loaded:
-        return
-    _kb_ids_loaded = True
-    for _tier in ("basic", "premium"):
-        try:
-            KB_IDS[_tier] = get_ssm_parameter(f"/app/healthcare/knowledge_base/{_tier}_kb_id")
-        except Exception:
-            KB_IDS[_tier] = ""
-    os.environ["KNOWLEDGE_BASE_ID"] = KB_IDS.get(AGENT_TIER, KB_IDS.get("basic", ""))
-    logger.info(f"Loaded KB IDs — basic: {KB_IDS.get('basic')}, premium: {KB_IDS.get('premium')}")
-
+# Note: Knowledge Base retrieval now flows through the AgentCore Gateway's
+# managed KB connector target. The per-tier KB id is bound on the gateway
+# target at deploy time (see scripts/agentcore_gateway.py), so the runtime no
+# longer needs to resolve or pass a KB id at request time.
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
@@ -132,9 +118,6 @@ async def invoke(payload, context=None):
     # Lazy-import heavy dependencies on first request (not at module level)
     # This keeps runtime initialization under the 30s deadline.
     _do_lazy_imports()
-
-    # Lazy-load KB IDs on first request (avoids blocking runtime init)
-    _ensure_kb_ids()
 
     # Initialize streaming queue
     if not TenantContext.get_response_queue():
@@ -163,11 +146,7 @@ async def invoke(payload, context=None):
         else:
             logger.warning(f"No request_headers on context (context={context is not None})")
 
-        # Select the correct Knowledge Base for this tenant's tier
-        kb_id = KB_IDS.get(tier, KB_IDS.get("basic", ""))
-        os.environ["KNOWLEDGE_BASE_ID"] = kb_id
-        logger.info(f"Selected KB for tier '{tier}': {kb_id}")
-
+    
         # Construct hierarchical identifiers for isolation
         actor_id = f"{tier}-{clinic_id}-{user_id}"
         s3_prefix = f"{tier}-tier/{clinic_id}/"

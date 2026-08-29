@@ -155,16 +155,88 @@ def wait_for_policy_engine_ready(policy_engine_id: str, max_wait: int = 120) -> 
     return False
 
 
-def get_gateway_target_name(gateway_id: str) -> str:
-    """Get the target name for the premium gateway (needed for Cedar action format)."""
+def get_gateway_target_names(gateway_id: str) -> dict:
+    """Resolve gateway target names by role (needed for Cedar action format).
+
+    A gateway now has two targets: the Lambda tool target (patient_context,
+    clinic_config) and the managed KB connector target (Retrieve). We match by
+    name prefix so Cedar actions can be scoped to the correct target.
+
+    Returns:
+        dict with keys "lambda" and "kb" mapping to target names (value may be
+        None if a target is not present).
+    """
     resp = gateway_client.list_gateway_targets(gatewayIdentifier=gateway_id, maxResults=10)
     items = resp.get("items", [])
     if not items:
         raise Exception(f"No targets found for gateway {gateway_id}")
-    return items[0]["name"]
+
+    names = {"lambda": None, "kb": None}
+    for item in items:
+        name = item["name"]
+        if name.startswith("HealthcareKB-"):
+            names["kb"] = name
+        elif name.startswith("HealthcareLambda-"):
+            names["lambda"] = name
+
+    # Fallback for the Lambda target if naming ever diverges: use the first
+    # non-KB target so the existing Lambda-tool policies still attach.
+    if names["lambda"] is None:
+        for item in items:
+            if not item["name"].startswith("HealthcareKB-"):
+                names["lambda"] = item["name"]
+                break
+
+    return names
 
 
-def _create_policies_for_gateway(policy_engine_id: str, gateway_arn: str, target_name: str, tier: str):
+def get_kb_retrieve_permit_policy(gateway_arn: str, target_name: str) -> list:
+    """Generate Cedar policies that permit the managed KB Retrieve tool.
+
+    The engine runs in ENFORCE mode (default-deny), so without an explicit
+    permit the Retrieve tool would be blocked. Retrieval carries no
+    business-hours restriction here — document access hours for the basic tier
+    are enforced in the agent wrapper (and can be added as a Cedar rule later
+    if desired). Tenant isolation is enforced by the clinic_id filter the
+    application injects, not by this policy.
+
+    As with the other tools, AgentCore's validator rejects unconditional
+    permits as "overly permissive", so we split into two complementary policies
+    keyed on the presence of retrievalConfiguration in the input.
+
+    Action format: TargetName___ToolName (triple underscore per AgentCore schema)
+    """
+    policy_with_config = f"""permit(
+  principal is AgentCore::OAuthUser,
+  action == AgentCore::Action::"{target_name}___Retrieve",
+  resource == AgentCore::Gateway::"{gateway_arn}"
+)
+when {{
+  context.input has retrievalConfiguration
+}};"""
+
+    policy_without_config = f"""permit(
+  principal is AgentCore::OAuthUser,
+  action == AgentCore::Action::"{target_name}___Retrieve",
+  resource == AgentCore::Gateway::"{gateway_arn}"
+)
+when {{
+  !(context.input has retrievalConfiguration)
+}};"""
+
+    return [
+        ("with_config", policy_with_config, "Permit KB Retrieve when retrievalConfiguration is provided"),
+        ("default", policy_without_config, "Permit KB Retrieve with default retrieval configuration"),
+    ]
+
+
+def _create_policies_for_gateway(
+    policy_engine_id: str,
+    gateway_arn: str,
+    target_name: str,
+    tier: str,
+    kb_target_name: str = None,
+):
     """Create Cedar policies for a single gateway, with tier-appropriate patient_context rules.
 
     Basic tier:   business hours restriction (8am-6pm) on patient_context
@@ -172,11 +244,14 @@ def _create_policies_for_gateway(policy_engine_id: str, gateway_arn: str, target
 
     Both tiers get clinic_config permits (non-sensitive, always allowed).
 
+    Both tiers also get a permit for the managed KB Retrieve tool.
+
     Args:
         policy_engine_id: ID of the shared policy engine.
         gateway_arn: ARN of the gateway to create policies for.
-        target_name: Gateway target name (e.g., "HealthcareLambda-Basic").
+        target_name: Lambda gateway target name (e.g., "HealthcareLambda-Basic").
         tier: Tier label used for naming ("basic" or "premium").
+        kb_target_name: Managed KB gateway target name (e.g., "HealthcareKB-Basic").
     """
     # --- patient_context policies (tier-dependent) ---
     if tier == "basic":
@@ -253,6 +328,34 @@ def _create_policies_for_gateway(policy_engine_id: str, gateway_arn: str, target
             click.echo(f"❌ Failed to create clinic config policy ({tier}/{suffix}): {e}", err=True)
             sys.exit(1)
 
+    # --- KB Retrieve permits (both tiers) ---
+    if not kb_target_name:
+        click.echo(f"⚠️  No KB target found for {tier} gateway — skipping KB Retrieve policies.")
+        return
+
+    kb_retrieve_policies = get_kb_retrieve_permit_policy(gateway_arn, kb_target_name)
+
+    for suffix, cedar_statement, description in kb_retrieve_policies:
+        policy_name = f"permit_kb_retrieve_{tier}_{suffix}"
+        click.echo(f"\n--- KB Retrieve Policy ({tier} / {suffix}) ---")
+        click.echo(cedar_statement)
+        click.echo("---")
+
+        try:
+            resp = policy_client.create_policy(
+                policyEngineId=policy_engine_id,
+                name=policy_name,
+                definition={"cedar": {"statement": cedar_statement}},
+                description=f"{description} ({tier})",
+            )
+            click.echo(f"✅ KB Retrieve policy ({tier}/{suffix}) created: {resp['policyId']}")
+            put_ssm_parameter(f"/app/healthcare/agentcore/policy_kb_retrieve_{tier}_{suffix}_id", resp["policyId"])
+        except policy_client.exceptions.ConflictException:
+            click.echo(f"⚠️  KB Retrieve policy ({tier}/{suffix}) already exists, skipping...")
+        except Exception as e:
+            click.echo(f"❌ Failed to create KB Retrieve policy ({tier}/{suffix}): {e}", err=True)
+            sys.exit(1)
+
 
 def _attach_policy_engine_to_gateway(gateway_id: str, policy_engine_arn: str, tier: str):
     """Attach a policy engine to a gateway in ENFORCE mode.
@@ -306,9 +409,17 @@ def create():
         try:
             gw_id = get_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_id")
             gw_arn = get_ssm_parameter(f"/app/healthcare/agentcore/{tier}_gateway_arn")
-            target = get_gateway_target_name(gw_id)
-            gateways[tier] = {"id": gw_id, "arn": gw_arn, "target": target}
-            click.echo(f"🔗 {tier.capitalize()} Gateway: {gw_id}  (target: {target})")
+            target_names = get_gateway_target_names(gw_id)
+            gateways[tier] = {
+                "id": gw_id,
+                "arn": gw_arn,
+                "target": target_names["lambda"],
+                "kb_target": target_names["kb"],
+            }
+            click.echo(
+                f"🔗 {tier.capitalize()} Gateway: {gw_id}  "
+                f"(lambda target: {target_names['lambda']}, kb target: {target_names['kb']})"
+            )
         except Exception as e:
             click.echo(f"❌ {tier.capitalize()} gateway not found in SSM. Deploy gateways first: {e}", err=True)
             sys.exit(1)
@@ -344,7 +455,9 @@ def create():
     # Step 2: Create Cedar policies for each gateway
     click.echo("\n📋 Step 2: Creating Cedar policies...")
     for tier, gw in gateways.items():
-        _create_policies_for_gateway(policy_engine_id, gw["arn"], gw["target"], tier)
+        _create_policies_for_gateway(
+            policy_engine_id, gw["arn"], gw["target"], tier, kb_target_name=gw["kb_target"]
+        )
 
     # Step 3: Attach policy engine to both gateways
     click.echo("\n📋 Step 3: Attaching policy engine to gateways...")
@@ -365,9 +478,11 @@ def create():
     click.echo(f"  Basic tier:")
     click.echo(f"    - business_hours_patient_access: patient_context restricted to 8am-6pm")
     click.echo(f"    - permit_clinic_config: clinic_config always permitted")
+    click.echo(f"    - permit_kb_retrieve: managed KB Retrieve permitted")
     click.echo(f"  Premium tier:")
     click.echo(f"    - permit_patient_context: patient_context available 24/7")
     click.echo(f"    - permit_clinic_config: clinic_config always permitted")
+    click.echo(f"    - permit_kb_retrieve: managed KB Retrieve permitted")
 
 
 @cli.command()
@@ -438,6 +553,9 @@ def delete(confirm):
         # Premium patient_context permit policies
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_patient_context_{tier}_with_patient_id")
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_patient_context_{tier}_list_mode_id")
+        # Managed KB Retrieve permit policies
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_kb_retrieve_{tier}_with_config_id")
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_kb_retrieve_{tier}_default_id")
     # Legacy keys from premium-only setup
     delete_ssm_parameter("/app/healthcare/agentcore/policy_business_hours_id")
     delete_ssm_parameter("/app/healthcare/agentcore/policy_clinic_config_id")

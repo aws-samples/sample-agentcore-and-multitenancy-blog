@@ -4,7 +4,10 @@
 # Core AgentCore dependencies
 bedrock-agentcore>=1.2.1
 
-# AWS SDK (agent-registry client requires >= 1.43.70)
+# AWS SDK
+# >= 1.43.70 required by the agent-registry client.
+# >= 1.43.61 also required for the AgentCore Gateway managed KB connector target
+# (targetConfiguration.mcp.connector) — older SDKs reject 'connector'.
 boto3>=1.43.70
 botocore>=1.43.70
 

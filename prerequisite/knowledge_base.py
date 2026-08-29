@@ -4,8 +4,12 @@
 """
 This module contains a helper class for building and using Knowledge Bases for Amazon Bedrock.
 The KnowledgeBasesForAmazonBedrock class provides a convenient interface for working with Knowledge Bases.
-It includes methods for creating, updating, and invoking Knowledge Bases, as well as managing
-IAM roles and S3 Vectors.
+
+It creates Bedrock Managed Knowledge Bases (type MANAGED), where Bedrock owns the
+vector store, ingestion, indexing, and retrieval. Managed KBs are the type
+required by the AgentCore Gateway managed KB connector target. The class also
+handles the KB execution IAM role and S3 data source, and retains backward-
+compatible cleanup for legacy VECTOR / S3 Vectors knowledge bases.
 """
 
 import json
@@ -20,12 +24,6 @@ import yaml
 import os
 import argparse
 
-valid_embedding_models = [
-    "cohere.embed-multilingual-v3",
-    "cohere.embed-english-v3",
-    "amazon.titan-embed-text-v1",
-    "amazon.titan-embed-text-v2:0",
-]
 pp = pprint.PrettyPrinter(indent=2)
 
 
@@ -100,7 +98,6 @@ class KnowledgeBasesForAmazonBedrock:
         kb_name: str,
         kb_description: str = None,
         data_bucket_name: str = None,
-        embedding_model: str = "amazon.titan-embed-text-v2:0",
     ):
         """
         Function used to create a new Knowledge Base or retrieve an existent one
@@ -109,7 +106,6 @@ class KnowledgeBasesForAmazonBedrock:
             kb_name: Knowledge Base Name
             kb_description: Knowledge Base Description
             data_bucket_name: Name of s3 Bucket containing Knowledge Base Data
-            embedding_model: Name of Embedding model to be used on Knowledge Base creation
 
         Returns:
             kb_id: str - Knowledge base id
@@ -148,11 +144,6 @@ class KnowledgeBasesForAmazonBedrock:
                 print(
                     f"KB bucket name not provided, creating a new one called: {data_bucket_name}"
                 )
-            if embedding_model not in valid_embedding_models:
-                valid_embeddings_str = str(valid_embedding_models)
-                raise ValueError(
-                    f"Invalid embedding model. Your embedding model should be one of {valid_embeddings_str}"
-                )
             kb_execution_role_name = (
                 f"AmazonBedrockExecutionRoleForKnowledgeBase_{self.suffix}"
             )
@@ -160,11 +151,6 @@ class KnowledgeBasesForAmazonBedrock:
                 f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{self.suffix}"
             )
             s3_policy_name = f"AmazonBedrockS3PolicyForKnowledgeBase_{self.suffix}"
-            s3_vectors_policy_name = (
-                f"AmazonBedrockS3VectorsPolicyForKnowledgeBase_{self.suffix}"
-            )
-            vector_bucket_name = f"{kb_name}-vectors-{self.suffix}"
-            index_name = f"{kb_name}-index-{self.suffix}"
             print(
                 "========================================================================================"
             )
@@ -179,7 +165,6 @@ class KnowledgeBasesForAmazonBedrock:
                 f"Step 2 - Creating Knowledge Base Execution Role ({kb_execution_role_name}) and Policies"
             )
             bedrock_kb_execution_role = self.create_bedrock_kb_execution_role(
-                embedding_model,
                 data_bucket_name,
                 fm_policy_name,
                 s3_policy_name,
@@ -190,29 +175,13 @@ class KnowledgeBasesForAmazonBedrock:
             print(
                 "========================================================================================"
             )
-            print("Step 3 - Creating S3 Vectors Bucket and Index")
-            vector_bucket_arn, index_arn = self.create_s3_vectors_bucket_and_index(
-                vector_bucket_name, index_name, bedrock_kb_execution_role
-            )
-            print(
-                "========================================================================================"
-            )
-            print("Step 4 - Creating S3 Vectors Policy")
-            self.create_s3_vectors_policy(
-                s3_vectors_policy_name, vector_bucket_arn, bedrock_kb_execution_role
-            )
-            print(
-                "========================================================================================"
-            )
-            print("Step 5 - Creating Knowledge Base")
-            print("Waiting for S3 Vectors policy to propagate...")
-            time.sleep(30)
+            print("Step 3 - Creating Managed Knowledge Base")
+            # A Bedrock Managed Knowledge Base provisions and manages its own
+            # vector store, ingestion, and retrieval infrastructure — no S3
+            # Vectors bucket/index or embedding-model plumbing required. This is
+            # the KB type required by the AgentCore Gateway managed KB connector.
             knowledge_base, data_source = self.create_knowledge_base(
-                vector_bucket_arn,
-                index_arn,
-                index_name,
                 data_bucket_name,
-                embedding_model,
                 kb_name,
                 kb_description,
                 bedrock_kb_execution_role,
@@ -292,6 +261,12 @@ class KnowledgeBasesForAmazonBedrock:
                     continue
                     
                 file_to_upload = os.path.join(root, file)
+
+                # Managed KBs require the typed metadata sidecar format. Upgrade
+                # any legacy flat-format .metadata.json in place before upload so
+                # clinic_id stays filterable regardless of when docs were generated.
+                if file.endswith(".metadata.json"):
+                    self._normalize_metadata_sidecar(file_to_upload)
                 
                 # Preserve directory structure as S3 key
                 relative_path = os.path.relpath(file_to_upload, base_path)
@@ -326,6 +301,46 @@ class KnowledgeBasesForAmazonBedrock:
                     ExtraArgs={'Metadata': metadata}
                 )
 
+    def _normalize_metadata_sidecar(self, metadata_file_path: str):
+        """Ensure a .metadata.json sidecar uses the managed-KB typed format.
+
+        Managed Knowledge Bases require each attribute to be shaped as
+        {"value": {"type": "STRING"|"NUMBER"|"BOOLEAN", "<t>Value": ...}}.
+        Older documents in this repo were written with a flat
+        {"clinic_id": "hospital-a"} shape, which managed KBs will not index —
+        silently breaking the clinic_id tenant filter. This upgrades any flat
+        attributes in place and leaves already-typed attributes untouched.
+        """
+        try:
+            with open(metadata_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"  ⚠️  Could not read metadata sidecar {metadata_file_path}: {e}")
+            return
+
+        attrs = data.get("metadataAttributes")
+        if not isinstance(attrs, dict):
+            return
+
+        changed = False
+        for key, val in list(attrs.items()):
+            # Already typed (has a nested "value" dict) — leave as-is.
+            if isinstance(val, dict) and "value" in val:
+                continue
+            if isinstance(val, bool):
+                typed = {"type": "BOOLEAN", "booleanValue": val}
+            elif isinstance(val, (int, float)):
+                typed = {"type": "NUMBER", "numberValue": val}
+            else:
+                typed = {"type": "STRING", "stringValue": str(val)}
+            attrs[key] = {"value": typed}
+            changed = True
+
+        if changed:
+            with open(metadata_file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            print(f"  ✏️  Upgraded metadata sidecar to typed format: {metadata_file_path}")
+
     def get_data_bucket_name(self):
         """
         get the name of the data bucket
@@ -343,13 +358,18 @@ class KnowledgeBasesForAmazonBedrock:
             # Extract the S3 bucket information from the data source configuration
             data_source_config = response["dataSource"]["dataSourceConfiguration"]
 
-            if data_source_config["type"] == "S3":
-                s3_config = data_source_config["s3Configuration"]
-                bucket_arn = s3_config["bucketArn"]
-
-                # Extract bucket name from ARN
-                bucket_name = bucket_arn.split(":")[-1]
-                return bucket_name
+            if data_source_config["type"] == "MANAGED_KNOWLEDGE_BASE_CONNECTOR":
+                conn = data_source_config[
+                    "managedKnowledgeBaseConnectorConfiguration"
+                ]["connectorParameters"]
+                # On read, connectorParameters comes back as a JSON string.
+                if isinstance(conn, str):
+                    conn = json.loads(conn)
+                return conn.get("connectionConfiguration", {}).get("bucketName")
+            elif data_source_config["type"] == "S3":
+                # Legacy customer-managed vector KB data source.
+                bucket_arn = data_source_config["s3Configuration"]["bucketArn"]
+                return bucket_arn.split(":")[-1]
             else:
                 return "Data source is not an S3 bucket"
 
@@ -359,7 +379,6 @@ class KnowledgeBasesForAmazonBedrock:
 
     def create_bedrock_kb_execution_role(
         self,
-        embedding_model: str,
         bucket_name: str,
         fm_policy_name: str,
         s3_policy_name: str,
@@ -367,9 +386,14 @@ class KnowledgeBasesForAmazonBedrock:
     ):
         """
         Create Knowledge Base Execution IAM Role and its required policies.
-        If role and/or policies already exist, retrieve them
+        If role and/or policies already exist, retrieve them.
+
+        For a Bedrock Managed Knowledge Base, the service uses a service-managed
+        embedding model, so the role only needs permission to discover models
+        (ListFoundationModels/ListCustomModels) plus S3 read access to the data
+        source. See the managed KB service role docs.
+
         Args:
-            embedding_model: the embedding model used by the knowledge base
             bucket_name: the bucket name used by the knowledge base
             fm_policy_name: the name of the foundation model access policy
             s3_policy_name: the name of the s3 access policy
@@ -384,11 +408,10 @@ class KnowledgeBasesForAmazonBedrock:
                 {
                     "Effect": "Allow",
                     "Action": [
-                        "bedrock:InvokeModel",
+                        "bedrock:ListFoundationModels",
+                        "bedrock:ListCustomModels",
                     ],
-                    "Resource": [
-                        f"arn:aws:bedrock:{self.region_name}::foundation-model/{embedding_model}"
-                    ],
+                    "Resource": "*",
                 }
             ],
         }
@@ -481,155 +504,26 @@ class KnowledgeBasesForAmazonBedrock:
         )
         return bedrock_kb_execution_role
 
-    def create_s3_vectors_bucket_and_index(
-        self,
-        vector_bucket_name: str,
-        index_name: str,
-        bedrock_kb_execution_role: str,
-    ):
-        """
-        Create S3 Vectors bucket and index.
-        Args:
-            vector_bucket_name: name of the S3 vectors bucket
-            index_name: name of the vector index
-            bedrock_kb_execution_role: knowledge base execution role
-
-        Returns:
-            vector_bucket_arn, index_arn
-        """
-        self.vector_bucket_name = vector_bucket_name
-        self.index_name = index_name
-
-        # Create S3 Vectors bucket
-        try:
-            self.s3_vectors_client.create_vector_bucket(
-                vectorBucketName=vector_bucket_name,
-                encryptionConfiguration={"sseType": "AES256"},
-            )
-            get_response = self.s3_vectors_client.get_vector_bucket(
-                vectorBucketName=vector_bucket_name
-            )
-            vector_bucket_arn = get_response["vectorBucket"]["vectorBucketArn"]
-            print(f"Created S3 Vectors bucket: {vector_bucket_name}")
-        except self.s3_vectors_client.exceptions.ConflictException:
-            print(f"S3 Vectors bucket {vector_bucket_name} already exists")
-            # Get the bucket ARN
-            vector_bucket_arn = f"arn:aws:s3vectors:{self.region_name}:{self.account_number}:vector-bucket/{vector_bucket_name}"
-        except Exception as e:
-            print(f"Error creating S3 vectors bucket: {e}")
-            raise
-
-        # Create vector index
-        try:
-            self.s3_vectors_client.create_index(
-                vectorBucketName=vector_bucket_name,
-                indexName=index_name,
-                dataType="float32",
-                dimension=1024,  # Matching the OpenSearch configuration
-                distanceMetric="cosine",
-                metadataConfiguration={
-                    "nonFilterableMetadataKeys": [
-                        "AMAZON_BEDROCK_TEXT",
-                    ]
-                },
-            )
-            get_index_response = self.s3_vectors_client.get_index(
-                vectorBucketName=vector_bucket_name,
-                indexName=index_name,
-            )
-            time.sleep(10)
-            index_arn = get_index_response["index"]["indexArn"]
-            print(f"Created S3 Vectors index: {index_name}")
-        except self.s3_vectors_client.exceptions.ConflictException:
-            print(f"S3 Vectors index {index_name} already exists")
-            # Get the index ARN
-            index_arn = f"arn:aws:s3vectors:{self.region_name}:{self.account_number}:index/{vector_bucket_name}/{index_name}"
-        except Exception as e:
-            print(f"Error creating S3 vectors index: {e}")
-            raise
-
-        return vector_bucket_arn, index_arn
-
-    def create_s3_vectors_policy(
-        self,
-        s3_vectors_policy_name: str,
-        vector_bucket_arn: str,
-        bedrock_kb_execution_role: str,
-    ):
-        """
-        Create S3 Vectors policy and attach it to the Knowledge Base Execution role.
-        Args:
-            s3_vectors_policy_name: name of the S3 vectors policy
-            vector_bucket_arn: ARN of the S3 vectors bucket
-            bedrock_kb_execution_role: knowledge base execution role
-        """
-        # Define S3 Vectors policy document
-        s3_vectors_policy_document = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Sid": "S3VectorsPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "s3vectors:GetIndex",
-                        "s3vectors:QueryVectors",
-                        "s3vectors:PutVectors",
-                        "s3vectors:GetVectors",
-                        "s3vectors:DeleteVectors",
-                    ],
-                    "Resource": f"{vector_bucket_arn}/index/*",
-                    "Condition": {
-                        "StringEquals": {
-                            "aws:ResourceAccount": f"{self.account_number}"
-                        }
-                    },
-                }
-            ],
-        }
-
-        try:
-            s3_vectors_policy = self.iam_client.create_policy(
-                PolicyName=s3_vectors_policy_name,
-                PolicyDocument=json.dumps(s3_vectors_policy_document),
-                Description="Policy for accessing S3 vectors",
-            )
-            print(f"Created S3 Vectors policy: {s3_vectors_policy_name}")
-        except self.iam_client.exceptions.EntityAlreadyExistsException:
-            print(f"S3 Vectors policy {s3_vectors_policy_name} already exists")
-            s3_vectors_policy = self.iam_client.get_policy(
-                PolicyArn=f"arn:aws:iam::{self.account_number}:policy/{s3_vectors_policy_name}"
-            )
-
-        # Attach policy to Bedrock execution role
-        s3_vectors_policy_arn = s3_vectors_policy["Policy"]["Arn"]
-        self.iam_client.attach_role_policy(
-            RoleName=bedrock_kb_execution_role["Role"]["RoleName"],
-            PolicyArn=s3_vectors_policy_arn,
-        )
-        print(
-            f"Attached S3 Vectors policy to role: {bedrock_kb_execution_role['Role']['RoleName']}"
-        )
-
     @retry(wait_random_min=1000, wait_random_max=2000, stop_max_attempt_number=7)
     def create_knowledge_base(
         self,
-        vector_bucket_arn: str,
-        index_arn: str,
-        index_name: str,
         bucket_name: str,
-        embedding_model: str,
         kb_name: str,
         kb_description: str,
         bedrock_kb_execution_role: str,
     ):
         """
-        Create Knowledge Base and its Data Source. If existent, retrieve
+        Create a Bedrock Managed Knowledge Base and its S3 Data Source. If
+        existent, retrieve.
+
+        A managed KB (type MANAGED) has Bedrock manage the vector store,
+        ingestion, indexing, and retrieval — so there is no storageConfiguration
+        and no embedding-model ARN to supply (a service-managed embedding model
+        is used by default). This is the KB type required by the AgentCore
+        Gateway managed KB connector.
+
         Args:
-            vector_bucket_arn: ARN of the S3 vectors bucket
-            index_arn: ARN of the S3 vectors index
-            index_name: name of the S3 vectors index
             bucket_name: name of the s3 bucket containing the knowledge base data
-            embedding_model: id of the embedding model used
             kb_name: knowledge base name
             kb_description: knowledge base description
             bedrock_kb_execution_role: knowledge base execution role
@@ -638,45 +532,27 @@ class KnowledgeBasesForAmazonBedrock:
             knowledge base object,
             data source object
         """
-        print(vector_bucket_arn)
-        print(index_name)
-        s3_vectors_configuration = {
-            "vectorBucketArn": vector_bucket_arn,
-            # "indexName": index_name,
-            "indexArn": index_arn,
+        # Note: a managed KB with the default managed embedding model does its
+        # own chunking — passing a chunkingConfiguration is rejected, so we omit
+        # vectorIngestionConfiguration entirely below.
+
+        # Managed KBs require the MANAGED_KNOWLEDGE_BASE_CONNECTOR data source
+        # type with an S3 connectorParameters block (not the plain S3 data
+        # source used by customer-managed vector KBs). Metadata sidecar files
+        # (.metadata.json) alongside each document carry the filterable
+        # clinic_id attribute used for tenant isolation.
+        managed_connector_configuration = {
+            "connectorParameters": {
+                "type": "S3",
+                "version": "1",
+                "connectionConfiguration": {
+                    "bucketName": bucket_name,
+                    "bucketOwnerAccountId": self.account_number,
+                },
+            }
         }
 
-        # Ingest strategy - How to ingest data from the data source
-        chunking_strategy_configuration = {
-            "chunkingStrategy": "FIXED_SIZE",
-            "fixedSizeChunkingConfiguration": {
-                "maxTokens": 512,
-                "overlapPercentage": 20,
-            },
-        }
-
-        # The data source to ingest documents from, into the OpenSearch serverless knowledge base index
-        s3_configuration = {
-            "bucketArn": f"arn:aws:s3:::{bucket_name}",
-            # "inclusionPrefixes": [
-            #     "policies"
-            # ],  # you can use this if you want to create a KB using data within s3 prefixes.
-        }
-
-        # The embedding model used by Bedrock to embed ingested documents, and realtime prompts
-        embedding_model_arn = (
-            f"arn:aws:bedrock:{self.region_name}::foundation-model/{embedding_model}"
-        )
-        print(
-            str(
-                {
-                    "type": "VECTOR",
-                    "vectorKnowledgeBaseConfiguration": {
-                        "embeddingModelArn": embedding_model_arn
-                    },
-                }
-            )
-        )
+        kb = None
         try:
             print(bedrock_kb_execution_role["Role"]["Arn"])
             create_kb_response = self.bedrock_agent_client.create_knowledge_base(
@@ -684,58 +560,78 @@ class KnowledgeBasesForAmazonBedrock:
                 description=kb_description,
                 roleArn=bedrock_kb_execution_role["Role"]["Arn"],
                 knowledgeBaseConfiguration={
-                    "type": "VECTOR",
-                    "vectorKnowledgeBaseConfiguration": {
-                        "embeddingModelArn": embedding_model_arn
+                    "type": "MANAGED",
+                    "managedKnowledgeBaseConfiguration": {
+                        # Service-managed embedding model (no ARN required).
+                        "embeddingModelType": "MANAGED",
                     },
-                },
-                storageConfiguration={
-                    "type": "S3_VECTORS",
-                    "s3VectorsConfiguration": s3_vectors_configuration,
                 },
             )
             kb = create_kb_response["knowledgeBase"]
             pp.pprint(kb)
-        except Exception as e:
-            # kbs = self.bedrock_agent_client.list_knowledge_bases(maxResults=100)
-            # kb_id = None
-            # for kb in kbs["knowledgeBaseSummaries"]:
-            #     if kb["name"] == kb_name:
-            #         kb_id = kb["knowledgeBaseId"]
-            # response = self.bedrock_agent_client.get_knowledge_base(
-            #     knowledgeBaseId=kb_id
-            # )
-            # kb = response["knowledgeBase"]
-            # pp.pprint(kb)
-            print(e)
+        except self.bedrock_agent_client.exceptions.ConflictException:
+            kbs = self.bedrock_agent_client.list_knowledge_bases(maxResults=100)
+            kb_id = None
+            for existing in kbs["knowledgeBaseSummaries"]:
+                if existing["name"] == kb_name:
+                    kb_id = existing["knowledgeBaseId"]
+            kb = self.bedrock_agent_client.get_knowledge_base(knowledgeBaseId=kb_id)[
+                "knowledgeBase"
+            ]
+            pp.pprint(kb)
+
+        # A managed KB must reach ACTIVE before a data source can be created —
+        # otherwise CreateDataSource fails with "not in a valid status".
+        self._wait_for_kb_active(kb["knowledgeBaseId"])
+
+        # If a data source already exists (e.g. re-run after a partial failure),
+        # reuse it instead of creating a duplicate.
+        existing_ds = self.bedrock_agent_client.list_data_sources(
+            knowledgeBaseId=kb["knowledgeBaseId"], maxResults=100
+        ).get("dataSourceSummaries", [])
+        if existing_ds:
+            ds_id = existing_ds[0]["dataSourceId"]
+            ds = self.bedrock_agent_client.get_data_source(
+                dataSourceId=ds_id, knowledgeBaseId=kb["knowledgeBaseId"]
+            )["dataSource"]
+            print(f"Data source already exists for {kb_name}, reusing it.")
+            pp.pprint(ds)
+            return kb, ds
 
         # Create a DataSource in KnowledgeBase
-        try:
-            create_ds_response = self.bedrock_agent_client.create_data_source(
-                name=kb_name,
-                description=kb_description,
-                knowledgeBaseId=kb["knowledgeBaseId"],
-                dataDeletionPolicy="RETAIN",
-                dataSourceConfiguration={
-                    "type": "S3",
-                    "s3Configuration": s3_configuration,
-                },
-                vectorIngestionConfiguration={
-                    "chunkingConfiguration": chunking_strategy_configuration
-                },
-            )
-            ds = create_ds_response["dataSource"]
-            pp.pprint(ds)
-        except self.bedrock_agent_client.exceptions.ConflictException:
-            ds_id = self.bedrock_agent_client.list_data_sources(
-                knowledgeBaseId=kb["knowledgeBaseId"], maxResults=100
-            )["dataSourceSummaries"][0]["dataSourceId"]
-            get_ds_response = self.bedrock_agent_client.get_data_source(
-                dataSourceId=ds_id, knowledgeBaseId=kb["knowledgeBaseId"]
-            )
-            ds = get_ds_response["dataSource"]
-            pp.pprint(ds)
+        create_ds_response = self.bedrock_agent_client.create_data_source(
+            name=kb_name,
+            description=kb_description,
+            knowledgeBaseId=kb["knowledgeBaseId"],
+            dataDeletionPolicy="RETAIN",
+            dataSourceConfiguration={
+                "type": "MANAGED_KNOWLEDGE_BASE_CONNECTOR",
+                "managedKnowledgeBaseConnectorConfiguration": managed_connector_configuration,
+            },
+        )
+        ds = create_ds_response["dataSource"]
+        pp.pprint(ds)
         return kb, ds
+
+    def _wait_for_kb_active(self, kb_id: str, max_wait_seconds: int = 300) -> None:
+        """Block until the knowledge base leaves a transitional status.
+
+        Managed KBs take longer to provision than legacy vector KBs, so we poll
+        get_knowledge_base until it is no longer CREATING/UPDATING before
+        attaching a data source.
+        """
+        transitional = ("CREATING", "UPDATING")
+        start = time.time()
+        while time.time() - start < max_wait_seconds:
+            status = self.bedrock_agent_client.get_knowledge_base(
+                knowledgeBaseId=kb_id
+            )["knowledgeBase"]["status"]
+            if status not in transitional:
+                print(f"Knowledge base {kb_id} status: {status}")
+                return
+            print(f"Waiting for knowledge base {kb_id} to become ACTIVE (status: {status})...")
+            time.sleep(10)
+        print(f"⚠️  Timed out waiting for knowledge base {kb_id} to become ACTIVE")
 
     def synchronize_data(self, kb_id, ds_id):
         """
@@ -806,19 +702,25 @@ class KnowledgeBasesForAmazonBedrock:
         for kb in kbs_available["knowledgeBaseSummaries"]:
             if kb_name == kb["name"]:
                 kb_id = kb["knowledgeBaseId"]
+
+        if kb_id is None:
+            print(f"Knowledge base '{kb_name}' not found — nothing to delete.")
+            return
+
+        # Deleting a KB that is still CREATING/UPDATING fails; wait it out.
+        self._wait_for_kb_active(kb_id)
+
         kb_details = self.bedrock_agent_client.get_knowledge_base(knowledgeBaseId=kb_id)
         kb_role = kb_details["knowledgeBase"]["roleArn"].split("/")[1]
 
-        vector_bucket_arn = kb_details["knowledgeBase"]["storageConfiguration"][
-            "s3VectorsConfiguration"
-        ]["vectorBucketArn"]
-        # index_name = kb_details["knowledgeBase"]["storageConfiguration"][
-        #     "s3VectorsConfiguration"
-        # ]["indexName"]
-        index_arn = kb_details["knowledgeBase"]["storageConfiguration"][
-            "s3VectorsConfiguration"
-        ]["indexArn"]
+        # Managed KBs own their datastore, so there is no S3 Vectors bucket/index
+        # to delete. Detect any legacy VECTOR/S3_VECTORS KB for backward compat.
+        storage_config = kb_details["knowledgeBase"].get("storageConfiguration", {})
+        s3_vectors_config = storage_config.get("s3VectorsConfiguration")
+        vector_bucket_arn = s3_vectors_config.get("vectorBucketArn") if s3_vectors_config else None
+        index_arn = s3_vectors_config.get("indexArn") if s3_vectors_config else None
 
+        # A partially-created KB may have no data source yet.
         ds_available = self.bedrock_agent_client.list_data_sources(
             knowledgeBaseId=kb_id,
             maxResults=100,
@@ -826,18 +728,11 @@ class KnowledgeBasesForAmazonBedrock:
         for ds in ds_available["dataSourceSummaries"]:
             if kb_id == ds["knowledgeBaseId"]:
                 ds_id = ds["dataSourceId"]
-        self.bedrock_agent_client.get_data_source(
-            dataSourceId=ds_id,
-            knowledgeBaseId=kb_id,
-        )
 
-        if (
-            delete_s3_vector
-        ):  # Renamed for backward compatibility, but now handles S3 vectors
+        # Only legacy VECTOR/S3_VECTORS knowledge bases have an S3 Vectors
+        # bucket/index to remove. Managed KBs manage their own datastore.
+        if delete_s3_vector and index_arn and vector_bucket_arn:
             self.s3_vectors_client.delete_index(
-                # vectorBucketName=vector_bucket_name,
-                # vectorBucketArn=vector_bucket_arn,
-                # indexName=index_name,
                 indexArn=index_arn,
             )
             print("S3 Vectors index deleted successfully!")
@@ -846,20 +741,26 @@ class KnowledgeBasesForAmazonBedrock:
                 vectorBucketArn=vector_bucket_arn,
             )
             print("S3 Vectors bucket deleted successfully!")
+        elif delete_s3_vector:
+            print("Managed KB (no S3 Vectors resources to delete), skipping.")
+
+        # Delete the data source first (if one exists), then the KB.
+        if ds_id is not None:
+            self.bedrock_agent_client.delete_data_source(
+                dataSourceId=ds_id, knowledgeBaseId=kb_id
+            )
+            print("Data Source deleted successfully!")
+        else:
+            print("No data source found for this knowledge base, skipping.")
+
+        self.bedrock_agent_client.delete_knowledge_base(knowledgeBaseId=kb_id)
+        print("Knowledge Base deleted successfully!")
 
         if delete_iam_roles_and_policies:
             self.delete_iam_roles_and_policies(kb_role)
             print("Knowledge Base Roles and Policies deleted successfully!")
 
         print("Resources deleted successfully!")
-
-        self.bedrock_agent_client.delete_data_source(
-            dataSourceId=ds_id, knowledgeBaseId=kb_id
-        )
-        print("Data Source deleted successfully!")
-
-        self.bedrock_agent_client.delete_knowledge_base(knowledgeBaseId=kb_id)
-        print("Knowledge Base deleted successfully!")
 
     def delete_iam_roles_and_policies(self, kb_execution_role_name: str):
         """

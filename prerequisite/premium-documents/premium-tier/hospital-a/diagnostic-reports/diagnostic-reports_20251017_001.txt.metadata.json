@@ -1,7 +1,22 @@
 {
   "metadataAttributes": {
-    "clinic_id": "hospital-a",
-    "tier": "premium-tier",
-    "document_type": "diagnostic-reports"
+    "clinic_id": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "hospital-a"
+      }
+    },
+    "tier": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "premium-tier"
+      }
+    },
+    "document_type": {
+      "value": {
+        "type": "STRING",
+        "stringValue": "diagnostic-reports"
+      }
+    }
   }
 }

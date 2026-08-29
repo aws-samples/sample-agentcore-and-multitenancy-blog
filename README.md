@@ -65,21 +65,27 @@ chmod +x scripts/cleanup.sh
 ![Multitenancy Architecture](agentcore-blog-architecture.png)
 
 
-### 1. Data Isolation — Knowledge Base Metadata Filtering
-Each clinic's documents are tagged with a `clinic_id` metadata field. At query time, the agent's `retrieve_clinic_documents` tool applies a metadata filter so tenants only retrieve their own documents.
+### 1. Data Isolation — Knowledge Base Metadata Filtering (via AgentCore Gateway)
+Each clinic's documents are tagged with a `clinic_id` metadata field. Retrieval flows through the AgentCore Gateway's **managed Knowledge Base connector target** — one target per tier with the `knowledgeBaseId` bound in the target's `parameterValues` (never exposed to the caller).
+
+This is a pool-tenancy pattern: one shared KB per tier, with the tenant filter applied per request. The agent's `retrieve_clinic_documents` wrapper injects the `clinic_id` filter from the validated tenant context and calls the gateway's `Retrieve` tool. The raw `Retrieve` tool is never registered into the model's toolset, so the LLM cannot set or override the filter.
 
 ```python
-# agent/tools/retrieve_clinic_documents.py
-response = client.retrieve(
-    knowledgeBaseId=kb_id,
-    retrievalQuery={"text": query},
-    retrievalConfiguration={
-        "vectorSearchConfiguration": {
-            "filter": {"equals": {"key": "clinic_id", "value": clinic_id}}
-        }
+# agent/agent.py — trusted wrapper injects clinic_id, then calls the gateway
+gateway_ref.call_tool_sync(
+    name=f"{kb_target}___Retrieve",   # e.g. HealthcareKB-Basic___Retrieve
+    arguments={
+        "retrievalQuery": {"text": query},
+        "retrievalConfiguration": {
+            "managedSearchConfiguration": {
+                "filter": {"equals": {"key": "clinic_id", "value": clinic_id}}
+            }
+        },
     },
 )
 ```
+
+The Gateway signs the `bedrock:Retrieve` call with its own execution role, so the runtime no longer needs direct `bedrock-agent-runtime` access or a `KNOWLEDGE_BASE_ID` env var. See [Managed Knowledge Bases connector target](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-managed-kb.html).
 
 ### 2. Memory Isolation — Hierarchical actor_id
 Conversation history is scoped per-tenant using a hierarchical `actor_id`:
@@ -131,8 +137,6 @@ X-S3-Prefix: premium-tier/hospital-a/
 │   ├── agent_task.py              # Async task runner
 │   ├── context.py                 # TenantContext — ContextVar-based tenant state
 │   ├── memory_hook.py             # Strands MemoryHook for AgentCore Memory
-│   └── tools/
-│       └── retrieve_clinic_documents.py  # KB retrieval with clinic filtering
 ├── app_modules/                   # Streamlit UI
 │   ├── auth.py                    # Cognito OAuth2 PKCE flow
 │   └── chat.py                    # ChatManager (API Gateway path)

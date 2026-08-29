@@ -5,8 +5,8 @@
 Consolidated healthcare agent — single class serving both basic and premium tiers.
 
 Tier differences are handled via configuration, not code duplication:
-  - Basic:   Nova Micro model, document search + gateway tools
-  - Premium: Claude Sonnet model, all basic tools + web search
+  - Basic:   Mistral Ministral 8B model, document search + gateway tools
+  - Premium: GPT-OSS 120B model, all basic tools + web search
 
 Multi-tenancy concerns addressed:
   1. Data isolation:   KB metadata filtering by clinic_id
@@ -32,14 +32,15 @@ import os
 import re
 
 import requests
+from datetime import datetime
 from html import unescape
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 
 from .utils import get_ssm_parameter
 from .discovery_client import DiscoveryClient
 from .memory_hook import MemoryHook
 from .guardrail_hook import GuardrailHook, GuardrailInterventionError
-from .tools.retrieve_clinic_documents import retrieve_clinic_documents
 
 from mcp.client.streamable_http import streamablehttp_client
 from .streamable_http_bearer import streamablehttp_client_with_bearer
@@ -51,6 +52,11 @@ from strands.tools.mcp import MCPClient
 
 logger = logging.getLogger(__name__)
 
+# Business hours policy (basic tier) — mirrors the Cedar policy on the gateway.
+EASTERN = ZoneInfo("America/New_York")
+BUSINESS_HOUR_START = 8
+BUSINESS_HOUR_END = 18
+
 # --- Tier configuration ---
 
 TIER_CONFIG = {
@@ -59,6 +65,7 @@ TIER_CONFIG = {
         "project_ssm": "/app/healthcare/projects/basic_id",
         "gateway_url_ssm": "/app/healthcare/agentcore/basic_gateway_url",
         "gateway_target": "HealthcareLambda-Basic",
+        "kb_target": "HealthcareKB-Basic",
         "web_search": False,
         "guardrail_id_ssm": "/app/healthcare/guardrails/basic_id",
         "guardrail_version_ssm": "/app/healthcare/guardrails/basic_version",
@@ -68,6 +75,7 @@ TIER_CONFIG = {
         "project_ssm": "/app/healthcare/projects/premium_id",
         "gateway_url_ssm": "/app/healthcare/agentcore/premium_gateway_url",
         "gateway_target": "HealthcareLambda-Premium",
+        "kb_target": "HealthcareKB-Premium",
         "web_search": True,
         "guardrail_id_ssm": "/app/healthcare/guardrails/premium_id",
         "guardrail_version_ssm": "/app/healthcare/guardrails/premium_version",
@@ -123,6 +131,32 @@ def _extract_gateway_response(result) -> str:
         pass
 
     return raw
+
+
+def _extract_kb_results(result) -> str:
+    """Extract passage text from a managed KB connector `Retrieve` tool result.
+
+    The gateway returns the tool result with a text content block whose payload
+    is a JSON string of the form {"retrievalResults": [{"content": {"text": ...}}]}.
+    We reuse _extract_gateway_response to pull out the raw text, then flatten the
+    retrievalResults into the same newline-joined passage format the agent used
+    with the previous direct-boto3 retrieval path.
+    """
+    raw = _extract_gateway_response(result)
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return raw
+
+    results = parsed.get("retrievalResults", []) if isinstance(parsed, dict) else []
+    passages = []
+    for r in results:
+        content = r.get("content", {}) if isinstance(r, dict) else {}
+        text = content.get("text")
+        if text:
+            passages.append(text)
+
+    return "\n\n".join(passages) if passages else "No relevant information found."
 
 
 def _create_websearch_tool():
@@ -373,8 +407,20 @@ class HealthcareAgent:
                 self.gateway_client.start()
                 self._gateway_started = True
 
+        # Static gateway tool wrappers — registered statically so the policy engine
+        # can enforce at tools/call time with actual arguments (not filtered at list time).
+        gateway_ref = self.gateway_client
+        gateway_target = config["gateway_target"]
+        kb_target = config["kb_target"]
+        enforce_business_hours = tier == "basic"
+
         # --- Tool registration ---
-        # KB retrieval with clinic_id pre-filled for isolation
+        # KB retrieval via the managed Knowledge Base connector on the Gateway.
+        # Tenant isolation: clinic_id is injected server-side into the metadata
+        # filter here (from the validated tenant context), never by the model.
+        # The raw "<kb_target>___Retrieve" tool is never registered into the
+        # model's toolset — only this query-only wrapper is — so the LLM cannot
+        # set or override the filter.
         clinic_id_captured = clinic_id
         enforce_hours = tier == "basic"
 
@@ -389,13 +435,39 @@ class HealthcareAgent:
                 query: Question about clinical documents or patient information.
                 max_results: Number of results to return (default: 5).
             """
-            return retrieve_clinic_documents(query, clinic_id_captured, max_results, enforce_business_hours=enforce_hours)
+            # Business hours enforcement (basic tier only) — mirrors the previous
+            # direct-retrieval behavior and the Cedar policy on the gateway.
+            if enforce_hours:
+                current_hour = datetime.now(EASTERN).hour
+                if not (BUSINESS_HOUR_START <= current_hour < BUSINESS_HOUR_END):
+                    return (
+                        "🛡️ Access denied by business hours policy. "
+                        "Clinical documents are only available between 8:00 AM and 6:00 PM Eastern. "
+                        "Please try again during business hours."
+                    )
 
-        # Static gateway tool wrappers — registered statically so the policy engine
-        # can enforce at tools/call time with actual arguments (not filtered at list time).
-        gateway_ref = self.gateway_client
-        gateway_target = config["gateway_target"]
-        enforce_business_hours = tier == "basic"
+            # clinic_id filter is injected here from trusted tenant context.
+            arguments = {
+                "retrievalQuery": {"text": query},
+                "retrievalConfiguration": {
+                    "managedSearchConfiguration": {
+                        "numberOfResults": max_results,
+                        "filter": {
+                            "equals": {"key": "clinic_id", "value": clinic_id_captured}
+                        },
+                    }
+                },
+            }
+            try:
+                _ensure_gateway_started()
+                result = gateway_ref.call_tool_sync(
+                    tool_use_id="retrieve_clinic_documents_call",
+                    name=f"{kb_target}___Retrieve",
+                    arguments=arguments,
+                )
+                return _extract_kb_results(result)
+            except Exception as e:
+                return f"Error in clinical document retrieval: {e}"
 
         patient_context_desc = (
             "Retrieve patient metadata (demographics, conditions, allergies, medications). "
