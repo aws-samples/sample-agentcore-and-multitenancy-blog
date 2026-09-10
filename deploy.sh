@@ -108,6 +108,9 @@ python scripts/agentcore_gateway.py create-all
 print_step "Publishing MCP gateway records to Agent Registry..."
 python scripts/registry_publisher.py
 
+print_step "Configuring AgentCore Gateway rate limits (per-user and per-target)..."
+python scripts/agentcore_rate_limits.py create
+
 print_step "Creating AgentCore Policy Engine (Business Hours Enforcement)..."
 python scripts/agentcore_policy.py create
 

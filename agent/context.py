@@ -32,6 +32,12 @@ class TenantContext:
     _gateway_token: Optional[str] = None
     _response_queue: Optional[asyncio.Queue] = None
     _agent = None
+    # Rate-limit signal: set by a gateway tool wrapper when the gateway throttles
+    # a request (HTTP 429). Strands swallows exceptions raised inside tools and
+    # feeds them back to the model, so a tool cannot bypass the model via `raise`.
+    # Instead the tool records the throttle here, and stream()/invoke() checks it
+    # after the turn and surfaces the message directly. Must be cleared per turn.
+    _rate_limit_message: Optional[str] = None
     _tier: Optional[str] = None
     _clinic_id: Optional[str] = None
     _user_id: Optional[str] = None
@@ -44,6 +50,7 @@ class TenantContext:
     _gateway_token_ctx: ContextVar[Optional[str]] = ContextVar("gateway_token", default=None)
     _response_queue_ctx: ContextVar[Optional[asyncio.Queue]] = ContextVar("response_queue", default=None)
     _agent_ctx: ContextVar = ContextVar("agent", default=None)
+    _rate_limit_message_ctx: ContextVar[Optional[str]] = ContextVar("rate_limit_message", default=None)
     _tier_ctx: ContextVar[Optional[str]] = ContextVar("tier", default=None)
     _clinic_id_ctx: ContextVar[Optional[str]] = ContextVar("clinic_id", default=None)
     _user_id_ctx: ContextVar[Optional[str]] = ContextVar("user_id", default=None)
@@ -92,6 +99,31 @@ class TenantContext:
     @classmethod
     def set_agent(cls, agent) -> None:
         cls._set("_agent", cls._agent_ctx, agent)
+
+    # --- Rate-limit signal (set by tool wrappers, read after the turn) ---
+
+    @classmethod
+    def set_rate_limited(cls, message: str) -> None:
+        """Record that a gateway tool call was throttled this turn."""
+        cls._rate_limit_message = message
+        cls._rate_limit_message_ctx.set(message)
+
+    @classmethod
+    def get_rate_limited(cls) -> Optional[str]:
+        """Return the throttle message if a tool was throttled this turn, else None."""
+        val = cls._rate_limit_message
+        if val is not None:
+            return val
+        try:
+            return cls._rate_limit_message_ctx.get()
+        except LookupError:
+            return None
+
+    @classmethod
+    def clear_rate_limited(cls) -> None:
+        """Reset the throttle signal at the start of a turn."""
+        cls._rate_limit_message = None
+        cls._rate_limit_message_ctx.set(None)
 
     @classmethod
     def get_tier(cls) -> Optional[str]:
