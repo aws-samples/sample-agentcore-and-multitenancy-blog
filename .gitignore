@@ -55,3 +55,6 @@ env/
 
 config/deployment_config.json
 generated-docs/
+
+# Log files (deploy/build output)
+*.log

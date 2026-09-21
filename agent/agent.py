@@ -83,6 +83,65 @@ TIER_CONFIG = {
 }
 
 
+# Substrings that indicate a gateway rate-limit / throttle denial. AgentCore
+# gateway rejects over-limit requests with an HTTP 429 and a throttling error;
+# the MCP client surfaces this as an exception whose text contains one of these.
+_THROTTLE_MARKERS = (
+    "429",
+    "throttl",           # ThrottlingException / "throttled"
+    "too many requests",
+    "rate limit",
+    "ratelimit",
+    "rate exceeded",
+    "quota",
+)
+
+
+def _is_throttle_error(exc: BaseException) -> bool:
+    """Return True if an exception (or anything it wraps) looks like rate limiting.
+
+    The MCP/anyio client surfaces a gateway 429 wrapped inside an ExceptionGroup
+    ("unhandled errors in a TaskGroup"), whose own str() contains no "429". We
+    therefore walk the full tree: the group's sub-exceptions, plus the __cause__
+    and __context__ chain, and also inspect an httpx response status code if
+    present. Checking only str(exc) on the outermost exception misses the 429.
+    """
+    seen = set()
+
+    def _check(e: BaseException) -> bool:
+        if e is None or id(e) in seen:
+            return False
+        seen.add(id(e))
+
+        # Direct string match on this exception.
+        if any(marker in str(e).lower() for marker in _THROTTLE_MARKERS):
+            return True
+
+        # httpx.HTTPStatusError (and similar) carry a response with a status code.
+        resp = getattr(e, "response", None)
+        if resp is not None and getattr(resp, "status_code", None) == 429:
+            return True
+
+        # ExceptionGroup / BaseExceptionGroup sub-exceptions.
+        for sub in getattr(e, "exceptions", None) or ():
+            if _check(sub):
+                return True
+
+        # Chained causes/contexts.
+        return _check(getattr(e, "__cause__", None)) or _check(getattr(e, "__context__", None))
+
+    return _check(exc)
+
+
+def _throttle_message(resource: str) -> str:
+    """Friendly, user-facing message for a rate-limit denial."""
+    return (
+        f"⏳ You've hit the usage rate limit while accessing {resource}. "
+        "The gateway limits how many requests each user can make in a short window "
+        "to keep the service responsive for everyone. Please wait a moment and try again."
+    )
+
+
 def _extract_gateway_response(result) -> str:
     """Extract clean text from an MCP gateway call result and unwrap Lambda envelope.
 
@@ -467,6 +526,12 @@ class HealthcareAgent:
                 )
                 return _extract_kb_results(result)
             except Exception as e:
+                if _is_throttle_error(e):
+                    logger.warning(f"Gateway throttled retrieve_clinic_documents: {e}")
+                    # Strands swallows tool exceptions, so signal via TenantContext;
+                    # stream()/invoke() surfaces the message after the turn.
+                    TenantContext.set_rate_limited(_throttle_message("clinical documents"))
+                    return _throttle_message("clinical documents")
                 return f"Error in clinical document retrieval: {e}"
 
         patient_context_desc = (
@@ -512,6 +577,10 @@ class HealthcareAgent:
                 return _extract_gateway_response(result)
             except Exception as e:
                 error_msg = str(e)
+                if _is_throttle_error(e):
+                    logger.warning(f"Gateway throttled patient_context: {e}")
+                    TenantContext.set_rate_limited(_throttle_message("patient data"))
+                    return _throttle_message("patient data")
                 if enforce_business_hours and (
                     "denied" in error_msg.lower() or "policy" in error_msg.lower()
                 ):
@@ -544,6 +613,10 @@ class HealthcareAgent:
                 )
                 return _extract_gateway_response(result)
             except Exception as e:
+                if _is_throttle_error(e):
+                    logger.warning(f"Gateway throttled clinic_config: {e}")
+                    TenantContext.set_rate_limited(_throttle_message("clinic configuration"))
+                    return _throttle_message("clinic configuration")
                 return f"Error accessing clinic configuration: {e}"
 
         # Assemble tool list
@@ -603,6 +676,8 @@ class HealthcareAgent:
             logger.warning(f"Failed to log usage metrics: {e}")
 
     def invoke(self, user_query: str) -> str:
+        # Clear any stale throttle signal from a previous turn.
+        TenantContext.clear_rate_limited()
         try:
             # Input guardrail check
             if self.guardrail_hook:
@@ -614,6 +689,14 @@ class HealthcareAgent:
             agent_result = self.agent(user_query)
             self._log_usage(agent_result)
             result = str(agent_result)
+
+            # If a gateway tool was throttled during this turn, surface the
+            # rate-limit message directly. Strands swallows tool exceptions and
+            # feeds them back to the model (which rewords them into misleading
+            # "service error" text), so we override the model output here.
+            throttle_msg = TenantContext.get_rate_limited()
+            if throttle_msg:
+                return throttle_msg
 
             # Output guardrail check
             if self.guardrail_hook:
@@ -628,6 +711,8 @@ class HealthcareAgent:
             return f"Error invoking agent: {e}"
 
     async def stream(self, user_query: str):
+        # Clear any stale throttle signal from a previous turn.
+        TenantContext.clear_rate_limited()
         try:
             # Input guardrail check
             if self.guardrail_hook:
@@ -642,6 +727,15 @@ class HealthcareAgent:
             async for event in self.agent.stream_async(user_query):
                 if "data" in event:
                     accumulated += event["data"]
+
+            # If a gateway tool was throttled during this turn, surface the
+            # rate-limit message directly instead of the model's (reworded)
+            # output. Strands swallows tool exceptions and feeds them back to
+            # the model, which otherwise narrates a misleading "service error".
+            throttle_msg = TenantContext.get_rate_limited()
+            if throttle_msg:
+                yield throttle_msg
+                return
 
             # Log per-clinic usage from the agent's latest metrics
             try:
