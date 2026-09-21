@@ -43,10 +43,22 @@ fail-open, so they are for traffic management / QoS, NOT a security boundary —
 authentication (CUSTOM_JWT), the Cedar policy engine, and API Gateway usage
 plans remain the security layers.
 
+Enforcement is eventually consistent, not request-exact. A newly created limit
+(or one with no recent traffic) is "cold" and over-admits: a short burst can pass
+through with zero throttles. Sustained traffic above the configured rate is what
+makes enforcement converge. To verify a limit, drive sustained load rather than a
+burst — see scripts/test_gateway_rate_limits.py (`soak`).
+
+Rate-limit decisions are emitted as OpenTelemetry SPAN attributes
+(aws.agentcore.gateway.throttle.customer.*), which ride the TRACES delivery, NOT
+APPLICATION_LOGS. `create` (and `enable-logs`) therefore configure both
+deliveries. See the comment block above enable_logs() for the attribute list.
+
 Usage:
     python scripts/agentcore_rate_limits.py create              # both tiers
     python scripts/agentcore_rate_limits.py create --tier basic # one tier
     python scripts/agentcore_rate_limits.py status              # show current limits
+    python scripts/agentcore_rate_limits.py enable-logs         # logs + traces only
     python scripts/agentcore_rate_limits.py delete              # remove managed limits
     python scripts/agentcore_rate_limits.py delete --tier premium
 """
@@ -374,12 +386,30 @@ def show_status(tier: str) -> None:
     click.echo("\n  ★ = managed by this script")
 
 
-# --- Application logs (rate-limit observability) ---------------------------
-# The gateway emits OpenTelemetry span attributes for every request where
-# customer rate limits are evaluated (which bucket matched, whether the request
-# was allowed or denied, remaining budget). Those land in the gateway's
-# APPLICATION_LOGS delivery. This mirrors the CloudWatch Logs delivery pattern
-# used for memory observability (scripts/setup_memory_observability.py).
+# --- Gateway observability (rate-limit decisions) --------------------------
+# Rate-limit decisions are emitted as OpenTelemetry SPAN attributes on the
+# server span, NOT as application log lines:
+#
+#   aws.agentcore.gateway.throttle.customer.decision       allowed | throttled
+#   aws.agentcore.gateway.throttle.customer.limit_key      rateLimitId (throttled only)
+#   aws.agentcore.gateway.throttle.customer.metric         requests | connections | tokens
+#   aws.agentcore.gateway.throttle.customer.matched_entry  resolved dimension values
+#   aws.agentcore.gateway.throttle.customer.evaluated      every bucket checked (always)
+#
+# Span attributes travel on the TRACES delivery, so an APPLICATION_LOGS
+# delivery alone shows request/response lines with no rate-limit data at all.
+# We therefore create BOTH deliveries, mirroring the two-source pattern in
+# scripts/setup_memory_observability.py:
+#
+#   APPLICATION_LOGS -> CWL   (request/response lines, useful for correlation)
+#   TRACES           -> XRAY  (the rate-limit decision attributes)
+#
+# X-Ray additionally needs CloudWatch Logs enabled as a trace segment
+# destination before spans are queryable in Logs Insights (the `aws/spans`
+# log group). That prerequisite is handled by _ensure_xray_cwl_destination().
+#
+# The `evaluated` attribute is present even when a request is ALLOWED, so this
+# is how you confirm buckets are being evaluated without having to trip a limit.
 
 
 def _gateway_arn(tier: str) -> str:
@@ -405,73 +435,137 @@ def _ensure_log_group(log_group_name: str) -> str:
     return f"arn:aws:logs:{REGION}:{ACCOUNT_ID}:log-group:{log_group_name}"
 
 
-def _ensure_delivery_source(name: str, resource_arn: str) -> None:
-    """Create the APPLICATION_LOGS delivery source for the gateway if absent."""
+def _ensure_delivery_source(name: str, resource_arn: str,
+                            log_type: str = "APPLICATION_LOGS") -> None:
+    """Create a delivery source of the given logType for the gateway if absent."""
     try:
+        # put_* is an upsert and does not raise when the source already exists,
+        # so say "Ensured" rather than claiming a fresh create.
         logs_client.put_delivery_source(
-            name=name, logType="APPLICATION_LOGS", resourceArn=resource_arn
+            name=name, logType=log_type, resourceArn=resource_arn
         )
-        click.echo(f"✅ Created delivery source: {name} (APPLICATION_LOGS)")
+        click.echo(f"✅ Ensured delivery source: {name} ({log_type})")
     except logs_client.exceptions.ResourceAlreadyExistsException:
-        click.echo(f"ℹ️  Delivery source already exists: {name}")
+        click.echo(f"ℹ️  Delivery source already exists: {name} ({log_type})")
 
 
-def _ensure_delivery_destination(name: str, log_group_arn: str) -> str:
-    """Create the CloudWatch Logs delivery destination if absent; return its ARN."""
+def _ensure_delivery_destination(name: str, log_group_arn: str = None,
+                                 destination_type: str = "CWL") -> str:
+    """Create a delivery destination if absent; return its ARN.
+
+    CWL destinations need a target log group ARN; XRAY destinations do not.
+    """
+    params = {"name": name, "deliveryDestinationType": destination_type}
+    if destination_type == "CWL":
+        if not log_group_arn:
+            raise ValueError("CWL delivery destination requires log_group_arn")
+        params["deliveryDestinationConfiguration"] = {
+            "destinationResourceArn": log_group_arn
+        }
     try:
-        resp = logs_client.put_delivery_destination(
-            name=name,
-            deliveryDestinationType="CWL",
-            deliveryDestinationConfiguration={"destinationResourceArn": log_group_arn},
-        )
-        click.echo(f"✅ Created delivery destination: {name} (CWL)")
+        resp = logs_client.put_delivery_destination(**params)
+        click.echo(f"✅ Ensured delivery destination: {name} ({destination_type})")
     except logs_client.exceptions.ResourceAlreadyExistsException:
         click.echo(f"ℹ️  Delivery destination already exists: {name}")
         resp = logs_client.get_delivery_destination(name=name)
     return resp["deliveryDestination"]["arn"]
 
 
-def _ensure_delivery(source_name: str, destination_arn: str) -> None:
+def _ensure_delivery(source_name: str, destination_arn: str, label: str) -> None:
     """Connect the delivery source to the destination if not already linked."""
     try:
         logs_client.create_delivery(
             deliverySourceName=source_name, deliveryDestinationArn=destination_arn
         )
-        click.echo(f"✅ Created delivery: {source_name} → CloudWatch Logs")
+        click.echo(f"✅ Ensured delivery: {source_name} → {label}")
     except logs_client.exceptions.ResourceAlreadyExistsException:
         click.echo(f"ℹ️  Delivery already exists for source: {source_name}")
 
 
+def _ensure_xray_cwl_destination() -> None:
+    """Enable CloudWatch Logs as an X-Ray trace segment destination.
+
+    Without this, spans delivered to X-Ray are not queryable in CloudWatch Logs
+    Insights (the `aws/spans` log group), which is where the rate-limit
+    throttle.customer.* attributes become searchable. Non-fatal: an X-Ray
+    configuration problem should not fail rate-limit provisioning.
+    """
+    try:
+        xray_client = boto3.client("xray", region_name=REGION)
+        xray_client.update_trace_segment_destination(Destination="CloudWatchLogs")
+        click.echo("✅ Enabled CloudWatch Logs as X-Ray trace segment destination")
+    except Exception as e:
+        # InvalidRequestException typically means it is already configured.
+        if "InvalidRequestException" in str(type(e).__name__) or "already" in str(e).lower():
+            click.echo("ℹ️  CloudWatch Logs already set as X-Ray trace segment destination")
+        else:
+            click.echo(f"⚠️  Could not update X-Ray trace segment destination: {e}")
+            click.echo("   Span attributes may not reach CloudWatch Logs Insights.")
+
+
 def enable_logs(tier: str) -> bool:
-    """Enable APPLICATION_LOGS delivery to CloudWatch for a tier's gateway (idempotent)."""
+    """Enable APPLICATION_LOGS and TRACES delivery for a tier's gateway (idempotent).
+
+    Both are needed: APPLICATION_LOGS carries request/response lines, while the
+    rate-limit decision attributes ride on the TRACES delivery as span
+    attributes. Configuring only APPLICATION_LOGS yields a log group with no
+    rate-limit data, which is misleading when debugging a limit.
+    """
     gateway_id = _get_gateway_id(tier)
     gateway_arn = _gateway_arn(tier)
     if not gateway_id or not gateway_arn:
         return False
 
     click.echo(f"\n{'='*60}")
-    click.echo(f"Enabling gateway application logs — {tier.title()} tier")
+    click.echo(f"Enabling gateway observability — {tier.title()} tier")
     click.echo(f"Gateway: {gateway_id}")
     click.echo(f"{'='*60}")
 
+    ok = True
+
+    # --- APPLICATION_LOGS -> CloudWatch Logs ---
     try:
         log_group_name = (
             f"/aws/vendedlogs/bedrock-agentcore/gateway/APPLICATION_LOGS/{gateway_id}"
         )
         log_group_arn = _ensure_log_group(log_group_name)
 
-        source_name = f"{gateway_id}-logs-source"
-        destination_name = f"{gateway_id}-logs-dest"
+        logs_source = f"{gateway_id}-logs-source"
+        logs_dest = f"{gateway_id}-logs-dest"
 
-        _ensure_delivery_source(source_name, gateway_arn)
-        destination_arn = _ensure_delivery_destination(destination_name, log_group_arn)
-        _ensure_delivery(source_name, destination_arn)
+        _ensure_delivery_source(logs_source, gateway_arn, "APPLICATION_LOGS")
+        logs_dest_arn = _ensure_delivery_destination(logs_dest, log_group_arn, "CWL")
+        _ensure_delivery(logs_source, logs_dest_arn, "CloudWatch Logs")
 
-        click.echo(f"📊 Rate-limit evaluations will appear in: {log_group_name}")
-        return True
+        click.echo(f"📄 Request/response lines: {log_group_name}")
     except Exception as e:
-        click.echo(f"❌ Failed to enable gateway logs for {tier}: {e}", err=True)
-        return False
+        click.echo(f"❌ Failed to enable application logs for {tier}: {e}", err=True)
+        ok = False
+
+    # --- TRACES -> X-Ray (this is where rate-limit decisions live) ---
+    # Best-effort: X-Ray setup problems should not fail rate-limit provisioning.
+    try:
+        _ensure_xray_cwl_destination()
+
+        traces_source = f"{gateway_id}-traces-source"
+        traces_dest = f"{gateway_id}-traces-dest"
+
+        _ensure_delivery_source(traces_source, gateway_arn, "TRACES")
+        traces_dest_arn = _ensure_delivery_destination(
+            traces_dest, destination_type="XRAY"
+        )
+        _ensure_delivery(traces_source, traces_dest_arn, "X-Ray")
+
+        click.echo(
+            "📊 Rate-limit decisions: span attributes "
+            "aws.agentcore.gateway.throttle.customer.* (queryable in the "
+            "`aws/spans` log group)"
+        )
+    except Exception as e:
+        click.echo(f"⚠️  Could not enable TRACES delivery for {tier} (non-blocking): {e}")
+        click.echo("   Rate-limit decision attributes will not be visible.")
+
+    return ok
 
 
 # --- CLI -------------------------------------------------------------------
@@ -529,12 +623,12 @@ def create(tier, skip_logs):
 @click.option("--tier", type=click.Choice(TIERS), default=None,
               help="Enable logs for a single tier (default: both).")
 def enable_logs_cmd(tier):
-    """Enable gateway application-log delivery to CloudWatch (rate-limit observability)."""
+    """Enable gateway APPLICATION_LOGS and TRACES delivery (rate-limit observability)."""
     failures = [t for t in _resolve_tiers(tier) if not enable_logs(t)]
     if failures:
-        click.echo(f"❌ Enabling logs failed for: {', '.join(failures)}", err=True)
+        click.echo(f"❌ Enabling observability failed for: {', '.join(failures)}", err=True)
         sys.exit(1)
-    click.echo("\n🎉 Gateway application logs enabled")
+    click.echo("\n🎉 Gateway observability enabled (logs + traces)")
 
 
 @cli.command()
