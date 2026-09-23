@@ -51,12 +51,12 @@ def render_document_chat_interface():
     """
     st.markdown(
         """
-        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%); 
+        <div style="background: linear-gradient(135deg, #ebf4ff 0%, #e0edff 100%); 
                     padding: 15px; border-radius: 8px; 
                     border-left: 4px solid #3182ce; margin-bottom: 20px;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
-            <h4 style="margin: 0 0 10px 0; color: #90cdf4;">📄 Clinical Document Assistant</h4>
-            <p style="margin: 0; color: #cbd5e0; font-size: 0.95em;">
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);">
+            <h4 style="margin: 0 0 10px 0; color: #1a4f8a;">📄 Clinical Document Assistant</h4>
+            <p style="margin: 0; color: #2d3748; font-size: 0.95em;">
                 Ask questions about patient records, lab results, appointment notes, and other clinical documents 
                 within your clinic's scope. All queries are isolated to your clinic's data.
             </p>
@@ -164,14 +164,14 @@ def render_document_scope_indicator(clinic_id: str, tier: str):
     """
     st.markdown(
         f"""
-        <div style="background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); 
+        <div style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); 
                     padding: 10px; border-radius: 5px; 
                     border-left: 3px solid #f6ad55; margin-bottom: 15px;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
-            <small style="color: #e2e8f0;">
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);">
+            <small style="color: #1a202c;">
                 🔒 <strong>Document Scope:</strong> {clinic_id} ({tier} tier)
                 <br>
-                <em style="color: #cbd5e0;">You can only access documents within your clinic's scope.</em>
+                <em style="color: #2d3748;">You can only access documents within your clinic's scope.</em>
             </small>
         </div>
         """,
@@ -202,16 +202,16 @@ def render_policy_status_banner(tier: str):
         # Premium tier: always active, no business hours restriction
         st.markdown(
             f"""
-            <div style="background: linear-gradient(135deg, #1a3a2a 0%, #0f2a1a 100%);
+            <div style="background: linear-gradient(135deg, #e6ffed 0%, #d9f7e3 100%);
                         padding: 10px 15px; border-radius: 5px;
                         border-left: 3px solid #48bb78; margin-bottom: 15px;
-                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
-                <small style="color: #c6f6d5;">
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);">
+                <small style="color: #1a3a2a;">
                     🛡️ <strong>Policy Status:</strong> Patient data access
-                    <strong style="color: #68d391;">ACTIVE</strong>
+                    <strong style="color: #22703f;">ACTIVE</strong>
                     &nbsp;·&nbsp; {time_str} &nbsp;·&nbsp; 24/7 access (Premium)
                     <br>
-                    <em style="color: #9ae6b4;">Premium tier: unrestricted access to patient records and clinical documents</em>
+                    <em style="color: #276749;">Premium tier: unrestricted access to patient records and clinical documents</em>
                 </small>
             </div>
             """,
@@ -230,16 +230,16 @@ def render_policy_status_banner(tier: str):
 
         st.markdown(
             f"""
-            <div style="background: linear-gradient(135deg, #1a3a2a 0%, #0f2a1a 100%);
+            <div style="background: linear-gradient(135deg, #e6ffed 0%, #d9f7e3 100%);
                         padding: 10px 15px; border-radius: 5px;
                         border-left: 3px solid #48bb78; margin-bottom: 15px;
-                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
-                <small style="color: #c6f6d5;">
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);">
+                <small style="color: #1a3a2a;">
                     🛡️ <strong>Policy Status:</strong> Patient data access
-                    <strong style="color: #68d391;">ACTIVE</strong>
+                    <strong style="color: #22703f;">ACTIVE</strong>
                     &nbsp;·&nbsp; {time_str} &nbsp;·&nbsp; {remaining_str} remaining until 6:00 PM
                     <br>
-                    <em style="color: #9ae6b4;">Business hours policy: patient records available 8:00 AM – 6:00 PM</em>
+                    <em style="color: #276749;">Business hours policy: patient records available 8:00 AM – 6:00 PM</em>
                 </small>
             </div>
             """,
@@ -253,16 +253,16 @@ def render_policy_status_banner(tier: str):
 
         st.markdown(
             f"""
-            <div style="background: linear-gradient(135deg, #3a1a1a 0%, #2a0f0f 100%);
+            <div style="background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
                         padding: 10px 15px; border-radius: 5px;
                         border-left: 3px solid #fc8181; margin-bottom: 15px;
-                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
-                <small style="color: #fed7d7;">
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);">
+                <small style="color: #742a2a;">
                     🛡️ <strong>Policy Status:</strong> Patient data access
-                    <strong style="color: #fc8181;">RESTRICTED</strong>
+                    <strong style="color: #c53030;">RESTRICTED</strong>
                     &nbsp;·&nbsp; {time_str} &nbsp;·&nbsp; Resumes {next_open}
                     <br>
-                    <em style="color: #feb2b2;">Business hours policy: patient records are only available 8:00 AM – 6:00 PM.
+                    <em style="color: #9b2c2c;">Business hours policy: patient records are only available 8:00 AM – 6:00 PM.
                     Document search and clinic configuration remain available.</em>
                 </small>
             </div>

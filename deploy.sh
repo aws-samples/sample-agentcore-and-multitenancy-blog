@@ -15,8 +15,20 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-DEPLOYMENT_TYPE="${DEPLOYMENT_TYPE:-direct_code_deploy}"  # Default to direct_code_deploy, set to "container" for container deployment
-PYTHON_RUNTIME="${PYTHON_RUNTIME:-PYTHON_3_12}"  # For direct_code_deploy only
+# The AgentCore Runtimes use direct code deployment: the artifact is a zip in
+# S3 built by scripts/package_agent.sh. DEPLOYMENT_TYPE is retained because
+# configure_deployment.py still reads it.
+DEPLOYMENT_TYPE="${DEPLOYMENT_TYPE:-direct_code_deploy}"
+PYTHON_RUNTIME="${PYTHON_RUNTIME:-PYTHON_3_12}"
+
+# AgentCore Runtime platform version. V2 restores a prepared snapshot per
+# session instead of initializing the environment, which keeps cold starts
+# fast and consistent. Set to V1 to compare against the original behavior.
+AGENTCORE_PLATFORM_VERSION="${AGENTCORE_PLATFORM_VERSION:-V2}"
+
+# Must match the bucket and stack naming that scripts/prereq.sh uses.
+BUCKET_NAME="${BUCKET_NAME:-healthcare}"
+RUNTIME_STACK_NAME="${RUNTIME_STACK_NAME:-HealthcareStackRuntime}"
 
 # Function to print colored output
 print_step() {
@@ -61,7 +73,10 @@ fi
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
 AWS_IDENTITY=$(aws sts get-caller-identity --query 'Arn' --output text)
+REGION=$(aws configure get region)
+FULL_BUCKET_NAME="${BUCKET_NAME}-${AWS_ACCOUNT_ID}"
 print_info "AWS Account: $AWS_ACCOUNT_ID"
+print_info "AWS Region: $REGION"
 print_info "AWS Identity: $AWS_IDENTITY"
 if [ -n "$AWS_PROFILE" ]; then
     print_info "AWS Profile: $AWS_PROFILE"
@@ -129,74 +144,6 @@ python scripts/setup_memory_observability.py enable-all || print_warning "Memory
 print_step "Verifying Memory Observability configuration..."
 python scripts/setup_memory_observability.py verify-all || echo -e "${YELLOW}[WARNING]${NC} Memory observability verification incomplete — deliveries may take time to propagate. This is non-blocking."
 
-print_step "Getting runtime role from SSM..."
-RUNTIME_ROLE=$(aws ssm get-parameter --name /app/healthcare/agentcore/runtime_iam_role --query 'Parameter.Value' --output text)
-
-if [ -z "$RUNTIME_ROLE" ]; then
-    print_error "Could not retrieve runtime IAM role from SSM parameters"
-    exit 1
-fi
-
-print_info "Runtime IAM Role: $RUNTIME_ROLE"
-
-print_step "Getting Cognito configuration for JWT authorization..."
-COGNITO_DISCOVERY_URL=$(aws ssm get-parameter --name /app/healthcare/agentcore/cognito_discovery_url --query 'Parameter.Value' --output text)
-COGNITO_MACHINE_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/machine_client_id --query 'Parameter.Value' --output text)
-COGNITO_WEB_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/web_client_id --query 'Parameter.Value' --output text)
-
-if [ -z "$COGNITO_DISCOVERY_URL" ] || [ -z "$COGNITO_MACHINE_CLIENT_ID" ] || [ -z "$COGNITO_WEB_CLIENT_ID" ]; then
-    print_error "Could not retrieve Cognito configuration from SSM parameters"
-    exit 1
-fi
-
-print_info "Cognito Discovery URL: $COGNITO_DISCOVERY_URL"
-print_info "Cognito Machine Client ID: $COGNITO_MACHINE_CLIENT_ID"
-print_info "Cognito Web Client ID: $COGNITO_WEB_CLIENT_ID"
-
-# Build JWT authorizer configuration with both allowedClients (for access tokens) and allowedAudience (for ID tokens)
-# AUTHORIZER_CONFIG="{\"customJWTAuthorizer\":{\"discoveryUrl\":\"$COGNITO_DISCOVERY_URL\",\"allowedClients\":[\"$COGNITO_MACHINE_CLIENT_ID\",\"$COGNITO_WEB_CLIENT_ID\"],\"allowedAudience\":[\"$COGNITO_WEB_CLIENT_ID\"]}}"
-AUTHORIZER_CONFIG="{\"customJWTAuthorizer\":{\"discoveryUrl\":\"$COGNITO_DISCOVERY_URL\",\"allowedAudience\":[\"$COGNITO_WEB_CLIENT_ID\"]}}"
-
-print_step "Configuring basic tier agent with JWT authorization..."
-if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_basic \
-      --deployment-type direct_code_deploy \
-      --runtime "$PYTHON_RUNTIME" \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-else
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_basic \
-      --deployment-type container \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-fi
-
-print_step "Configuring premium tier agent with JWT authorization..."
-if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_premium \
-      --deployment-type direct_code_deploy \
-      --runtime "$PYTHON_RUNTIME" \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-else
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_premium \
-      --deployment-type container \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-fi
-
 print_step "Creating test users with clinic assignments..."
 python scripts/create_test_users.py
 
@@ -206,21 +153,73 @@ else
     print_warning "Some test users may have failed to create. Check output above."
 fi
 
-print_step "Deploying basic tier agent to AWS..."
-agentcore deploy --agent healthcare_basic
+# ----------------------------------------------------------------------------
+# AgentCore Runtimes (infrastructure as code)
+#
+# The runtimes are declared in prerequisite/agentcore_runtime.yaml rather than
+# created with 'agentcore configure' + 'agentcore deploy'. Two reasons:
+#
+#   1. The bedrock-agentcore-starter-toolkit is no longer supported, and its
+#      successor (@aws/agentcore) is a different toolchain entirely.
+#   2. Neither CLI can set platformVersion, so neither can create a V2 runtime.
+#      AWS::BedrockAgentCore::Runtime exposes PlatformVersion directly.
+#
+# The template reads the execution role and Cognito settings straight from SSM,
+# which is why the shell no longer fetches them and passes them along.
+# ----------------------------------------------------------------------------
 
-print_step "Deploying premium tier agent to AWS..."
-agentcore deploy --agent healthcare_premium
+print_step "Packaging agent bundle for AgentCore Runtime..."
+CODE_PREFIX=$(scripts/package_agent.sh "$FULL_BUCKET_NAME")
+
+if [ -z "$CODE_PREFIX" ]; then
+    print_error "Agent packaging failed; no bundle key returned"
+    exit 1
+fi
+
+print_info "Agent bundle: s3://$FULL_BUCKET_NAME/$CODE_PREFIX"
+
+print_step "Deploying AgentCore Runtimes (platform version ${AGENTCORE_PLATFORM_VERSION})..."
+print_info "A V2 runtime prepares and snapshots its environment, so this takes"
+print_info "several minutes per runtime rather than seconds."
+
+aws cloudformation deploy \
+  --stack-name "$RUNTIME_STACK_NAME" \
+  --template-file prerequisite/agentcore_runtime.yaml \
+  --region "$REGION" \
+  --parameter-overrides \
+    CodeBucket="$FULL_BUCKET_NAME" \
+    CodePrefix="$CODE_PREFIX" \
+    PlatformVersion="$AGENTCORE_PLATFORM_VERSION" \
+    PythonRuntime="$PYTHON_RUNTIME"
+
+print_step "Verifying runtime platform version..."
+for tier in basic premium; do
+    runtime_id=$(aws ssm get-parameter \
+      --name "/app/healthcare/agentcore/${tier}_agent_id" \
+      --query 'Parameter.Value' --output text 2>/dev/null)
+
+    if [ -n "$runtime_id" ]; then
+        # Read back through Cloud Control, which uses the resource schema and
+        # therefore reports PlatformVersion even on AWS CLI versions whose
+        # bedrock-agentcore-control model predates the field.
+        details=$(aws cloudcontrol get-resource \
+          --type-name AWS::BedrockAgentCore::Runtime \
+          --identifier "$runtime_id" \
+          --region "$REGION" \
+          --query 'ResourceDescription.Properties' --output text 2>/dev/null)
+        print_info "$tier: $(echo "$details" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(f"{d[\"AgentRuntimeName\"]} status={d[\"Status\"]} platformVersion={d.get(\"PlatformVersion\",\"V1\")}")' 2>/dev/null || echo "$runtime_id")"
+    fi
+done
 
 print_step "Deployment completed successfully!"
 echo ""
 echo "🎉 Multi-tenant AgentCore deployment is ready!"
 echo ""
 echo "Deployment Configuration:"
-echo "  Type: $DEPLOYMENT_TYPE"
-if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
-    echo "  Runtime: $PYTHON_RUNTIME"
-fi
+echo "  Type: direct code deployment (zip in S3)"
+echo "  Python runtime: $PYTHON_RUNTIME"
+echo "  Platform version: $AGENTCORE_PLATFORM_VERSION"
+echo "  Runtime stack: $RUNTIME_STACK_NAME"
 echo ""
 echo "Agents deployed and ready to use!"
 echo ""

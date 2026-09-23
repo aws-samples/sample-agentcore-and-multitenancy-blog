@@ -58,3 +58,6 @@ generated-docs/
 
 # Log files (deploy/build output)
 *.log
+
+# Agent deployment bundle built by scripts/package_agent.sh
+build/

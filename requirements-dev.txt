@@ -1,8 +1,12 @@
 # Healthcare Multi-Tenant AgentCore — all dependencies
 
 # Core AgentCore dependencies
+#
+# bedrock-agentcore-starter-toolkit is intentionally absent. It is no longer
+# supported upstream, and it cannot set the runtime platformVersion, so the
+# AgentCore Runtimes are declared in prerequisite/agentcore_runtime.yaml and
+# packaged by scripts/package_agent.sh instead.
 bedrock-agentcore>=1.2.1
-bedrock-agentcore-starter-toolkit>=0.2.10
 
 # AWS SDK
 # 1.43.61+ required for the AgentCore Gateway managed KB connector target

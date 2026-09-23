@@ -52,22 +52,19 @@ def load_ssm_parameters() -> Dict[str, str]:
     return parameters
 
 def generate_agentcore_yaml(config: Dict[str, Any], deployment_type: str = "direct_code_deploy"):
-    """Generate .bedrock_agentcore.yaml with dynamic values
-    
+    """No-op retained so existing callers keep working.
+
+    Runtime configuration is no longer written to a local file. The AgentCore
+    Runtimes are declared in prerequisite/agentcore_runtime.yaml, which reads
+    its inputs from SSM and publishes the resulting runtime ids and ARNs back
+    to SSM for the Streamlit app and the API Gateway proxy to consume.
+
     Args:
-        config: Configuration dictionary
-        deployment_type: Either "direct_code_deploy" or "container" (default: direct_code_deploy)
-    
-    Note: This function is now DEPRECATED for agent configuration.
-    Use 'agentcore configure' CLI command instead, which will create the yaml file.
-    This function is kept only for reference and backward compatibility.
+        config: Configuration dictionary (unused).
+        deployment_type: Retained for signature compatibility (unused).
     """
-    
-    print(f"⚠️  Skipping .bedrock_agentcore.yaml generation")
-    print(f"   The 'agentcore configure' command will create this file with correct settings")
-    print(f"   Deployment type will be: {deployment_type}")
-    
-    # Don't generate the file - let agentcore configure do it
+    print("ℹ️  Runtime config is declared in prerequisite/agentcore_runtime.yaml")
+    print("   Runtime ids and ARNs are published to /app/healthcare/agentcore/*")
     return
 
 def main():

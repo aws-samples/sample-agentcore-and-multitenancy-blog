@@ -11,25 +11,25 @@ def apply_custom_styles():
         <style>
         /* Main app background */
         body {
-            background: #0f1419 !important;
+            background: #ffffff !important;
         }
         .stApp {
-            background: #0f1419 !important;
+            background: #ffffff !important;
         }
         
         /* Chat input styling */
         .stChatInput {
-            background: #1a1f2e !important;
-            border: 1px solid #2d3748 !important;
+            background: #f0f4f8 !important;
+            border: 1px solid #cbd5e0 !important;
             border-radius: 12px !important;
         }
         .stChatInput input {
-            background: #1a1f2e !important;
-            color: #e2e8f0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
             border: none !important;
         }
         .stChatInput input::placeholder {
-            color: #718096 !important;
+            color: #4a5568 !important;
         }
         
         /* Button styling */
@@ -48,19 +48,24 @@ def apply_custom_styles():
         }
         
         /* Chat bubbles */
+        /* Chat bubbles use light backgrounds with black text. The bubble
+           colours are declared !important because the global
+           "p, label, span, div { color: ... !important }" rule below also
+           matches these divs and their children, and would otherwise win and
+           render the conversation in light grey. */
         .user-bubble {
-            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-            color: #e2e8f0;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            color: #000000;
             border-radius: 16px;
             padding: 0.8rem 1.2rem;
             margin-bottom: 0.5rem;
             display: inline-block;
-            border: 1px solid #4a5568;
+            border: 1px solid #a0aec0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
         .assistant-bubble {
-            background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
-            color: #e2e8f0;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+            color: #000000;
             border-radius: 16px;
             padding: 0.8rem 1.2rem;
             margin-bottom: 0.5rem;
@@ -78,8 +83,8 @@ def apply_custom_styles():
             animation: pulse-border 2s infinite, fadeInUp 0.3s ease-out;
         }
         .thinking-bubble {
-            background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
-            color: #90cdf4;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+            color: #1a365d;
             border-radius: 16px;
             padding: 0.8rem 1.2rem;
             margin-bottom: 0.5rem;
@@ -90,9 +95,57 @@ def apply_custom_styles():
         }
         .typing-cursor::after {
             content: '▋';
-            color: #63b3ed;
+            color: #2b6cb0;
             animation: cursor-blink 1s infinite;
             margin-left: 2px;
+        }
+
+        /* Force black chat text over the global grey text rule, including any
+           nested elements Streamlit renders inside the bubble. */
+        .user-bubble,
+        .user-bubble p,
+        .user-bubble span,
+        .user-bubble div,
+        .user-bubble li,
+        .user-bubble strong,
+        .user-bubble em,
+        .assistant-bubble,
+        .assistant-bubble p,
+        .assistant-bubble span,
+        .assistant-bubble div,
+        .assistant-bubble li,
+        .assistant-bubble strong,
+        .assistant-bubble em {
+            color: #000000 !important;
+        }
+        .thinking-bubble,
+        .thinking-bubble span,
+        .thinking-bubble div {
+            color: #1a365d !important;
+        }
+
+        /* Response-time caption: dimmer than the message but still legible on
+           a light bubble. Replaces an inline #888 that fell below contrast. */
+        .user-bubble .response-time,
+        .assistant-bubble .response-time {
+            color: #4a5568 !important;
+            font-size: 0.9em;
+        }
+
+        /* Links inside a bubble need a dark blue; the global link colour is
+           tuned for the dark page background. */
+        .user-bubble a,
+        .assistant-bubble a {
+            color: #1a4f8a !important;
+            text-decoration: underline !important;
+        }
+
+        /* Inline code inside a bubble, which would otherwise keep the
+           dark-page treatment and lose contrast. */
+        .user-bubble code,
+        .assistant-bubble code {
+            background: #edf2f7 !important;
+            color: #1a365d !important;
         }
         
         /* Animations */
@@ -137,90 +190,90 @@ def apply_custom_styles():
         
         /* Sidebar styling */
         section[data-testid="stSidebar"] {
-            background: #1a1f2e !important;
-            border-right: 1px solid #2d3748 !important;
+            background: #f0f4f8 !important;
+            border-right: 1px solid #cbd5e0 !important;
         }
         section[data-testid="stSidebar"] .stMarkdown {
-            color: #e2e8f0 !important;
+            color: #1a202c !important;
         }
         section[data-testid="stSidebar"] h1,
         section[data-testid="stSidebar"] h2,
         section[data-testid="stSidebar"] h3 {
-            color: #90cdf4 !important;
+            color: #1a4f8a !important;
         }
         
         /* Text and headings */
         h1, h2, h3, h4, h5, h6 {
-            color: #e2e8f0 !important;
+            color: #1a202c !important;
         }
         p, label, span, div {
-            color: #cbd5e0 !important;
+            color: #000000 !important;
         }
         .stMarkdown {
-            color: #cbd5e0 !important;
+            color: #000000 !important;
         }
         
         /* Code blocks */
         code {
-            background: #1a202c !important;
-            color: #90cdf4 !important;
+            background: #edf2f7 !important;
+            color: #1a365d !important;
             padding: 2px 6px !important;
             border-radius: 4px !important;
-            border: 1px solid #2d3748 !important;
+            border: 1px solid #cbd5e0 !important;
         }
         pre {
-            background: #1a202c !important;
-            border: 1px solid #2d3748 !important;
+            background: #edf2f7 !important;
+            border: 1px solid #cbd5e0 !important;
             border-radius: 8px !important;
         }
         
         /* Expander styling */
         .streamlit-expanderHeader {
-            background: #1a1f2e !important;
-            color: #e2e8f0 !important;
-            border: 1px solid #2d3748 !important;
+            background: #f0f4f8 !important;
+            color: #1a202c !important;
+            border: 1px solid #cbd5e0 !important;
             border-radius: 8px !important;
         }
         .streamlit-expanderContent {
-            background: #1a1f2e !important;
-            border: 1px solid #2d3748 !important;
+            background: #f0f4f8 !important;
+            border: 1px solid #cbd5e0 !important;
             border-left: 3px solid #667eea !important;
         }
         
         /* Divider */
         hr {
             border: none !important;
-            border-top: 1px solid #2d3748 !important;
+            border-top: 1px solid #cbd5e0 !important;
             margin: 1.5rem 0 !important;
         }
         
         /* Info boxes - override inline styles */
         div[style*="background-color: #f0f8ff"],
         div[style*="background-color: #fff3cd"] {
-            background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%) !important;
+            background: linear-gradient(135deg, #ebf4ff 0%, #e0edff 100%) !important;
             border-left: 4px solid #3182ce !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
         }
         div[style*="background-color: #f0f8ff"] h4,
         div[style*="background-color: #f0f8ff"] p,
         div[style*="background-color: #fff3cd"] small,
         div[style*="background-color: #fff3cd"] strong,
         div[style*="background-color: #fff3cd"] em {
-            color: #e2e8f0 !important;
+            color: #1a202c !important;
         }
         
         /* Caption text */
         .stCaptionContainer {
-            color: #718096 !important;
+            color: #4a5568 !important;
         }
         
         /* Links */
         a {
-            color: #63b3ed !important;
+            color: #2b6cb0 !important;
             text-decoration: none !important;
         }
         a:hover {
-            color: #90cdf4 !important;
+            color: #1a4f8a !important;
             text-decoration: underline !important;
         }
         </style>

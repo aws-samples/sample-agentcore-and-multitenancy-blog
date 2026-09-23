@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  AgentCore Runtimes for the multi-tenant healthcare sample, declared as
+  infrastructure as code.
+
+  Both tiers run the same code bundle; the tier is resolved per request from
+  the payload, so the two runtimes differ only in name. Declaring them here
+  replaces the 'agentcore configure' and 'agentcore deploy' calls that the
+  (now unsupported) bedrock-agentcore-starter-toolkit used to make, and it
+  lets us set PlatformVersion, which no AgentCore CLI currently exposes.
+
+  PlatformVersion V2 starts each session by restoring a prepared snapshot
+  instead of initializing the environment, which keeps cold starts fast and
+  consistent regardless of concurrency or bundle size. See
+  https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-how-it-works.html#runtime-platform-versions
+
+Parameters:
+  CodeBucket:
+    Type: String
+    Description: S3 bucket holding the agent deployment bundle.
+
+  CodePrefix:
+    Type: String
+    Description: >
+      S3 key of the agent deployment bundle. The key embeds a content hash
+      (see scripts/package_agent.sh) so that a code change produces a new key
+      and CloudFormation therefore rolls the runtime to the new bundle. A
+      fixed key would leave the runtime pinned to whatever it first saw.
+
+  PlatformVersion:
+    Type: String
+    Default: V2
+    AllowedValues: [V1, V2]
+    Description: >
+      AgentCore Runtime platform version. V2 adds snapshot-based starts and
+      usage-based memory billing. Leave at V2 unless you are deliberately
+      comparing against V1 behavior.
+
+  PythonRuntime:
+    Type: String
+    Default: PYTHON_3_12
+    AllowedValues: [PYTHON_3_10, PYTHON_3_11, PYTHON_3_12, PYTHON_3_13, PYTHON_3_14]
+    Description: Managed Python runtime for direct code deployment.
+
+  IdleSessionTimeoutSeconds:
+    Type: Number
+    Default: 900
+    MinValue: 60
+    MaxValue: 1209600
+    Description: Seconds a session may sit idle before termination.
+
+  MaxSessionLifetimeSeconds:
+    Type: Number
+    Default: 28800
+    MinValue: 60
+    MaxValue: 1209600
+    Description: Maximum total session lifetime in seconds.
+
+  # Resolved from SSM so the template reads its inputs directly rather than
+  # having deploy.sh shell out to 'aws ssm get-parameter' and pass them in.
+  RuntimeRoleArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/runtime_iam_role
+    Description: Execution role, created by prerequisite/infrastructure.yaml.
+
+  CognitoDiscoveryUrl:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/cognito_discovery_url
+    Description: OIDC discovery URL, created by prerequisite/cognito_multitenant.yaml.
+
+  CognitoWebClientId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/web_client_id
+    Description: Cognito app client id used as the allowed JWT audience.
+
+Resources:
+  # Inbound auth: the runtime validates the Cognito JWT (signature, issuer,
+  # audience, expiry) before any agent code runs. Authorization is NOT
+  # optional here, and the allowlisted Authorization header is what lets the
+  # agent forward the same user token outbound to the Gateway.
+  BasicRuntime:
+    Type: AWS::BedrockAgentCore::Runtime
+    Properties:
+      AgentRuntimeName: healthcare_basic
+      Description: Basic tier healthcare clinical document assistant.
+      RoleArn: !Ref RuntimeRoleArn
+      PlatformVersion: !Ref PlatformVersion
+      AgentRuntimeArtifact:
+        CodeConfiguration:
+          Code:
+            S3:
+              Bucket: !Ref CodeBucket
+              Prefix: !Ref CodePrefix
+          Runtime: !Ref PythonRuntime
+          EntryPoint:
+            - main.py
+      NetworkConfiguration:
+        NetworkMode: PUBLIC
+      # In CloudFormation this is a bare string enum, not the
+      # {ServerProtocol: HTTP} object the API and the old YAML config used.
+      ProtocolConfiguration: HTTP
+      AuthorizerConfiguration:
+        CustomJWTAuthorizer:
+          DiscoveryUrl: !Ref CognitoDiscoveryUrl
+          AllowedAudience:
+            - !Ref CognitoWebClientId
+      RequestHeaderConfiguration:
+        RequestHeaderAllowlist:
+          - Authorization
+      LifecycleConfiguration:
+        IdleRuntimeSessionTimeout: !Ref IdleSessionTimeoutSeconds
+        MaxLifetime: !Ref MaxSessionLifetimeSeconds
+
+  PremiumRuntime:
+    Type: AWS::BedrockAgentCore::Runtime
+    Properties:
+      AgentRuntimeName: healthcare_premium
+      Description: Premium tier healthcare clinical document assistant.
+      RoleArn: !Ref RuntimeRoleArn
+      PlatformVersion: !Ref PlatformVersion
+      AgentRuntimeArtifact:
+        CodeConfiguration:
+          Code:
+            S3:
+              Bucket: !Ref CodeBucket
+              Prefix: !Ref CodePrefix
+          Runtime: !Ref PythonRuntime
+          EntryPoint:
+            - main.py
+      NetworkConfiguration:
+        NetworkMode: PUBLIC
+      ProtocolConfiguration: HTTP
+      AuthorizerConfiguration:
+        CustomJWTAuthorizer:
+          DiscoveryUrl: !Ref CognitoDiscoveryUrl
+          AllowedAudience:
+            - !Ref CognitoWebClientId
+      RequestHeaderConfiguration:
+        RequestHeaderAllowlist:
+          - Authorization
+      LifecycleConfiguration:
+        IdleRuntimeSessionTimeout: !Ref IdleSessionTimeoutSeconds
+        MaxLifetime: !Ref MaxSessionLifetimeSeconds
+
+  # Published to SSM because the Streamlit app and the API Gateway proxy need
+  # the ARNs at runtime. This replaces reading .bedrock_agentcore.yaml, which
+  # was a starter toolkit artifact and no longer exists.
+  BasicAgentIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/basic_agent_id
+      Type: String
+      Value: !GetAtt BasicRuntime.AgentRuntimeId
+
+  BasicAgentArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/basic_agent_arn
+      Type: String
+      Value: !GetAtt BasicRuntime.AgentRuntimeArn
+
+  PremiumAgentIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/premium_agent_id
+      Type: String
+      Value: !GetAtt PremiumRuntime.AgentRuntimeId
+
+  PremiumAgentArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/premium_agent_arn
+      Type: String
+      Value: !GetAtt PremiumRuntime.AgentRuntimeArn
+
+Outputs:
+  BasicAgentRuntimeId:
+    Description: Basic tier runtime id.
+    Value: !GetAtt BasicRuntime.AgentRuntimeId
+
+  BasicAgentRuntimeArn:
+    Description: Basic tier runtime ARN.
+    Value: !GetAtt BasicRuntime.AgentRuntimeArn
+
+  BasicAgentRuntimeStatus:
+    Description: Basic tier runtime status.
+    Value: !GetAtt BasicRuntime.Status
+
+  PremiumAgentRuntimeId:
+    Description: Premium tier runtime id.
+    Value: !GetAtt PremiumRuntime.AgentRuntimeId
+
+  PremiumAgentRuntimeArn:
+    Description: Premium tier runtime ARN.
+    Value: !GetAtt PremiumRuntime.AgentRuntimeArn
+
+  PremiumAgentRuntimeStatus:
+    Description: Premium tier runtime status.
+    Value: !GetAtt PremiumRuntime.Status
+
+  EffectivePlatformVersion:
+    Description: Platform version requested for both runtimes.
+    Value: !Ref PlatformVersion
