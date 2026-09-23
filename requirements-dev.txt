@@ -1,8 +1,12 @@
 # Healthcare Multi-Tenant AgentCore — all dependencies
 
 # Core AgentCore dependencies
+#
+# bedrock-agentcore-starter-toolkit is intentionally absent. It is no longer
+# supported upstream, and it cannot set the runtime platformVersion, so the
+# AgentCore Runtimes are declared in prerequisite/agentcore_runtime.yaml and
+# packaged by scripts/package_agent.sh instead.
 bedrock-agentcore>=1.2.1
-bedrock-agentcore-starter-toolkit>=0.2.10
 
 # AWS SDK
 # 1.43.61+ required for the AgentCore Gateway managed KB connector target
@@ -36,7 +40,10 @@ pandas>=2.3.3,<3.0.0
 PyYAML>=6.0.3
 
 # MCP and data validation
-fastmcp
+# Pinned to match requirements.txt; see the note there. mcp 2.0 renamed
+# streamablehttp_client, which the agent imports directly.
+mcp>=1.23.0,<2.0.0
+fastmcp>=3.4.7,<4.0.0
 pydantic
 
 # HTTP requests

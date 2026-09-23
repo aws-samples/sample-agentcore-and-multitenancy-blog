@@ -9,7 +9,7 @@ import urllib.parse
 from typing import Any, Optional
 import requests
 import streamlit as st
-from scripts.utils import read_config, get_aws_region
+from scripts.utils import get_ssm_parameter, get_aws_region
 from .utils import make_urls_clickable, create_safe_markdown_text
 
 
@@ -67,19 +67,20 @@ class ChatManager:
             st.session_state["pending_assistant"] = False
     
     def set_agent_for_user(self, user_tier: str):
-        """Set the agent ARN based on user tier"""
-        runtime_config = read_config(".bedrock_agentcore.yaml")
-        
-        # Map tier to agent name
-        tier_to_agent = {
-            "basic": "healthcare_basic",
-            "premium": "healthcare_premium"
-        }
-        
-        agent_name = tier_to_agent.get(user_tier, "healthcare_basic")
-        
-        # Set agent ARN in session state
-        st.session_state["agent_arn"] = runtime_config["agents"][agent_name]["bedrock_agentcore"]["agent_arn"]
+        """Set the agent ARN based on user tier.
+
+        The ARN is read from SSM, where prerequisite/agentcore_runtime.yaml
+        publishes it. It previously came from .bedrock_agentcore.yaml, which
+        was an artifact of the bedrock-agentcore-starter-toolkit; that toolkit
+        is no longer supported and the runtimes are now declared in
+        CloudFormation, so the file no longer exists.
+        """
+        tier = "premium" if user_tier == "premium" else "basic"
+        agent_name = f"healthcare_{tier}"
+
+        st.session_state["agent_arn"] = get_ssm_parameter(
+            f"/app/healthcare/agentcore/{tier}_agent_arn"
+        )
         st.session_state["agent_name"] = agent_name
 
     def invoke_endpoint(
@@ -215,7 +216,7 @@ class ChatManager:
                 if message["role"] == "assistant" and "elapsed" in message:
                     clickable_content = make_urls_clickable(message["content"])
                     create_safe_markdown_text(
-                        f'<div class="{bubble_class}">{emoji} {clickable_content}<br><span style="font-size:0.9em;color:#888;">⏱️ Response time: {message["elapsed"]:.2f} seconds</span></div>',
+                        f'<div class="{bubble_class}">{emoji} {clickable_content}<br><span class="response-time">⏱️ Response time: {message["elapsed"]:.2f} seconds</span></div>',
                         st,
                     )
                 else:
@@ -290,7 +291,7 @@ class ChatManager:
             clickable_streaming_text = make_urls_clickable(remove_thinking_tags(accumulated_response))
 
             create_safe_markdown_text(
-                f'<div class="assistant-bubble">🤖 {clickable_streaming_text}<br><span style="font-size:0.9em;color:#888;">⏱️ Response time: {elapsed:.2f} seconds</span></div>',
+                f'<div class="assistant-bubble">🤖 {clickable_streaming_text}<br><span class="response-time">⏱️ Response time: {elapsed:.2f} seconds</span></div>',
                 message_placeholder,
             )
 
@@ -363,7 +364,7 @@ class ChatManager:
                 clickable_answer = make_urls_clickable(accumulated_response)
 
                 create_safe_markdown_text(
-                    f'<div class="assistant-bubble">🤖 {clickable_answer}<br><span style="font-size:0.9em;color:#888;">⏱️ Response time: {elapsed:.2f} seconds</span></div>',
+                    f'<div class="assistant-bubble">🤖 {clickable_answer}<br><span class="response-time">⏱️ Response time: {elapsed:.2f} seconds</span></div>',
                     message_placeholder,
                 )
 

@@ -36,6 +36,7 @@ BUCKET_NAME=${1:-healthcare}
 INFRA_STACK_NAME=${2:-HealthcareStackInfra}
 COGNITO_STACK_NAME=${3:-HealthcareStackCognito}
 API_GATEWAY_STACK_NAME=${4:-HealthcareStackApiGateway}
+RUNTIME_STACK_NAME=${5:-HealthcareStackRuntime}
 REGION=$(aws configure get region)
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 FULL_BUCKET_NAME="${BUCKET_NAME}-${ACCOUNT_ID}"
@@ -61,9 +62,21 @@ else
 fi
 
 # ----- 1. Delete AgentCore Agent Runtimes -----
-print_step "Deleting AgentCore agent runtimes..."
-python scripts/agentcore_agent_runtime.py healthcare_basic || print_warning "Failed to delete healthcare_basic runtime (may not exist)"
-python scripts/agentcore_agent_runtime.py healthcare_premium || print_warning "Failed to delete healthcare_premium runtime (may not exist)"
+# The runtimes are declared in prerequisite/agentcore_runtime.yaml, so the
+# stack owns them. Deleting them directly would leave the stack referencing
+# resources that no longer exist.
+print_step "Deleting AgentCore Runtime stack: $RUNTIME_STACK_NAME..."
+aws cloudformation delete-stack --stack-name "$RUNTIME_STACK_NAME" --region "$REGION" 2>/dev/null || print_warning "Runtime stack may not exist"
+print_info "Waiting for runtime stack deletion (snapshots can take time to release)..."
+aws cloudformation wait stack-delete-complete --stack-name "$RUNTIME_STACK_NAME" --region "$REGION" 2>/dev/null || true
+print_info "Runtime stack deleted (or did not exist)."
+
+# Fallback for environments deployed before the runtimes moved into
+# CloudFormation, where they were created by the starter toolkit and are not
+# owned by any stack.
+print_step "Removing any unmanaged runtimes left from a starter toolkit deploy..."
+python scripts/agentcore_agent_runtime.py healthcare_basic 2>/dev/null || print_info "No unmanaged healthcare_basic runtime"
+python scripts/agentcore_agent_runtime.py healthcare_premium 2>/dev/null || print_info "No unmanaged healthcare_premium runtime"
 
 # ----- 2. Delete AgentCore Memory Resources -----
 print_step "Deleting AgentCore Memory resources (basic and premium)..."

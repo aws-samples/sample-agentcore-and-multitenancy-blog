@@ -66,8 +66,6 @@ fi
 
 # ----- 4. Deploy CloudFormation -----
 deploy_stack() {
-  set +e
-
   local stack_name=$1
   local template_file=$2
   shift 2
@@ -75,14 +73,21 @@ deploy_stack() {
 
   echo "🚀 Deploying CloudFormation stack: $stack_name"
 
+  # errexit is disabled only around the deploy call, because 'aws
+  # cloudformation deploy' exits non-zero for the benign "No changes to deploy"
+  # case. It is restored immediately: this function used to leave errexit off
+  # for the remainder of the script, so a later fatal error (knowledge base
+  # creation, for example) no longer stopped the deploy and the script still
+  # printed "Deployment complete".
+  set +e
   output=$(aws cloudformation deploy \
     --stack-name "$stack_name" \
     --template-file "$template_file" \
     --capabilities CAPABILITY_NAMED_IAM \
     --region "$REGION" \
     "${params[@]}" 2>&1)
-
   exit_code=$?
+  set -e
 
   echo "$output"
 
@@ -102,21 +107,33 @@ deploy_stack() {
 }
 
 # ----- Run all stacks -----
+# '|| var=$?' keeps errexit from aborting here so the exit code can be
+# inspected, while still leaving errexit active for the rest of the script.
 echo "🔧 Starting deployment of infrastructure stack..."
-deploy_stack "$INFRA_STACK_NAME" "$INFRA_TEMPLATE_FILE" --parameter-overrides LambdaS3Bucket="$FULL_BUCKET_NAME" LambdaS3Key="$S3_KEY"
-infra_exit_code=$?
+infra_exit_code=0
+deploy_stack "$INFRA_STACK_NAME" "$INFRA_TEMPLATE_FILE" --parameter-overrides LambdaS3Bucket="$FULL_BUCKET_NAME" LambdaS3Key="$S3_KEY" || infra_exit_code=$?
+
+if [ $infra_exit_code -ne 0 ]; then
+  echo "❌ Infrastructure stack failed; everything downstream depends on it. Stopping."
+  exit $infra_exit_code
+fi
 
 echo "🔧 Starting deployment of Cognito stack..."
-deploy_stack "$COGNITO_STACK_NAME" "$COGNITO_TEMPLATE_FILE"
-cognito_exit_code=$?
+cognito_exit_code=0
+deploy_stack "$COGNITO_STACK_NAME" "$COGNITO_TEMPLATE_FILE" || cognito_exit_code=$?
+
+if [ $cognito_exit_code -ne 0 ]; then
+  echo "❌ Cognito stack failed; authentication and the runtime authorizer depend on it. Stopping."
+  exit $cognito_exit_code
+fi
 
 echo "🔧 Starting deployment of API Gateway stack..."
 if [ -f "$API_GATEWAY_ZIP_FILE" ]; then
+  api_gateway_exit_code=0
   deploy_stack "$API_GATEWAY_STACK_NAME" "$API_GATEWAY_TEMPLATE_FILE" \
     --parameter-overrides \
       LambdaCodeBucket="$FULL_BUCKET_NAME" \
-      LambdaCodeKey="$API_GATEWAY_S3_KEY"
-  api_gateway_exit_code=$?
+      LambdaCodeKey="$API_GATEWAY_S3_KEY" || api_gateway_exit_code=$?
 
   if [ $api_gateway_exit_code -eq 0 ]; then
     echo "🔑 Fixing API Key SSM parameters (CloudFormation stores key ID, not actual value)..."

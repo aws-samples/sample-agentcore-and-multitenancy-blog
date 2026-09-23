@@ -1,0 +1,17 @@
+# Streamlit theme.
+#
+# This file matters more than it looks. Without it Streamlit renders its own
+# chrome (chat message containers, chat input, sidebar, buttons) using its
+# default LIGHT theme, while app_modules/styles.py used to paint selected areas
+# dark and force every text element to light grey. Wherever a Streamlit-owned
+# light surface met that forced light-grey text, the result was light grey on
+# light and effectively unreadable.
+#
+# Declaring the theme here makes Streamlit's own widgets agree with the custom
+# CSS instead of fighting it.
+[theme]
+base = "light"
+primaryColor = "#2b6cb0"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f4f8"
+textColor = "#000000"

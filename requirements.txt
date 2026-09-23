@@ -22,7 +22,15 @@ openai>=1.82.0
 aws-bedrock-token-generator
 
 # MCP and data validation
-fastmcp
+#
+# mcp is pinned to 1.x on purpose. The agent imports
+# mcp.client.streamable_http directly (agent/streamable_http_bearer.py wraps
+# streamablehttp_client to forward the user's JWT to the Gateway), and mcp 2.0
+# renamed that function to streamable_http_client. fastmcp 4.x requires
+# mcp>=2.0, so leaving either unpinned lets a fresh build resolve the rename
+# and fail at import time inside the runtime.
+mcp>=1.23.0,<2.0.0
+fastmcp>=3.4.7,<4.0.0
 pydantic
 
 # HTTP requests
