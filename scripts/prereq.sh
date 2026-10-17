@@ -110,12 +110,31 @@ echo "🔧 Starting deployment of Cognito stack..."
 deploy_stack "$COGNITO_STACK_NAME" "$COGNITO_TEMPLATE_FILE"
 cognito_exit_code=$?
 
+if [ $cognito_exit_code -ne 0 ]; then
+  echo "❌ Cognito stack deployment failed; API Gateway cannot be configured securely."
+  exit $cognito_exit_code
+fi
+
+COGNITO_USER_POOL_ID=$(aws ssm get-parameter \
+  --name /app/healthcare/agentcore/userpool_id \
+  --region "$REGION" \
+  --query 'Parameter.Value' \
+  --output text)
+
+if [ -z "$COGNITO_USER_POOL_ID" ] || [ "$COGNITO_USER_POOL_ID" = "None" ]; then
+  echo "❌ Could not retrieve the Cognito user pool ID for API Gateway authentication."
+  exit 1
+fi
+
+echo "🔐 API Gateway will use Cognito user pool: $COGNITO_USER_POOL_ID"
+
 echo "🔧 Starting deployment of API Gateway stack..."
 if [ -f "$API_GATEWAY_ZIP_FILE" ]; then
   deploy_stack "$API_GATEWAY_STACK_NAME" "$API_GATEWAY_TEMPLATE_FILE" \
     --parameter-overrides \
       LambdaCodeBucket="$FULL_BUCKET_NAME" \
-      LambdaCodeKey="$API_GATEWAY_S3_KEY"
+      LambdaCodeKey="$API_GATEWAY_S3_KEY" \
+      CognitoUserPoolId="$COGNITO_USER_POOL_ID"
   api_gateway_exit_code=$?
 
   if [ $api_gateway_exit_code -eq 0 ]; then

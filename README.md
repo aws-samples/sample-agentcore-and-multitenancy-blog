@@ -111,8 +111,8 @@ One `HealthcareAgent` class serves both tiers. Differences are driven by a `TIER
 | Guardrails | Tier-specific (ApplyGuardrail API) | Tier-specific (ApplyGuardrail API) |
 | Access Policy | Business hours (8am–6pm) | 24/7 |
 
-### 4. Authentication & Tenant Identity — Cognito JWT
-Amazon Cognito issues JWTs with custom attributes (`custom:tier`, `custom:clinic_id`). The API Gateway Lambda extracts these claims and forwards them to the agent as payload fields.
+### 4. Layered Authentication & Tenant Identity — Cognito JWT
+Amazon Cognito issues JWTs with custom attributes (`custom:tier`, `custom:clinic_id`). API Gateway validates the user's Cognito ID token before invoking the proxy Lambda. The Lambda extracts tenant claims from the edge-validated token and forwards the original token to AgentCore Runtime, whose custom JWT authorizer validates it independently before agent code runs. API keys remain enabled for tier-based throttling and quotas; they are not an authentication mechanism.
 
 ### 5. Cost Attribution — Bedrock Projects + Structured Usage Logging
 Per-tenant cost tracking via:

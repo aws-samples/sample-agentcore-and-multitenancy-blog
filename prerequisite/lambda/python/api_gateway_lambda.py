@@ -4,9 +4,12 @@
 """
 API Gateway Lambda proxy for AgentCore — tenant context extraction and throttling.
 
-JWT signature verification is handled by AgentCore Runtime's Inbound JWT Authorizer
-(configured via CustomJWTAuthorizerConfiguration). This Lambda only needs to:
-  1. Decode the JWT (without signature verification) to extract tenant claims
+JWT signature verification is performed independently at two boundaries:
+  1. API Gateway's Cognito user-pool authorizer, before Lambda invocation
+  2. AgentCore Runtime's custom JWT authorizer, before agent execution
+
+This Lambda only needs to:
+  1. Decode the edge-validated JWT to extract tenant claims
   2. Enrich the payload with tenant context (tier, clinic_id, user_id)
   3. Forward the request with the original Bearer token to AgentCore Runtime
 
@@ -31,10 +34,17 @@ agentcore_client = boto3.client(
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     API Gateway Lambda proxy to AgentCore with tenant-based throttling.
-    JWT validation is delegated to AgentCore Runtime's Inbound JWT Authorizer.
+    API Gateway validates the Cognito token before invocation, and AgentCore
+    Runtime validates the forwarded token again before agent execution.
     """
     try:
-        print(f"Received event: {json.dumps(event)}")
+        request_context = event.get('requestContext', {})
+        print(
+            "Received API Gateway request: "
+            f"request_id={request_context.get('requestId', 'unknown')}, "
+            f"method={event.get('httpMethod', 'unknown')}, "
+            f"resource={event.get('resource', 'unknown')}"
+        )
 
         # Extract tenant claims from JWT (no signature verification needed —
         # AgentCore Runtime's Inbound JWT Authorizer handles that)
