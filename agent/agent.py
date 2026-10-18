@@ -42,7 +42,6 @@ from .discovery_client import DiscoveryClient
 from .memory_hook import MemoryHook
 from .guardrail_hook import GuardrailHook, GuardrailInterventionError
 
-from mcp.client.streamable_http import streamablehttp_client
 from .streamable_http_bearer import streamablehttp_client_with_bearer
 from .context import TenantContext
 from strands import Agent, tool

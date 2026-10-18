@@ -36,7 +36,10 @@ pandas>=2.3.3,<3.0.0
 PyYAML>=6.0.3
 
 # MCP and data validation
-fastmcp
+# Pinned to match requirements.txt; see the note there. mcp 2.0 renamed
+# streamablehttp_client, which the agent imports directly.
+mcp>=1.23.0,<2.0.0
+fastmcp>=3.4.7,<4.0.0
 pydantic
 
 # HTTP requests

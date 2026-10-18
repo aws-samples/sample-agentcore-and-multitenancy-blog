@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'API Gateway with throttling for AgentCore multitenancy'
+Description: 'API Gateway with layered Cognito authentication and throttling for AgentCore multitenancy'
 
 Parameters:
   LambdaCodeBucket:
@@ -9,6 +9,11 @@ Parameters:
     Type: String
     Description: S3 key for Lambda code zip file
     Default: api_gateway_lambda.zip
+  CognitoUserPoolId:
+    Type: String
+    Description: Cognito user pool that authenticates API Gateway requests
+    AllowedPattern: '[\w-]+_[0-9A-Za-z]+'
+    ConstraintDescription: Must be a valid Cognito user pool ID
 
 Resources:
   # Lambda Function
@@ -25,9 +30,9 @@ Resources:
       Timeout: 120
       Environment:
         Variables:
-          # JWT signature verification is handled by AgentCore Runtime's
-          # Inbound JWT Authorizer. The Lambda only decodes the token
-          # (without verification) to extract tenant claims for routing.
+          # JWT signature verification is performed independently by API Gateway
+          # and AgentCore Runtime. Lambda decodes the already edge-validated token
+          # only to extract tenant claims for routing.
           AWS_REGION_OVERRIDE: !Ref 'AWS::Region'
 
   # Lambda Execution Role
@@ -81,10 +86,21 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: agentcore-multitenant-api
-      Description: API Gateway for AgentCore with tenant throttling
+      Description: API Gateway for AgentCore with Cognito authentication and tenant throttling
       EndpointConfiguration:
         Types:
           - REGIONAL
+
+  # Front-door authentication. AgentCore Runtime validates the same token again.
+  AgentCoreCognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: agentcore-cognito-authorizer
+      RestApiId: !Ref AgentCoreApiGateway
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      ProviderARNs:
+        - !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
 
   # API Gateway Resource
   AgentCoreResource:
@@ -108,8 +124,9 @@ Resources:
       RestApiId: !Ref AgentCoreApiGateway
       ResourceId: !Ref AgentArnResource
       HttpMethod: POST
-      AuthorizationType: None
-      ApiKeyRequired: true  # Enable API key requirement
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref AgentCoreCognitoAuthorizer
+      ApiKeyRequired: true  # API keys provide throttling and quotas, not authentication
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
@@ -153,7 +170,6 @@ Resources:
   # Usage Plans for demo - very low limits to show throttling
   PremiumUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
-    DependsOn: ApiGatewayStage
     Properties:
       UsagePlanName: premium-tier-demo
       Description: Premium tier for demo - higher limits
@@ -169,7 +185,6 @@ Resources:
 
   BasicUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
-    DependsOn: ApiGatewayStage
     Properties:
       UsagePlanName: basic-tier-demo
       Description: Basic tier for demo - lower limits
