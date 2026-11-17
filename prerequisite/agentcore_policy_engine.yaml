@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Shared Amazon Bedrock AgentCore policy engine for healthcare gateways.
+
+Resources:
+  HealthcarePolicyEngine:
+    Type: AWS::BedrockAgentCore::PolicyEngine
+    Properties:
+      Name: healthcare_policy_engine
+      Description: >
+        Cedar authorization for healthcare agent tools, including business-hour
+        controls for basic-tier patient access.
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+
+  PolicyEngineIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/policy_engine_id
+      Type: String
+      Value: !GetAtt HealthcarePolicyEngine.PolicyEngineId
+      Description: AgentCore policy engine identifier.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PolicyEngineArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/policy_engine_arn
+      Type: String
+      Value: !GetAtt HealthcarePolicyEngine.PolicyEngineArn
+      Description: AgentCore policy engine ARN.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+Outputs:
+  PolicyEngineId:
+    Value: !GetAtt HealthcarePolicyEngine.PolicyEngineId
+  PolicyEngineArn:
+    Value: !GetAtt HealthcarePolicyEngine.PolicyEngineArn
+  PolicyEngineStatus:
+    Value: !GetAtt HealthcarePolicyEngine.Status

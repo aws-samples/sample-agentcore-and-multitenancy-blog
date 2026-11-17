@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Basic and premium Amazon Bedrock AgentCore Memory resources.
+
+Resources:
+  BasicMemory:
+    Type: AWS::BedrockAgentCore::Memory
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: healthcare_basic_memory
+      Description: Memory for healthcare basic-tier clinical document processing.
+      EventExpiryDuration: 90
+      MemoryStrategies:
+        - SemanticMemoryStrategy:
+            Name: clinical_facts
+            Description: Clinical facts and patient information.
+            Namespaces:
+              - clinic/{actorId}/facts/{sessionId}
+        - SummaryMemoryStrategy:
+            Name: conversation_summary
+            Description: Conversation summaries for clinical interactions.
+            Namespaces:
+              - clinic/{actorId}/summaries/{sessionId}
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+        Tier: basic
+
+  PremiumMemory:
+    Type: AWS::BedrockAgentCore::Memory
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: healthcare_premium_memory
+      Description: Memory for healthcare premium-tier advanced clinical analytics.
+      EventExpiryDuration: 180
+      MemoryStrategies:
+        - SemanticMemoryStrategy:
+            Name: clinical_insights
+            Description: Advanced clinical insights and analytics.
+            Namespaces:
+              - clinic/{actorId}/insights/{sessionId}
+        - SummaryMemoryStrategy:
+            Name: advanced_summary
+            Description: Advanced conversation summaries with clinical context.
+            Namespaces:
+              - clinic/{actorId}/summaries/{sessionId}
+        - UserPreferenceMemoryStrategy:
+            Name: user_preferences
+            Description: User preferences and clinical workflow settings.
+            Namespaces:
+              - clinic/{actorId}/preferences
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+        Tier: premium
+
+  BasicMemoryIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/memory/basic_id
+      Type: String
+      Value: !GetAtt BasicMemory.MemoryId
+      Description: Basic-tier AgentCore Memory identifier.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  BasicMemoryArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/memory/basic_arn
+      Type: String
+      Value: !GetAtt BasicMemory.MemoryArn
+      Description: Basic-tier AgentCore Memory ARN.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumMemoryIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/memory/premium_id
+      Type: String
+      Value: !GetAtt PremiumMemory.MemoryId
+      Description: Premium-tier AgentCore Memory identifier.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumMemoryArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/memory/premium_arn
+      Type: String
+      Value: !GetAtt PremiumMemory.MemoryArn
+      Description: Premium-tier AgentCore Memory ARN.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+Outputs:
+  BasicMemoryId:
+    Value: !GetAtt BasicMemory.MemoryId
+  BasicMemoryArn:
+    Value: !GetAtt BasicMemory.MemoryArn
+  BasicMemoryStatus:
+    Value: !GetAtt BasicMemory.Status
+  PremiumMemoryId:
+    Value: !GetAtt PremiumMemory.MemoryId
+  PremiumMemoryArn:
+    Value: !GetAtt PremiumMemory.MemoryArn
+  PremiumMemoryStatus:
+    Value: !GetAtt PremiumMemory.Status

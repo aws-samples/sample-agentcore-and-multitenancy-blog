@@ -30,6 +30,20 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
+The deployment keeps each AgentCore resource category in a separate
+CloudFormation stack so gateways, targets, policies, rate limits, memory,
+observability, Registry, Guardrails, and Runtime can be updated independently. The stack
+order is managed by `deploy.sh`, and cross-stack identifiers are published
+through SSM Parameter Store.
+
+The AgentCore OAuth2 credential provider is intentionally deferred. The current
+application does not consume it, and its Cognito client-secret source must be
+decided before it can be managed safely as infrastructure as code.
+
+The templates target fresh deployments. Existing API-created resources with the
+same names must be removed or imported before deployment; CloudFormation does
+not automatically adopt them.
+
 ### Run the Web UI
 
 ```bash

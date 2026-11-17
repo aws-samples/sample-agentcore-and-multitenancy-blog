@@ -31,12 +31,37 @@ print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 
+delete_stack() {
+    local stack_name="$1"
+    print_step "Deleting CloudFormation stack: $stack_name..."
+    aws cloudformation delete-stack \
+      --stack-name "$stack_name" \
+      --region "$REGION" 2>/dev/null || {
+        print_info "$stack_name does not exist."
+        return
+      }
+    aws cloudformation wait stack-delete-complete \
+      --stack-name "$stack_name" \
+      --region "$REGION" 2>/dev/null || true
+    print_info "$stack_name deleted (or did not exist)."
+}
+
 # ----- Config -----
 BUCKET_NAME=${1:-healthcare}
 INFRA_STACK_NAME=${2:-HealthcareStackInfra}
 COGNITO_STACK_NAME=${3:-HealthcareStackCognito}
 API_GATEWAY_STACK_NAME=${4:-HealthcareStackApiGateway}
 RUNTIME_STACK_NAME=${5:-HealthcareStackRuntime}
+POLICY_ENGINE_STACK_NAME=${POLICY_ENGINE_STACK_NAME:-HealthcareStackAgentCorePolicyEngine}
+GATEWAY_STACK_NAME=${GATEWAY_STACK_NAME:-HealthcareStackAgentCoreGateways}
+GATEWAY_TARGET_STACK_NAME=${GATEWAY_TARGET_STACK_NAME:-HealthcareStackAgentCoreGatewayTargets}
+POLICY_STACK_NAME=${POLICY_STACK_NAME:-HealthcareStackAgentCorePolicies}
+RATE_LIMIT_STACK_NAME=${RATE_LIMIT_STACK_NAME:-HealthcareStackAgentCoreRateLimits}
+GATEWAY_OBSERVABILITY_STACK_NAME=${GATEWAY_OBSERVABILITY_STACK_NAME:-HealthcareStackAgentCoreGatewayObservability}
+MEMORY_STACK_NAME=${MEMORY_STACK_NAME:-HealthcareStackAgentCoreMemory}
+MEMORY_OBSERVABILITY_STACK_NAME=${MEMORY_OBSERVABILITY_STACK_NAME:-HealthcareStackAgentCoreMemoryObservability}
+REGISTRY_STACK_NAME=${REGISTRY_STACK_NAME:-HealthcareStackAgentRegistry}
+GUARDRAIL_STACK_NAME=${GUARDRAIL_STACK_NAME:-HealthcareStackBedrockGuardrails}
 REGION=$(aws configure get region)
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 FULL_BUCKET_NAME="${BUCKET_NAME}-${ACCOUNT_ID}"
@@ -44,7 +69,13 @@ FULL_BUCKET_NAME="${BUCKET_NAME}-${ACCOUNT_ID}"
 print_info "Region: $REGION"
 print_info "Account: $ACCOUNT_ID"
 print_info "S3 Bucket: $FULL_BUCKET_NAME"
-print_info "Stacks: $INFRA_STACK_NAME, $COGNITO_STACK_NAME, $API_GATEWAY_STACK_NAME"
+print_info "Stacks:"
+print_info "  Base: $INFRA_STACK_NAME, $COGNITO_STACK_NAME, $API_GATEWAY_STACK_NAME"
+print_info "  AgentCore: $POLICY_ENGINE_STACK_NAME, $GATEWAY_STACK_NAME, $GATEWAY_TARGET_STACK_NAME"
+print_info "  AgentCore: $POLICY_STACK_NAME, $RATE_LIMIT_STACK_NAME, $MEMORY_STACK_NAME"
+print_info "  Supporting: $GATEWAY_OBSERVABILITY_STACK_NAME, $MEMORY_OBSERVABILITY_STACK_NAME"
+print_info "  Supporting: $REGISTRY_STACK_NAME, $GUARDRAIL_STACK_NAME"
+print_info "  Runtime: $RUNTIME_STACK_NAME"
 
 # ----- Confirm Deletion -----
 read -p "⚠️  Are you sure you want to tear down the entire healthcare deployment? (y/N): " confirm
@@ -61,65 +92,74 @@ else
     print_warning "No .venv found. Python scripts may fail if dependencies aren't installed globally."
 fi
 
-# ----- 1. Delete AgentCore Agent Runtimes -----
-# The runtimes are declared in prerequisite/agentcore_runtime.yaml, so the
-# stack owns them. Deleting them directly would leave the stack referencing
-# resources that no longer exist.
-print_step "Deleting AgentCore Runtime stack: $RUNTIME_STACK_NAME..."
-aws cloudformation delete-stack --stack-name "$RUNTIME_STACK_NAME" --region "$REGION" 2>/dev/null || print_warning "Runtime stack may not exist"
-print_info "Waiting for runtime stack deletion (snapshots can take time to release)..."
-aws cloudformation wait stack-delete-complete --stack-name "$RUNTIME_STACK_NAME" --region "$REGION" 2>/dev/null || true
-print_info "Runtime stack deleted (or did not exist)."
+# ----- 1. Delete CloudFormation-owned AgentCore resources -----
+# Capture retained Memory IDs and observability log group suffixes before
+# deleting their stack-owned SSM parameters.
+BASIC_GATEWAY_ID=$(aws ssm get-parameter \
+  --name /app/healthcare/agentcore/basic_gateway_id \
+  --query 'Parameter.Value' --output text 2>/dev/null || true)
+PREMIUM_GATEWAY_ID=$(aws ssm get-parameter \
+  --name /app/healthcare/agentcore/premium_gateway_id \
+  --query 'Parameter.Value' --output text 2>/dev/null || true)
+BASIC_MEMORY_ID=$(aws ssm get-parameter \
+  --name /app/healthcare/memory/basic_id \
+  --query 'Parameter.Value' --output text 2>/dev/null || true)
+PREMIUM_MEMORY_ID=$(aws ssm get-parameter \
+  --name /app/healthcare/memory/premium_id \
+  --query 'Parameter.Value' --output text 2>/dev/null || true)
 
-# Fallback for environments deployed before the runtimes moved into
-# CloudFormation, where they were created by the starter toolkit and are not
-# owned by any stack.
+delete_stack "$RUNTIME_STACK_NAME"
+delete_stack "$REGISTRY_STACK_NAME"
+delete_stack "$GUARDRAIL_STACK_NAME"
+delete_stack "$POLICY_STACK_NAME"
+delete_stack "$GATEWAY_TARGET_STACK_NAME"
+delete_stack "$RATE_LIMIT_STACK_NAME"
+delete_stack "$GATEWAY_OBSERVABILITY_STACK_NAME"
+delete_stack "$GATEWAY_STACK_NAME"
+delete_stack "$POLICY_ENGINE_STACK_NAME"
+delete_stack "$MEMORY_OBSERVABILITY_STACK_NAME"
+delete_stack "$MEMORY_STACK_NAME"
+
+# Observability log groups are retained by their stacks. This explicit cleanup
+# path removes them only after the operator confirms the full teardown.
+for resource in \
+  "gateway:$BASIC_GATEWAY_ID" \
+  "gateway:$PREMIUM_GATEWAY_ID" \
+  "memory:$BASIC_MEMORY_ID" \
+  "memory:$PREMIUM_MEMORY_ID"; do
+    resource_type=${resource%%:*}
+    resource_id=${resource#*:}
+    if [ -n "$resource_id" ] && [ "$resource_id" != "None" ]; then
+        log_group="/aws/vendedlogs/bedrock-agentcore/${resource_type}/APPLICATION_LOGS/${resource_id}"
+        print_step "Deleting retained log group: $log_group..."
+        aws logs delete-log-group --log-group-name "$log_group" --region "$REGION" 2>/dev/null || \
+          print_info "Log group already absent: $log_group"
+    fi
+done
+
+# AgentCore Memory is retained by CloudFormation to prevent accidental data
+# loss. This cleanup path is explicitly destructive and has already obtained
+# confirmation, so remove the retained resources by their captured IDs.
+if [ -n "$BASIC_MEMORY_ID" ] && [ "$BASIC_MEMORY_ID" != "None" ]; then
+    print_step "Deleting retained basic AgentCore Memory: $BASIC_MEMORY_ID..."
+    python scripts/agentcore_memory.py delete --memory-id "$BASIC_MEMORY_ID" --confirm || \
+      print_warning "Failed to delete retained basic memory"
+fi
+if [ -n "$PREMIUM_MEMORY_ID" ] && [ "$PREMIUM_MEMORY_ID" != "None" ]; then
+    print_step "Deleting retained premium AgentCore Memory: $PREMIUM_MEMORY_ID..."
+    python scripts/agentcore_memory.py delete --memory-id "$PREMIUM_MEMORY_ID" --confirm || \
+      print_warning "Failed to delete retained premium memory"
+fi
+
+# Fallback for runtimes created by the retired starter toolkit rather than the
+# runtime CloudFormation stack.
 print_step "Removing any unmanaged runtimes left from a starter toolkit deploy..."
 python scripts/agentcore_agent_runtime.py healthcare_basic 2>/dev/null || print_info "No unmanaged healthcare_basic runtime"
 python scripts/agentcore_agent_runtime.py healthcare_premium 2>/dev/null || print_info "No unmanaged healthcare_premium runtime"
 
-# ----- 2. Delete AgentCore Memory Resources -----
-print_step "Deleting AgentCore Memory resources (basic and premium)..."
-python scripts/agentcore_memory.py delete-all --confirm || print_warning "Failed to delete memory resources"
-
-# ----- 3. Delete Cognito Credential Provider -----
-print_step "Deleting Cognito credential provider..."
-python scripts/cognito_credentials_provider.py delete --confirm || print_warning "Failed to delete Cognito credential provider"
-
-# ----- 4. Delete AgentCore Policy Engine -----
-print_step "Deleting AgentCore Policy Engine..."
-python scripts/agentcore_policy.py delete --confirm || print_warning "Failed to delete policy engine"
-
-# ----- 4b. Delete Agent Registry -----
-print_step "Deleting Agent Registry..."
-python -c "
-import boto3, sys
-ssm = boto3.client('ssm')
-try:
-    registry_id = ssm.get_parameter(Name='/app/healthcare/agentcore/registry_id')['Parameter']['Value']
-except:
-    print('No Agent Registry found (SSM parameter missing).')
-    sys.exit(0)
-
-client = boto3.client('agent-registry-control')
-try:
-    records = client.list_registry_records(registryId=registry_id).get('registryRecords', [])
-    for r in records:
-        print(f\"  Deleting record: {r['name']}\")
-        client.delete_registry_record(registryId=registry_id, recordId=r['recordId'])
-    client.delete_registry(registryId=registry_id)
-    print(f'Agent Registry {registry_id} deleted.')
-except Exception as e:
-    print(f'Warning: Could not delete Agent Registry: {e}')
-" || print_warning "Agent Registry cleanup had issues"
-
-# ----- 5. Delete AgentCore Gateways -----
-print_step "Deleting AgentCore Gateways (basic and premium)..."
-python scripts/agentcore_gateway.py delete-all --confirm || print_warning "Failed to delete gateways"
-
-# ----- 5b. Delete Bedrock Guardrails -----
-print_step "Deleting Bedrock Guardrails (basic and premium)..."
-python scripts/bedrock_guardrails.py delete --confirm || print_warning "Failed to delete guardrails"
+# A previous deployment may have created this deferred resource by API.
+print_step "Deleting legacy Cognito credential provider, if present..."
+python scripts/cognito_credentials_provider.py delete --confirm || print_info "No legacy Cognito credential provider"
 
 # ----- 6. Delete Knowledge Bases (basic and premium) -----
 print_step "Deleting Basic tier Knowledge Base..."

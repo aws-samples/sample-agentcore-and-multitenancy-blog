@@ -19,11 +19,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.bedrock_agentcore.yaml`.
 - `scripts/cleanup.sh` deletes the runtime stack instead of deleting runtimes
   directly, and still removes unmanaged runtimes left by older deploys.
+- Gateways, gateway targets, rate limits, the policy engine and Cedar policies,
+  Memory, observability delivery, Agent Registry records, and Bedrock Guardrails
+  are now managed by separate CloudFormation stacks. `deploy.sh` deploys them in
+  dependency order.
+- Agent Registry publication scripting now performs only the record-submission
+  lifecycle step that CloudFormation does not support.
+- The unused AgentCore OAuth2 credential provider is deferred until its Cognito
+  client-secret source and consumer are confirmed.
+- Managed Knowledge Base Cedar policies now condition on the connector's typed,
+  required `retrievalQuery.text` field instead of the untyped
+  `retrievalConfiguration` parameter value.
+- Current Eastern time is injected with Strands `ContextInjector`. Basic-tier
+  `request_hour` is derived from trusted server time rather than supplied by
+  the model.
 
 ### Removed
 
 - `bedrock-agentcore-starter-toolkit` dependency. It is no longer supported
   upstream and cannot set the runtime platform version.
+- `strands-agents-tools`; the removed `current_time` tool is replaced by the
+  Strands `ContextInjector` plugin.
 
 ### Added
 

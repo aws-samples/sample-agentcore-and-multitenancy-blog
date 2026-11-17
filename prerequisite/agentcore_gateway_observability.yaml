@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudWatch Logs and X-Ray delivery for healthcare AgentCore gateways.
+
+Parameters:
+  BasicGatewayId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/basic_gateway_id
+  BasicGatewayArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/basic_gateway_arn
+  PremiumGatewayId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/premium_gateway_id
+  PremiumGatewayArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/premium_gateway_arn
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653]
+
+Resources:
+  BasicGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/bedrock-agentcore/gateway/APPLICATION_LOGS/${BasicGatewayId}
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/bedrock-agentcore/gateway/APPLICATION_LOGS/${PremiumGatewayId}
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  BasicGatewayLogsSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${BasicGatewayId}-logs-source
+      LogType: APPLICATION_LOGS
+      ResourceArn: !Ref BasicGatewayArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  BasicGatewayTracesSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${BasicGatewayId}-traces-source
+      LogType: TRACES
+      ResourceArn: !Ref BasicGatewayArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumGatewayLogsSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${PremiumGatewayId}-logs-source
+      LogType: APPLICATION_LOGS
+      ResourceArn: !Ref PremiumGatewayArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  PremiumGatewayTracesSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${PremiumGatewayId}-traces-source
+      LogType: TRACES
+      ResourceArn: !Ref PremiumGatewayArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  BasicGatewayLogsDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub ${BasicGatewayId}-logs-destination
+      DeliveryDestinationType: CWL
+      DestinationResourceArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${BasicGatewayLogGroup}
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumGatewayLogsDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub ${PremiumGatewayId}-logs-destination
+      DeliveryDestinationType: CWL
+      DestinationResourceArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${PremiumGatewayLogGroup}
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  GatewayTracesDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: healthcare-gateway-traces-destination
+      DeliveryDestinationType: XRAY
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+
+  BasicGatewayLogsDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: BasicGatewayLogsSource
+    Properties:
+      DeliverySourceName: !Sub ${BasicGatewayId}-logs-source
+      DeliveryDestinationArn: !GetAtt BasicGatewayLogsDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  BasicGatewayTracesDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: BasicGatewayTracesSource
+    Properties:
+      DeliverySourceName: !Sub ${BasicGatewayId}-traces-source
+      DeliveryDestinationArn: !GetAtt GatewayTracesDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumGatewayLogsDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: PremiumGatewayLogsSource
+    Properties:
+      DeliverySourceName: !Sub ${PremiumGatewayId}-logs-source
+      DeliveryDestinationArn: !GetAtt PremiumGatewayLogsDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  PremiumGatewayTracesDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: PremiumGatewayTracesSource
+    Properties:
+      DeliverySourceName: !Sub ${PremiumGatewayId}-traces-source
+      DeliveryDestinationArn: !GetAtt GatewayTracesDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+Outputs:
+  BasicGatewayLogGroupName:
+    Value: !Ref BasicGatewayLogGroup
+  PremiumGatewayLogGroupName:
+    Value: !Ref PremiumGatewayLogGroup

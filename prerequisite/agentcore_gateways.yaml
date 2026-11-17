@@ -1,0 +1,188 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Basic and premium Amazon Bedrock AgentCore gateways.
+
+Parameters:
+  GatewayRoleArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/gateway_iam_role
+    Description: IAM role assumed by AgentCore Gateway.
+
+  CognitoDiscoveryUrl:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/cognito_discovery_url
+    Description: Cognito OpenID Connect discovery URL.
+
+  CognitoWebClientId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/web_client_id
+    Description: Cognito web client accepted as the JWT audience.
+
+  PolicyEngineArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/policy_engine_arn
+    Description: Shared AgentCore policy engine ARN.
+
+Resources:
+  BasicGateway:
+    Type: AWS::BedrockAgentCore::Gateway
+    Properties:
+      Name: healthcare-basic-gw
+      Description: Healthcare clinical document processing gateway for the basic tier.
+      RoleArn: !Ref GatewayRoleArn
+      ProtocolType: MCP
+      AuthorizerType: CUSTOM_JWT
+      AuthorizerConfiguration:
+        CustomJWTAuthorizer:
+          DiscoveryUrl: !Ref CognitoDiscoveryUrl
+          AllowedAudience:
+            - !Ref CognitoWebClientId
+      PolicyEngineConfiguration:
+        Arn: !Ref PolicyEngineArn
+        Mode: ENFORCE
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+        Tier: basic
+
+  PremiumGateway:
+    Type: AWS::BedrockAgentCore::Gateway
+    Properties:
+      Name: healthcare-premium-gw
+      Description: Healthcare clinical document processing gateway for the premium tier.
+      RoleArn: !Ref GatewayRoleArn
+      ProtocolType: MCP
+      AuthorizerType: CUSTOM_JWT
+      AuthorizerConfiguration:
+        CustomJWTAuthorizer:
+          DiscoveryUrl: !Ref CognitoDiscoveryUrl
+          AllowedAudience:
+            - !Ref CognitoWebClientId
+      PolicyEngineConfiguration:
+        Arn: !Ref PolicyEngineArn
+        Mode: ENFORCE
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+        Tier: premium
+
+  BasicGatewayIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/basic_gateway_id
+      Type: String
+      Value: !GetAtt BasicGateway.GatewayIdentifier
+      Description: Basic-tier AgentCore gateway identifier.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  BasicGatewayNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/basic_gateway_name
+      Type: String
+      Value: healthcare-basic-gw
+      Description: Basic-tier AgentCore gateway name.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  BasicGatewayArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/basic_gateway_arn
+      Type: String
+      Value: !GetAtt BasicGateway.GatewayArn
+      Description: Basic-tier AgentCore gateway ARN.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  BasicGatewayUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/basic_gateway_url
+      Type: String
+      Value: !GetAtt BasicGateway.GatewayUrl
+      Description: Basic-tier AgentCore gateway URL.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumGatewayIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/premium_gateway_id
+      Type: String
+      Value: !GetAtt PremiumGateway.GatewayIdentifier
+      Description: Premium-tier AgentCore gateway identifier.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumGatewayNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/premium_gateway_name
+      Type: String
+      Value: healthcare-premium-gw
+      Description: Premium-tier AgentCore gateway name.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumGatewayArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/premium_gateway_arn
+      Type: String
+      Value: !GetAtt PremiumGateway.GatewayArn
+      Description: Premium-tier AgentCore gateway ARN.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumGatewayUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/premium_gateway_url
+      Type: String
+      Value: !GetAtt PremiumGateway.GatewayUrl
+      Description: Premium-tier AgentCore gateway URL.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+Outputs:
+  BasicGatewayId:
+    Value: !GetAtt BasicGateway.GatewayIdentifier
+  BasicGatewayArn:
+    Value: !GetAtt BasicGateway.GatewayArn
+  BasicGatewayUrl:
+    Value: !GetAtt BasicGateway.GatewayUrl
+  PremiumGatewayId:
+    Value: !GetAtt PremiumGateway.GatewayIdentifier
+  PremiumGatewayArn:
+    Value: !GetAtt PremiumGateway.GatewayArn
+  PremiumGatewayUrl:
+    Value: !GetAtt PremiumGateway.GatewayUrl

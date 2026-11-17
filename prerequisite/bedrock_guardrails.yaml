@@ -1,0 +1,219 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Basic and premium Amazon Bedrock Guardrails for the healthcare sample.
+
+Resources:
+  BasicGuardrail:
+    Type: AWS::Bedrock::Guardrail
+    Properties:
+      Name: healthcare-basic-guardrail
+      Description: Healthcare basic-tier guardrail with content safety, PII masking, and profanity filtering.
+      BlockedInputMessaging: >
+        Your request was blocked by our safety policy. Please rephrase your
+        question to focus on clinical document retrieval.
+      BlockedOutputsMessaging: >
+        The response was blocked by our safety policy. Please try a different
+        question.
+      ContentPolicyConfig:
+        FiltersConfig:
+          - Type: HATE
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: INSULTS
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: SEXUAL
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: VIOLENCE
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: MISCONDUCT
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: PROMPT_ATTACK
+            InputStrength: HIGH
+            OutputStrength: NONE
+      SensitiveInformationPolicyConfig:
+        PiiEntitiesConfig:
+          - Type: US_SOCIAL_SECURITY_NUMBER
+            Action: ANONYMIZE
+          - Type: CREDIT_DEBIT_CARD_NUMBER
+            Action: ANONYMIZE
+          - Type: CREDIT_DEBIT_CARD_CVV
+            Action: ANONYMIZE
+          - Type: CREDIT_DEBIT_CARD_EXPIRY
+            Action: ANONYMIZE
+          - Type: INTERNATIONAL_BANK_ACCOUNT_NUMBER
+            Action: ANONYMIZE
+      WordPolicyConfig:
+        ManagedWordListsConfig:
+          - Type: PROFANITY
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumGuardrail:
+    Type: AWS::Bedrock::Guardrail
+    Properties:
+      Name: healthcare-premium-guardrail
+      Description: Healthcare premium-tier guardrail with content safety, PII masking, profanity filtering, and contextual grounding.
+      BlockedInputMessaging: >
+        Your request was blocked by our safety policy. Please rephrase your
+        question to focus on clinical document retrieval.
+      BlockedOutputsMessaging: >
+        The response was blocked by our safety policy. Please try a different
+        question.
+      ContentPolicyConfig:
+        FiltersConfig:
+          - Type: HATE
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: INSULTS
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: SEXUAL
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: VIOLENCE
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: MISCONDUCT
+            InputStrength: HIGH
+            OutputStrength: HIGH
+          - Type: PROMPT_ATTACK
+            InputStrength: HIGH
+            OutputStrength: NONE
+      SensitiveInformationPolicyConfig:
+        PiiEntitiesConfig:
+          - Type: US_SOCIAL_SECURITY_NUMBER
+            Action: ANONYMIZE
+          - Type: CREDIT_DEBIT_CARD_NUMBER
+            Action: ANONYMIZE
+          - Type: CREDIT_DEBIT_CARD_CVV
+            Action: ANONYMIZE
+          - Type: CREDIT_DEBIT_CARD_EXPIRY
+            Action: ANONYMIZE
+          - Type: INTERNATIONAL_BANK_ACCOUNT_NUMBER
+            Action: ANONYMIZE
+      WordPolicyConfig:
+        ManagedWordListsConfig:
+          - Type: PROFANITY
+      ContextualGroundingPolicyConfig:
+        FiltersConfig:
+          - Type: GROUNDING
+            Threshold: 0.8
+            Action: BLOCK
+          - Type: RELEVANCE
+            Threshold: 0.7
+            Action: BLOCK
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  BasicGuardrailIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/guardrails/basic_id
+      Type: String
+      Value: !GetAtt BasicGuardrail.GuardrailId
+      Description: Basic-tier Bedrock Guardrail identifier.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  BasicGuardrailArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/guardrails/basic_arn
+      Type: String
+      Value: !GetAtt BasicGuardrail.GuardrailArn
+      Description: Basic-tier Bedrock Guardrail ARN.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  BasicGuardrailVersionParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/guardrails/basic_version
+      Type: String
+      Value: !GetAtt BasicGuardrail.Version
+      Description: Basic-tier Bedrock Guardrail version, which is DRAFT.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumGuardrailIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/guardrails/premium_id
+      Type: String
+      Value: !GetAtt PremiumGuardrail.GuardrailId
+      Description: Premium-tier Bedrock Guardrail identifier.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumGuardrailArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/guardrails/premium_arn
+      Type: String
+      Value: !GetAtt PremiumGuardrail.GuardrailArn
+      Description: Premium-tier Bedrock Guardrail ARN.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+  PremiumGuardrailVersionParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/guardrails/premium_version
+      Type: String
+      Value: !GetAtt PremiumGuardrail.Version
+      Description: Premium-tier Bedrock Guardrail version, which is DRAFT.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+Outputs:
+  BasicGuardrailId:
+    Value: !GetAtt BasicGuardrail.GuardrailId
+  BasicGuardrailArn:
+    Value: !GetAtt BasicGuardrail.GuardrailArn
+  BasicGuardrailVersion:
+    Value: !GetAtt BasicGuardrail.Version
+  PremiumGuardrailId:
+    Value: !GetAtt PremiumGuardrail.GuardrailId
+  PremiumGuardrailArn:
+    Value: !GetAtt PremiumGuardrail.GuardrailArn
+  PremiumGuardrailVersion:
+    Value: !GetAtt PremiumGuardrail.Version

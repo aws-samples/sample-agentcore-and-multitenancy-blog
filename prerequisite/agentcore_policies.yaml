@@ -1,0 +1,301 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Cedar policies for basic and premium healthcare AgentCore gateways.
+
+Parameters:
+  PolicyEngineId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/policy_engine_id
+  BasicGatewayArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/basic_gateway_arn
+  PremiumGatewayArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/premium_gateway_arn
+
+Resources:
+  BasicBusinessHoursPatientAccess:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: business_hours_patient_access_basic
+      Description: Restrict basic-tier patient context access to 08:00 through 18:00.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareLambda-Basic___patient_context",
+              resource == AgentCore::Gateway::"${BasicGatewayArn}"
+            )
+            when {
+              context.input has request_hour &&
+              context.input.request_hour >= 8 &&
+              context.input.request_hour < 18
+            };
+
+  BasicClinicConfigWithId:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_clinic_config_basic_with_id
+      Description: Permit basic-tier clinic configuration when clinic_id is supplied.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareLambda-Basic___clinic_config",
+              resource == AgentCore::Gateway::"${BasicGatewayArn}"
+            )
+            when {
+              context.input has clinic_id
+            };
+
+  BasicClinicConfigDefault:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_clinic_config_basic_default
+      Description: Permit basic-tier clinic configuration for the caller's default clinic.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareLambda-Basic___clinic_config",
+              resource == AgentCore::Gateway::"${BasicGatewayArn}"
+            )
+            when {
+              !(context.input has clinic_id)
+            };
+
+  BasicKnowledgeBaseRetrieve:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_kb_retrieve_basic
+      Description: Permit basic-tier retrieval when the required query text is present.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareKB-Basic___Retrieve",
+              resource == AgentCore::Gateway::"${BasicGatewayArn}"
+            )
+            when {
+              context.input has retrievalQuery &&
+              context.input.retrievalQuery has text
+            };
+
+  PremiumPatientContextWithPatient:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_patient_context_premium_with_patient
+      Description: Permit premium-tier patient context lookup when patient_id is supplied.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareLambda-Premium___patient_context",
+              resource == AgentCore::Gateway::"${PremiumGatewayArn}"
+            )
+            when {
+              context.input has patient_id
+            };
+
+  PremiumPatientContextListMode:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_patient_context_premium_list_mode
+      Description: Permit premium-tier patient listing when patient_id is omitted.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareLambda-Premium___patient_context",
+              resource == AgentCore::Gateway::"${PremiumGatewayArn}"
+            )
+            when {
+              !(context.input has patient_id)
+            };
+
+  PremiumClinicConfigWithId:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_clinic_config_premium_with_id
+      Description: Permit premium-tier clinic configuration when clinic_id is supplied.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareLambda-Premium___clinic_config",
+              resource == AgentCore::Gateway::"${PremiumGatewayArn}"
+            )
+            when {
+              context.input has clinic_id
+            };
+
+  PremiumClinicConfigDefault:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_clinic_config_premium_default
+      Description: Permit premium-tier clinic configuration for the caller's default clinic.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareLambda-Premium___clinic_config",
+              resource == AgentCore::Gateway::"${PremiumGatewayArn}"
+            )
+            when {
+              !(context.input has clinic_id)
+            };
+
+  PremiumKnowledgeBaseRetrieve:
+    Type: AWS::BedrockAgentCore::Policy
+    Properties:
+      PolicyEngineId: !Ref PolicyEngineId
+      Name: permit_kb_retrieve_premium
+      Description: Permit premium-tier retrieval when the required query text is present.
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub |
+            permit(
+              principal is AgentCore::OAuthUser,
+              action == AgentCore::Action::"HealthcareKB-Premium___Retrieve",
+              resource == AgentCore::Gateway::"${PremiumGatewayArn}"
+            )
+            when {
+              context.input has retrievalQuery &&
+              context.input.retrievalQuery has text
+            };
+
+  BasicBusinessHoursPolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_business_hours_basic_id
+      Type: String
+      Value: !GetAtt BasicBusinessHoursPatientAccess.PolicyId
+
+  BasicClinicConfigWithIdPolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_clinic_config_basic_with_id_id
+      Type: String
+      Value: !GetAtt BasicClinicConfigWithId.PolicyId
+
+  BasicClinicConfigDefaultPolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_clinic_config_basic_default_id
+      Type: String
+      Value: !GetAtt BasicClinicConfigDefault.PolicyId
+
+  BasicKnowledgeBasePolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_kb_retrieve_basic_id
+      Type: String
+      Value: !GetAtt BasicKnowledgeBaseRetrieve.PolicyId
+
+  PremiumPatientContextWithPatientPolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_patient_context_premium_with_patient_id
+      Type: String
+      Value: !GetAtt PremiumPatientContextWithPatient.PolicyId
+
+  PremiumPatientContextListModePolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_patient_context_premium_list_mode_id
+      Type: String
+      Value: !GetAtt PremiumPatientContextListMode.PolicyId
+
+  PremiumClinicConfigWithIdPolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_clinic_config_premium_with_id_id
+      Type: String
+      Value: !GetAtt PremiumClinicConfigWithId.PolicyId
+
+  PremiumClinicConfigDefaultPolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_clinic_config_premium_default_id
+      Type: String
+      Value: !GetAtt PremiumClinicConfigDefault.PolicyId
+
+  PremiumKnowledgeBasePolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+      Name: /app/healthcare/agentcore/policy_kb_retrieve_premium_id
+      Type: String
+      Value: !GetAtt PremiumKnowledgeBaseRetrieve.PolicyId
+
+Outputs:
+  PolicyCount:
+    Value: "9"

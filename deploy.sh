@@ -28,6 +28,16 @@ AGENTCORE_PLATFORM_VERSION="${AGENTCORE_PLATFORM_VERSION:-V2}"
 
 # Must match the bucket and stack naming that scripts/prereq.sh uses.
 BUCKET_NAME="${BUCKET_NAME:-healthcare}"
+POLICY_ENGINE_STACK_NAME="${POLICY_ENGINE_STACK_NAME:-HealthcareStackAgentCorePolicyEngine}"
+GATEWAY_STACK_NAME="${GATEWAY_STACK_NAME:-HealthcareStackAgentCoreGateways}"
+GATEWAY_TARGET_STACK_NAME="${GATEWAY_TARGET_STACK_NAME:-HealthcareStackAgentCoreGatewayTargets}"
+POLICY_STACK_NAME="${POLICY_STACK_NAME:-HealthcareStackAgentCorePolicies}"
+RATE_LIMIT_STACK_NAME="${RATE_LIMIT_STACK_NAME:-HealthcareStackAgentCoreRateLimits}"
+GATEWAY_OBSERVABILITY_STACK_NAME="${GATEWAY_OBSERVABILITY_STACK_NAME:-HealthcareStackAgentCoreGatewayObservability}"
+MEMORY_STACK_NAME="${MEMORY_STACK_NAME:-HealthcareStackAgentCoreMemory}"
+MEMORY_OBSERVABILITY_STACK_NAME="${MEMORY_OBSERVABILITY_STACK_NAME:-HealthcareStackAgentCoreMemoryObservability}"
+REGISTRY_STACK_NAME="${REGISTRY_STACK_NAME:-HealthcareStackAgentRegistry}"
+GUARDRAIL_STACK_NAME="${GUARDRAIL_STACK_NAME:-HealthcareStackBedrockGuardrails}"
 RUNTIME_STACK_NAME="${RUNTIME_STACK_NAME:-HealthcareStackRuntime}"
 
 # Function to print colored output
@@ -45,6 +55,46 @@ print_error() {
 
 print_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+# Deploy one CloudFormation-owned AgentCore component. Each component uses its
+# own stack so it can be updated or rolled back without replacing unrelated
+# resources. Cross-stack dependencies are passed through SSM parameters.
+deploy_component_stack() {
+    local stack_name="$1"
+    local template_file="$2"
+    shift 2
+
+    print_step "Deploying stack ${stack_name}..."
+    aws cloudformation deploy \
+      --stack-name "$stack_name" \
+      --template-file "$template_file" \
+      --region "$REGION" \
+      --no-fail-on-empty-changeset \
+      "$@"
+}
+
+# AgentCore trace delivery to X-Ray requires CloudWatch Logs as the account's
+# trace segment destination. This is an account-level setting rather than an
+# AgentCore resource, and CloudFormation cannot safely adopt it when it is
+# already enabled, so keep this single idempotent control-plane call.
+ensure_xray_cloudwatch_destination() {
+    local destination
+    local status
+    destination=$(aws xray get-trace-segment-destination \
+      --region "$REGION" --query 'Destination' --output text 2>/dev/null || true)
+    status=$(aws xray get-trace-segment-destination \
+      --region "$REGION" --query 'Status' --output text 2>/dev/null || true)
+
+    if [ "$destination" = "CloudWatchLogs" ] && [ "$status" = "ACTIVE" ]; then
+        print_info "CloudWatch Logs is already the active X-Ray trace destination."
+        return
+    fi
+
+    print_step "Enabling CloudWatch Logs as the X-Ray trace destination..."
+    aws xray update-trace-segment-destination \
+      --destination CloudWatchLogs \
+      --region "$REGION" >/dev/null
 }
 
 # --- Pre-flight checks ---
@@ -111,38 +161,70 @@ fi
 print_step "Updating configuration with created resources..."
 python scripts/configure_deployment.py "$DEPLOYMENT_TYPE"
 
-print_step "Listing SSM parameters..."
-chmod +x scripts/list_ssm_parameters.sh
-./scripts/list_ssm_parameters.sh
-
 print_warning "Please ensure all resource names are prefixed with 'healthcare'"
 
-print_step "Creating AgentCore Gateways (Basic and Premium)..."
-python scripts/agentcore_gateway.py create-all
+# ----------------------------------------------------------------------------
+# AgentCore control-plane resources (infrastructure as code)
+#
+# Each resource category has a separate stack. The deployment order follows
+# the actual dependencies: policy engine -> gateways -> targets -> policies.
+# Memory and Registry use their own stacks. The OAuth2 credential provider is
+# intentionally deferred until its usage and secret source are confirmed.
+# ----------------------------------------------------------------------------
 
-print_step "Publishing MCP gateway records to Agent Registry..."
+deploy_component_stack \
+  "$POLICY_ENGINE_STACK_NAME" \
+  prerequisite/agentcore_policy_engine.yaml
+
+deploy_component_stack \
+  "$GATEWAY_STACK_NAME" \
+  prerequisite/agentcore_gateways.yaml
+
+deploy_component_stack \
+  "$GATEWAY_TARGET_STACK_NAME" \
+  prerequisite/agentcore_gateway_targets.yaml
+
+deploy_component_stack \
+  "$POLICY_STACK_NAME" \
+  prerequisite/agentcore_policies.yaml
+
+deploy_component_stack \
+  "$RATE_LIMIT_STACK_NAME" \
+  prerequisite/agentcore_gateway_rate_limits.yaml
+
+ensure_xray_cloudwatch_destination
+
+deploy_component_stack \
+  "$GATEWAY_OBSERVABILITY_STACK_NAME" \
+  prerequisite/agentcore_gateway_observability.yaml
+
+REGISTRY_RECORD_TIMESTAMP=$(/bin/date -u +"%Y-%m-%dT%H:%M:%SZ")
+deploy_component_stack \
+  "$REGISTRY_STACK_NAME" \
+  prerequisite/agent_registry.yaml \
+  --parameter-overrides RecordTimestamp="$REGISTRY_RECORD_TIMESTAMP"
+
+# AWS::AgentRegistry::RegistryRecord creates a DRAFT revision. Submission is a
+# separate Agent Registry lifecycle operation with no CloudFormation property.
+# The stack's APPROVE_ALL rule approves each submitted revision automatically.
+print_step "Submitting Agent Registry records for approval..."
 python scripts/registry_publisher.py
 
-print_step "Configuring AgentCore Gateway rate limits (per-user and per-target)..."
-python scripts/agentcore_rate_limits.py create
+deploy_component_stack \
+  "$MEMORY_STACK_NAME" \
+  prerequisite/agentcore_memory.yaml
 
-print_step "Creating AgentCore Policy Engine (Business Hours Enforcement)..."
-python scripts/agentcore_policy.py create
+deploy_component_stack \
+  "$MEMORY_OBSERVABILITY_STACK_NAME" \
+  prerequisite/agentcore_memory_observability.yaml
 
-print_step "Creating Bedrock Guardrails (Basic and Premium)..."
-python scripts/bedrock_guardrails.py create
+deploy_component_stack \
+  "$GUARDRAIL_STACK_NAME" \
+  prerequisite/bedrock_guardrails.yaml
 
-print_step "Setting up Cognito Credential Provider..."
-python scripts/cognito_credentials_provider.py create --name healthcare-cognito-provider
-
-print_step "Creating Memory Resources (Basic and Premium)..."
-python scripts/agentcore_memory.py create-all
-
-print_step "Enabling Memory Observability for cost tracking..."
-python scripts/setup_memory_observability.py enable-all || print_warning "Memory observability setup had issues — this is non-blocking. You can retry with: python scripts/setup_memory_observability.py enable-all"
-
-print_step "Verifying Memory Observability configuration..."
-python scripts/setup_memory_observability.py verify-all || echo -e "${YELLOW}[WARNING]${NC} Memory observability verification incomplete — deliveries may take time to propagate. This is non-blocking."
+# The AgentCore OAuth2 credential provider is intentionally not created here.
+# It is currently unused, and its Cognito client secret source requires a
+# separate design decision before it can be managed safely by CloudFormation.
 
 print_step "Creating test users with clinic assignments..."
 python scripts/create_test_users.py
@@ -182,10 +264,9 @@ print_step "Deploying AgentCore Runtimes (platform version ${AGENTCORE_PLATFORM_
 print_info "A V2 runtime prepares and snapshots its environment, so this takes"
 print_info "several minutes per runtime rather than seconds."
 
-aws cloudformation deploy \
-  --stack-name "$RUNTIME_STACK_NAME" \
-  --template-file prerequisite/agentcore_runtime.yaml \
-  --region "$REGION" \
+deploy_component_stack \
+  "$RUNTIME_STACK_NAME" \
+  prerequisite/agentcore_runtime.yaml \
   --parameter-overrides \
     CodeBucket="$FULL_BUCKET_NAME" \
     CodePrefix="$CODE_PREFIX" \
@@ -211,6 +292,10 @@ for tier in basic premium; do
     fi
 done
 
+print_step "Listing deployed SSM parameters..."
+chmod +x scripts/list_ssm_parameters.sh
+./scripts/list_ssm_parameters.sh
+
 print_step "Deployment completed successfully!"
 echo ""
 echo "🎉 Multi-tenant AgentCore deployment is ready!"
@@ -219,6 +304,14 @@ echo "Deployment Configuration:"
 echo "  Type: direct code deployment (zip in S3)"
 echo "  Python runtime: $PYTHON_RUNTIME"
 echo "  Platform version: $AGENTCORE_PLATFORM_VERSION"
+echo "  Policy engine stack: $POLICY_ENGINE_STACK_NAME"
+echo "  Gateway stack: $GATEWAY_STACK_NAME"
+echo "  Gateway target stack: $GATEWAY_TARGET_STACK_NAME"
+echo "  Policy stack: $POLICY_STACK_NAME"
+echo "  Rate limit stack: $RATE_LIMIT_STACK_NAME"
+echo "  Memory stack: $MEMORY_STACK_NAME"
+echo "  Guardrail stack: $GUARDRAIL_STACK_NAME"
+echo "  Registry stack: $REGISTRY_STACK_NAME"
 echo "  Runtime stack: $RUNTIME_STACK_NAME"
 echo ""
 echo "Agents deployed and ready to use!"

@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS Agent Registry records for the healthcare AgentCore gateways.
+
+Parameters:
+  BasicGatewayUrl:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/basic_gateway_url
+  PremiumGatewayUrl:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/premium_gateway_url
+  RecordTimestamp:
+    Type: String
+    Description: ISO-8601 timestamp recorded in the gateway descriptors.
+
+Resources:
+  HealthcareRegistry:
+    Type: AWS::AgentRegistry::Registry
+    Properties:
+      Name: healthcare-mcp-registry
+      Description: Discoverable endpoints for healthcare AgentCore gateways.
+      AuthorizerType: AWS_IAM
+      ApprovalConfiguration:
+        AutoApprovalRules:
+          - APPROVE_ALL
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+
+  BasicGatewayRecord:
+    Type: AWS::AgentRegistry::RegistryRecord
+    Properties:
+      RegistryId: !GetAtt HealthcareRegistry.RegistryId
+      Name: healthcare-mcp-gateway-basic
+      DisplayName: Healthcare MCP Gateway - Basic
+      Description: Healthcare Lambda Gateway - Basic Tier
+      RecordType: CUSTOM
+      Descriptors:
+        Custom:
+          Data: !Sub >-
+            {"tier":"basic","endpoint_url":"${BasicGatewayUrl}","updated_at":"${RecordTimestamp}"}
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumGatewayRecord:
+    Type: AWS::AgentRegistry::RegistryRecord
+    Properties:
+      RegistryId: !GetAtt HealthcareRegistry.RegistryId
+      Name: healthcare-mcp-gateway-premium
+      DisplayName: Healthcare MCP Gateway - Premium
+      Description: Healthcare Lambda Gateway - Premium Tier
+      RecordType: CUSTOM
+      Descriptors:
+        Custom:
+          Data: !Sub >-
+            {"tier":"premium","endpoint_url":"${PremiumGatewayUrl}","updated_at":"${RecordTimestamp}"}
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  RegistryIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /app/healthcare/agentcore/registry_id
+      Type: String
+      Value: !GetAtt HealthcareRegistry.RegistryId
+      Description: AWS Agent Registry identifier for gateway discovery.
+      Tags:
+        Environment: sample
+        Project: HealthcareAgentCore
+        Owner: !Ref AWS::AccountId
+        CostCenter: Healthcare
+
+Outputs:
+  RegistryId:
+    Value: !GetAtt HealthcareRegistry.RegistryId
+  RegistryArn:
+    Value: !GetAtt HealthcareRegistry.RegistryArn
+  BasicRecordId:
+    Value: !GetAtt BasicGatewayRecord.RecordId
+  PremiumRecordId:
+    Value: !GetAtt PremiumGatewayRecord.RecordId

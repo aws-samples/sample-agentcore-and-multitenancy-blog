@@ -1,0 +1,244 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Lambda and managed Knowledge Base targets for healthcare AgentCore gateways.
+
+Parameters:
+  BasicGatewayId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/basic_gateway_id
+  PremiumGatewayId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/premium_gateway_id
+  HealthcareLambdaArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/lambda_arn
+  BasicKnowledgeBaseId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/knowledge_base/basic_kb_id
+  PremiumKnowledgeBaseId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/knowledge_base/premium_kb_id
+
+Resources:
+  BasicLambdaTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      GatewayIdentifier: !Ref BasicGatewayId
+      Name: HealthcareLambda-Basic
+      Description: Healthcare Lambda tools for the basic tier.
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      MetadataConfiguration:
+        AllowedRequestHeaders:
+          - X-Tier
+          - X-Clinic-ID
+          - X-S3-Prefix
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !Ref HealthcareLambdaArn
+            ToolSchema:
+              InlinePayload:
+                - Name: patient_context
+                  Description: >
+                    Retrieve structured patient metadata including demographics,
+                    medical conditions, allergies, medications, and visit history.
+                    Automatically filtered to the requesting clinic for security.
+                    Use this to get patient background before reviewing clinical
+                    documents.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      patient_id:
+                        Type: string
+                        Description: Unique patient identifier (e.g., P12345)
+                      list_patients:
+                        Type: boolean
+                        Description: >
+                          If true, returns paginated list of all patients for the
+                          clinic instead of single patient lookup. Defaults to false
+                          if not provided
+                      limit:
+                        Type: integer
+                        Description: >
+                          Number of patients to return in list (defaults to 20 if not
+                          provided, maximum 100). Only used when list_patients=true
+                      last_evaluated_key:
+                        Type: object
+                        Description: >
+                          Pagination token from previous response to get next page.
+                          Only used when list_patients=true
+                      request_hour:
+                        Type: integer
+                        Description: >
+                          Current hour of the day (0-23) in the clinic's local
+                          timezone. Supplied by trusted application code for
+                          business hours policy enforcement.
+                    Required: []
+                - Name: clinic_config
+                  Description: >
+                    Retrieve clinic-specific configuration including specialty,
+                    available services, operating hours, and provider list. Use this
+                    to understand clinic capabilities and context when answering
+                    questions about services or scheduling.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      clinic_id:
+                        Type: string
+                        Description: >
+                          Specific clinic identifier (optional - defaults to
+                          requesting user's clinic)
+                    Required: []
+
+  PremiumLambdaTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      GatewayIdentifier: !Ref PremiumGatewayId
+      Name: HealthcareLambda-Premium
+      Description: Healthcare Lambda tools for the premium tier.
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      MetadataConfiguration:
+        AllowedRequestHeaders:
+          - X-Tier
+          - X-Clinic-ID
+          - X-S3-Prefix
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !Ref HealthcareLambdaArn
+            ToolSchema:
+              InlinePayload:
+                - Name: patient_context
+                  Description: >
+                    Retrieve structured patient metadata including demographics,
+                    medical conditions, allergies, medications, and visit history.
+                    Automatically filtered to the requesting clinic for security.
+                    Use this to get patient background before reviewing clinical
+                    documents.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      patient_id:
+                        Type: string
+                        Description: Unique patient identifier (e.g., P12345)
+                      list_patients:
+                        Type: boolean
+                        Description: >
+                          If true, returns paginated list of all patients for the
+                          clinic instead of single patient lookup. Defaults to false
+                          if not provided
+                      limit:
+                        Type: integer
+                        Description: >
+                          Number of patients to return in list (defaults to 20 if not
+                          provided, maximum 100). Only used when list_patients=true
+                      last_evaluated_key:
+                        Type: object
+                        Description: >
+                          Pagination token from previous response to get next page.
+                          Only used when list_patients=true
+                      request_hour:
+                        Type: integer
+                        Description: >
+                          Current hour of the day (0-23) in the clinic's local
+                          timezone. Supplied by trusted application code for
+                          business hours policy enforcement.
+                    Required: []
+                - Name: clinic_config
+                  Description: >
+                    Retrieve clinic-specific configuration including specialty,
+                    available services, operating hours, and provider list. Use this
+                    to understand clinic capabilities and context when answering
+                    questions about services or scheduling.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      clinic_id:
+                        Type: string
+                        Description: >
+                          Specific clinic identifier (optional - defaults to
+                          requesting user's clinic)
+                    Required: []
+
+  BasicKnowledgeBaseTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      GatewayIdentifier: !Ref BasicGatewayId
+      Name: HealthcareKB-Basic
+      Description: Healthcare managed Knowledge Base connector for the basic tier.
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Connector:
+            Source:
+              ConnectorId: bedrock-knowledge-bases
+            Configurations:
+              - Name: Retrieve
+                Description: >
+                  Search the clinic knowledge base for clinical documents. The
+                  tenant metadata filter is applied by the application.
+                ParameterValues:
+                  knowledgeBaseId: !Ref BasicKnowledgeBaseId
+                  retrievalConfiguration:
+                    managedSearchConfiguration:
+                      numberOfResults: 5
+                ParameterOverrides:
+                  - Path: $.retrievalQuery.text
+                    Description: The search query text.
+                    Visible: true
+                  - Path: $.retrievalConfiguration.managedSearchConfiguration.filter
+                    Description: >
+                      Metadata filter applied to the search. Set by the application
+                      to enforce clinic-level tenant isolation.
+                    Visible: true
+                  - Path: $.retrievalConfiguration.managedSearchConfiguration.numberOfResults
+                    Description: Number of results to retrieve (1-100).
+                    Visible: true
+
+  PremiumKnowledgeBaseTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      GatewayIdentifier: !Ref PremiumGatewayId
+      Name: HealthcareKB-Premium
+      Description: Healthcare managed Knowledge Base connector for the premium tier.
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Connector:
+            Source:
+              ConnectorId: bedrock-knowledge-bases
+            Configurations:
+              - Name: Retrieve
+                Description: >
+                  Search the clinic knowledge base for clinical documents. The
+                  tenant metadata filter is applied by the application.
+                ParameterValues:
+                  knowledgeBaseId: !Ref PremiumKnowledgeBaseId
+                  retrievalConfiguration:
+                    managedSearchConfiguration:
+                      numberOfResults: 5
+                ParameterOverrides:
+                  - Path: $.retrievalQuery.text
+                    Description: The search query text.
+                    Visible: true
+                  - Path: $.retrievalConfiguration.managedSearchConfiguration.filter
+                    Description: >
+                      Metadata filter applied to the search. Set by the application
+                      to enforce clinic-level tenant isolation.
+                    Visible: true
+                  - Path: $.retrievalConfiguration.managedSearchConfiguration.numberOfResults
+                    Description: Number of results to retrieve (1-100).
+                    Visible: true
+
+Outputs:
+  BasicLambdaTargetId:
+    Value: !GetAtt BasicLambdaTarget.TargetId
+  PremiumLambdaTargetId:
+    Value: !GetAtt PremiumLambdaTarget.TargetId
+  BasicKnowledgeBaseTargetId:
+    Value: !GetAtt BasicKnowledgeBaseTarget.TargetId
+  PremiumKnowledgeBaseTargetId:
+    Value: !GetAtt PremiumKnowledgeBaseTarget.TargetId
