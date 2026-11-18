@@ -23,7 +23,7 @@
                 },
                 "request_hour": {
                     "type": "integer",
-                    "description": "Current hour of the day (0-23) in the clinic's local timezone. Required for business hours policy enforcement. Use the current_time tool to determine this value."
+                    "description": "Current hour of the day (0-23) in the clinic's local timezone. Supplied by trusted application code for business hours policy enforcement."
                 }
             },
             "required": []

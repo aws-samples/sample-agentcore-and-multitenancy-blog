@@ -191,42 +191,28 @@ def get_gateway_target_names(gateway_id: str) -> dict:
 
 
 def get_kb_retrieve_permit_policy(gateway_arn: str, target_name: str) -> list:
-    """Generate Cedar policies that permit the managed KB Retrieve tool.
+    """Generate the Cedar policy that permits the managed KB Retrieve tool.
 
-    The engine runs in ENFORCE mode (default-deny), so without an explicit
-    permit the Retrieve tool would be blocked. Retrieval carries no
-    business-hours restriction here — document access hours for the basic tier
-    are enforced in the agent wrapper (and can be added as a Cedar rule later
-    if desired). Tenant isolation is enforced by the clinic_id filter the
-    application injects, not by this policy.
-
-    As with the other tools, AgentCore's validator rejects unconditional
-    permits as "overly permissive", so we split into two complementary policies
-    keyed on the presence of retrievalConfiguration in the input.
+    The managed connector declares ``retrievalQuery.text`` as required and
+    typed in its generated tool schema. AgentCore rejects policy conditions on
+    ``retrievalConfiguration`` because connector parameter values do not
+    declare a Cedar type. Requiring the typed query field keeps the policy
+    conditional while matching every valid Retrieve call.
 
     Action format: TargetName___ToolName (triple underscore per AgentCore schema)
     """
-    policy_with_config = f"""permit(
+    policy = f"""permit(
   principal is AgentCore::OAuthUser,
   action == AgentCore::Action::"{target_name}___Retrieve",
   resource == AgentCore::Gateway::"{gateway_arn}"
 )
 when {{
-  context.input has retrievalConfiguration
-}};"""
-
-    policy_without_config = f"""permit(
-  principal is AgentCore::OAuthUser,
-  action == AgentCore::Action::"{target_name}___Retrieve",
-  resource == AgentCore::Gateway::"{gateway_arn}"
-)
-when {{
-  !(context.input has retrievalConfiguration)
+  context.input has retrievalQuery &&
+  context.input.retrievalQuery has text
 }};"""
 
     return [
-        ("with_config", policy_with_config, "Permit KB Retrieve when retrievalConfiguration is provided"),
-        ("default", policy_without_config, "Permit KB Retrieve with default retrieval configuration"),
+        ("query", policy, "Permit KB Retrieve when the required query text is present"),
     ]
 
 
@@ -553,7 +539,9 @@ def delete(confirm):
         # Premium patient_context permit policies
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_patient_context_{tier}_with_patient_id")
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_patient_context_{tier}_list_mode_id")
-        # Managed KB Retrieve permit policies
+        # Managed KB Retrieve permit policy
+        delete_ssm_parameter(f"/app/healthcare/agentcore/policy_kb_retrieve_{tier}_id")
+        # Legacy split-policy keys
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_kb_retrieve_{tier}_with_config_id")
         delete_ssm_parameter(f"/app/healthcare/agentcore/policy_kb_retrieve_{tier}_default_id")
     # Legacy keys from premium-only setup

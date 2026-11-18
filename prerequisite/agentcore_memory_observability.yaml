@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudWatch Logs and X-Ray delivery for healthcare AgentCore Memory.
+
+Parameters:
+  BasicMemoryId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/memory/basic_id
+  BasicMemoryArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/memory/basic_arn
+  PremiumMemoryId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/memory/premium_id
+  PremiumMemoryArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/memory/premium_arn
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653]
+
+Resources:
+  BasicMemoryLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/bedrock-agentcore/memory/APPLICATION_LOGS/${BasicMemoryId}
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumMemoryLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/bedrock-agentcore/memory/APPLICATION_LOGS/${PremiumMemoryId}
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  BasicMemoryLogsSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${BasicMemoryId}-logs-source
+      LogType: APPLICATION_LOGS
+      ResourceArn: !Ref BasicMemoryArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  BasicMemoryTracesSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${BasicMemoryId}-traces-source
+      LogType: TRACES
+      ResourceArn: !Ref BasicMemoryArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumMemoryLogsSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${PremiumMemoryId}-logs-source
+      LogType: APPLICATION_LOGS
+      ResourceArn: !Ref PremiumMemoryArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  PremiumMemoryTracesSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub ${PremiumMemoryId}-traces-source
+      LogType: TRACES
+      ResourceArn: !Ref PremiumMemoryArn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  BasicMemoryLogsDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub ${BasicMemoryId}-logs-destination
+      DeliveryDestinationType: CWL
+      DestinationResourceArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${BasicMemoryLogGroup}
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumMemoryLogsDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub ${PremiumMemoryId}-logs-destination
+      DeliveryDestinationType: CWL
+      DestinationResourceArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${PremiumMemoryLogGroup}
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  MemoryTracesDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: healthcare-memory-traces-destination
+      DeliveryDestinationType: XRAY
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+
+  BasicMemoryLogsDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: BasicMemoryLogsSource
+    Properties:
+      DeliverySourceName: !Sub ${BasicMemoryId}-logs-source
+      DeliveryDestinationArn: !GetAtt BasicMemoryLogsDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  BasicMemoryTracesDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: BasicMemoryTracesSource
+    Properties:
+      DeliverySourceName: !Sub ${BasicMemoryId}-traces-source
+      DeliveryDestinationArn: !GetAtt MemoryTracesDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: basic
+
+  PremiumMemoryLogsDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: PremiumMemoryLogsSource
+    Properties:
+      DeliverySourceName: !Sub ${PremiumMemoryId}-logs-source
+      DeliveryDestinationArn: !GetAtt PremiumMemoryLogsDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+  PremiumMemoryTracesDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: PremiumMemoryTracesSource
+    Properties:
+      DeliverySourceName: !Sub ${PremiumMemoryId}-traces-source
+      DeliveryDestinationArn: !GetAtt MemoryTracesDestination.Arn
+      Tags:
+        - Key: Environment
+          Value: sample
+        - Key: Project
+          Value: HealthcareAgentCore
+        - Key: Owner
+          Value: !Ref AWS::AccountId
+        - Key: CostCenter
+          Value: Healthcare
+        - Key: Tier
+          Value: premium
+
+Outputs:
+  BasicMemoryLogGroupName:
+    Value: !Ref BasicMemoryLogGroup
+  PremiumMemoryLogGroupName:
+    Value: !Ref PremiumMemoryLogGroup

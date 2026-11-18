@@ -45,9 +45,9 @@ from .guardrail_hook import GuardrailHook, GuardrailInterventionError
 from .streamable_http_bearer import streamablehttp_client_with_bearer
 from .context import TenantContext
 from strands import Agent, tool
-from strands_tools import current_time
 from strands.models.openai import OpenAIModel
 from strands.tools.mcp import MCPClient
+from strands.vended_plugins.context_injector import ContextInjector
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,19 @@ logger = logging.getLogger(__name__)
 EASTERN = ZoneInfo("America/New_York")
 BUSINESS_HOUR_START = 8
 BUSINESS_HOUR_END = 18
+
+
+def _render_current_time_context(_context) -> str:
+    """Render trusted, current Eastern time for each fresh agent turn."""
+    now = datetime.now(EASTERN)
+    return (
+        "<current_time>"
+        "<timezone>America/New_York</timezone>"
+        f"<iso8601>{now.isoformat()}</iso8601>"
+        f"<hour>{now.hour}</hour>"
+        "</current_time>"
+    )
+
 
 # --- Tier configuration ---
 
@@ -303,14 +316,11 @@ def _build_system_prompt(
         patient_context_section = (
             "- patient_context: Retrieve patient metadata (demographics, conditions, allergies, medications)\n"
             "  * Automatically filtered to your clinic for security\n"
-            "  * IMPORTANT: You MUST include request_hour parameter with the current hour (0-23) from current_time.\n"
-            "    This is required by the business hours policy. Access is only permitted between 8am-6pm.\n"
-            "    Always call current_time first to get the current hour before calling patient_context."
+            "  * Business hours are enforced from trusted server time. Access is only permitted between 8am-6pm Eastern."
         )
         answering_guidelines = (
-            "1. Before accessing patient data, call current_time to get the current hour\n"
-            "2. Include request_hour (0-23) when calling patient_context — access is denied outside 8am-6pm\n"
-            "3. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information"
+            "1. Use patient_context to look up patient information during permitted business hours\n"
+            "2. Search the clinic's documents using retrieve_clinic_documents for relevant clinical information"
         )
     else:
         patient_context_section = (
@@ -337,8 +347,10 @@ AVAILABLE TOOLS:
   * Searches documents under: {s3_prefix}
 {patient_context_section}
 - clinic_config: Get clinic configuration (specialty, services, hours, providers)
-- current_time: Get current date and time
 {web_tool_section}
+CURRENT TIME CONTEXT:
+- The trusted <current_time> block is injected before each fresh user turn.
+- Basic-tier business hours are enforced separately using trusted server time.
 SECURITY RULES:
 1. You can ONLY access data for clinic: {clinic_id}
 2. All tools automatically filter to your clinic — you cannot access other clinics' data
@@ -535,8 +547,8 @@ class HealthcareAgent:
 
         patient_context_desc = (
             "Retrieve patient metadata (demographics, conditions, allergies, medications). "
-            "Filtered to your clinic. IMPORTANT: You MUST include request_hour (0-23) from current_time. "
-            "Access is only permitted between 8am-6pm by business hours policy."
+            "Filtered to your clinic. Business hours are enforced from trusted server time; "
+            "access is permitted between 8am-6pm Eastern."
             if enforce_business_hours
             else "Retrieve patient metadata (demographics, conditions, allergies, medications). "
             "Filtered to your clinic. Available 24/7 for premium tier."
@@ -547,7 +559,6 @@ class HealthcareAgent:
             patient_id: str = None,
             list_patients: bool = False,
             limit: int = 20,
-            request_hour: int = None,
         ) -> str:
             """Look up patient metadata with clinic isolation.
 
@@ -555,7 +566,6 @@ class HealthcareAgent:
                 patient_id: Unique patient identifier (e.g., P12345).
                 list_patients: If true, returns all patients for the clinic.
                 limit: Max patients to return in list mode.
-                request_hour: Current hour 0-23. Required for basic tier business hours policy. Get from current_time.
             """
             args = {}
             if patient_id is not None:
@@ -563,9 +573,11 @@ class HealthcareAgent:
             if list_patients:
                 args["list_patients"] = list_patients
                 args["limit"] = limit
-            # Only pass request_hour for basic tier — premium bypasses business hours policy
-            if enforce_business_hours and request_hour is not None:
-                args["request_hour"] = request_hour
+            # The Cedar policy requires request_hour for the basic tier. Derive
+            # it from trusted server time rather than accepting a model-supplied
+            # value that could bypass the business-hours authorization rule.
+            if enforce_business_hours:
+                args["request_hour"] = datetime.now(EASTERN).hour
             try:
                 _ensure_gateway_started()
                 result = gateway_ref.call_tool_sync(
@@ -618,8 +630,9 @@ class HealthcareAgent:
                     return _throttle_message("clinic configuration")
                 return f"Error accessing clinic configuration: {e}"
 
-        # Assemble tool list
-        all_tools = [retrieve_with_clinic, current_time, patient_context, clinic_config]
+        # Assemble tool list. Current time is injected as trusted context rather
+        # than exposed as a tool, following the strands-agents-tools migration.
+        all_tools = [retrieve_with_clinic, patient_context, clinic_config]
         if websearch_tool:
             all_tools.append(websearch_tool)
         if tools:
@@ -627,6 +640,13 @@ class HealthcareAgent:
 
         # --- Create Strands Agent ---
         hooks = [memory_hook] if memory_hook else []
+        plugins = [
+            ContextInjector(
+                _render_current_time_context,
+                name="healthcare-current-time",
+                trigger="userTurn",
+            )
+        ]
 
         # --- Bedrock Guardrails (tier-specific, via ApplyGuardrail API) ---
         self.guardrail_hook = None
@@ -647,6 +667,7 @@ class HealthcareAgent:
             system_prompt=self.system_prompt,
             tools=all_tools,
             hooks=hooks,
+            plugins=plugins,
         )
 
     def _log_usage(self, result) -> None:

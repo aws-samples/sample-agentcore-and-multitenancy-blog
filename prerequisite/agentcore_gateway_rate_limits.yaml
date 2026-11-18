@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Per-user and per-target rate limits for healthcare AgentCore gateways.
+
+Parameters:
+  BasicGatewayId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/basic_gateway_id
+  PremiumGatewayId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /app/healthcare/agentcore/premium_gateway_id
+
+Resources:
+  BasicPerUserRateLimit:
+    Type: AWS::BedrockAgentCore::GatewayRateLimit
+    Properties:
+      GatewayIdentifier: !Ref BasicGatewayId
+      DimensionKeys:
+        - $.context.jwt.sub
+      Description: "[healthcare-managed] basic per-user request/connection limit"
+      Entries:
+        - Dimensions:
+            "$.context.jwt.sub": "*"
+          Requests:
+            - Rate: 120
+              Period: minute
+          Connections:
+            - Rate: 5
+              Period: second
+
+  BasicPerTargetRateLimit:
+    Type: AWS::BedrockAgentCore::GatewayRateLimit
+    Properties:
+      GatewayIdentifier: !Ref BasicGatewayId
+      DimensionKeys:
+        - targetName
+      Description: "[healthcare-managed] basic per-target request limit"
+      Entries:
+        - Dimensions:
+            targetName: "*"
+          Requests:
+            - Rate: 2
+              Period: second
+
+  PremiumPerUserRateLimit:
+    Type: AWS::BedrockAgentCore::GatewayRateLimit
+    Properties:
+      GatewayIdentifier: !Ref PremiumGatewayId
+      DimensionKeys:
+        - $.context.jwt.sub
+      Description: "[healthcare-managed] premium per-user request/connection limit"
+      Entries:
+        - Dimensions:
+            "$.context.jwt.sub": "*"
+          Requests:
+            - Rate: 600
+              Period: minute
+          Connections:
+            - Rate: 20
+              Period: second
+
+  PremiumPerTargetRateLimit:
+    Type: AWS::BedrockAgentCore::GatewayRateLimit
+    Properties:
+      GatewayIdentifier: !Ref PremiumGatewayId
+      DimensionKeys:
+        - targetName
+      Description: "[healthcare-managed] premium per-target request limit"
+      Entries:
+        - Dimensions:
+            targetName: "*"
+          Requests:
+            - Rate: 10
+              Period: second
+
+Outputs:
+  BasicPerUserStatus:
+    Value: !GetAtt BasicPerUserRateLimit.Status
+  BasicPerTargetStatus:
+    Value: !GetAtt BasicPerTargetRateLimit.Status
+  PremiumPerUserStatus:
+    Value: !GetAtt PremiumPerUserRateLimit.Status
+  PremiumPerTargetStatus:
+    Value: !GetAtt PremiumPerTargetRateLimit.Status

@@ -15,8 +15,30 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-DEPLOYMENT_TYPE="${DEPLOYMENT_TYPE:-direct_code_deploy}"  # Default to direct_code_deploy, set to "container" for container deployment
-PYTHON_RUNTIME="${PYTHON_RUNTIME:-PYTHON_3_12}"  # For direct_code_deploy only
+# The AgentCore Runtimes use direct code deployment: the artifact is a zip in
+# S3 built by scripts/package_agent.sh. DEPLOYMENT_TYPE is retained because
+# configure_deployment.py still reads it.
+DEPLOYMENT_TYPE="${DEPLOYMENT_TYPE:-direct_code_deploy}"
+PYTHON_RUNTIME="${PYTHON_RUNTIME:-PYTHON_3_12}"
+
+# AgentCore Runtime platform version. V2 restores a prepared snapshot per
+# session instead of initializing the environment, which keeps cold starts
+# fast and consistent. Set to V1 to compare against the original behavior.
+AGENTCORE_PLATFORM_VERSION="${AGENTCORE_PLATFORM_VERSION:-V2}"
+
+# Must match the bucket and stack naming that scripts/prereq.sh uses.
+BUCKET_NAME="${BUCKET_NAME:-healthcare}"
+POLICY_ENGINE_STACK_NAME="${POLICY_ENGINE_STACK_NAME:-HealthcareStackAgentCorePolicyEngine}"
+GATEWAY_STACK_NAME="${GATEWAY_STACK_NAME:-HealthcareStackAgentCoreGateways}"
+GATEWAY_TARGET_STACK_NAME="${GATEWAY_TARGET_STACK_NAME:-HealthcareStackAgentCoreGatewayTargets}"
+POLICY_STACK_NAME="${POLICY_STACK_NAME:-HealthcareStackAgentCorePolicies}"
+RATE_LIMIT_STACK_NAME="${RATE_LIMIT_STACK_NAME:-HealthcareStackAgentCoreRateLimits}"
+GATEWAY_OBSERVABILITY_STACK_NAME="${GATEWAY_OBSERVABILITY_STACK_NAME:-HealthcareStackAgentCoreGatewayObservability}"
+MEMORY_STACK_NAME="${MEMORY_STACK_NAME:-HealthcareStackAgentCoreMemory}"
+MEMORY_OBSERVABILITY_STACK_NAME="${MEMORY_OBSERVABILITY_STACK_NAME:-HealthcareStackAgentCoreMemoryObservability}"
+REGISTRY_STACK_NAME="${REGISTRY_STACK_NAME:-HealthcareStackAgentRegistry}"
+GUARDRAIL_STACK_NAME="${GUARDRAIL_STACK_NAME:-HealthcareStackBedrockGuardrails}"
+RUNTIME_STACK_NAME="${RUNTIME_STACK_NAME:-HealthcareStackRuntime}"
 
 # Function to print colored output
 print_step() {
@@ -33,6 +55,46 @@ print_error() {
 
 print_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+# Deploy one CloudFormation-owned AgentCore component. Each component uses its
+# own stack so it can be updated or rolled back without replacing unrelated
+# resources. Cross-stack dependencies are passed through SSM parameters.
+deploy_component_stack() {
+    local stack_name="$1"
+    local template_file="$2"
+    shift 2
+
+    print_step "Deploying stack ${stack_name}..."
+    aws cloudformation deploy \
+      --stack-name "$stack_name" \
+      --template-file "$template_file" \
+      --region "$REGION" \
+      --no-fail-on-empty-changeset \
+      "$@"
+}
+
+# AgentCore trace delivery to X-Ray requires CloudWatch Logs as the account's
+# trace segment destination. This is an account-level setting rather than an
+# AgentCore resource, and CloudFormation cannot safely adopt it when it is
+# already enabled, so keep this single idempotent control-plane call.
+ensure_xray_cloudwatch_destination() {
+    local destination
+    local status
+    destination=$(aws xray get-trace-segment-destination \
+      --region "$REGION" --query 'Destination' --output text 2>/dev/null || true)
+    status=$(aws xray get-trace-segment-destination \
+      --region "$REGION" --query 'Status' --output text 2>/dev/null || true)
+
+    if [ "$destination" = "CloudWatchLogs" ] && [ "$status" = "ACTIVE" ]; then
+        print_info "CloudWatch Logs is already the active X-Ray trace destination."
+        return
+    fi
+
+    print_step "Enabling CloudWatch Logs as the X-Ray trace destination..."
+    aws xray update-trace-segment-destination \
+      --destination CloudWatchLogs \
+      --region "$REGION" >/dev/null
 }
 
 # --- Pre-flight checks ---
@@ -61,7 +123,10 @@ fi
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
 AWS_IDENTITY=$(aws sts get-caller-identity --query 'Arn' --output text)
+REGION=$(aws configure get region)
+FULL_BUCKET_NAME="${BUCKET_NAME}-${AWS_ACCOUNT_ID}"
 print_info "AWS Account: $AWS_ACCOUNT_ID"
+print_info "AWS Region: $REGION"
 print_info "AWS Identity: $AWS_IDENTITY"
 if [ -n "$AWS_PROFILE" ]; then
     print_info "AWS Profile: $AWS_PROFILE"
@@ -96,106 +161,70 @@ fi
 print_step "Updating configuration with created resources..."
 python scripts/configure_deployment.py "$DEPLOYMENT_TYPE"
 
-print_step "Listing SSM parameters..."
-chmod +x scripts/list_ssm_parameters.sh
-./scripts/list_ssm_parameters.sh
-
 print_warning "Please ensure all resource names are prefixed with 'healthcare'"
 
-print_step "Creating AgentCore Gateways (Basic and Premium)..."
-python scripts/agentcore_gateway.py create-all
+# ----------------------------------------------------------------------------
+# AgentCore control-plane resources (infrastructure as code)
+#
+# Each resource category has a separate stack. The deployment order follows
+# the actual dependencies: policy engine -> gateways -> targets -> policies.
+# Memory and Registry use their own stacks. The OAuth2 credential provider is
+# intentionally deferred until its usage and secret source are confirmed.
+# ----------------------------------------------------------------------------
 
-print_step "Publishing MCP gateway records to Agent Registry..."
+deploy_component_stack \
+  "$POLICY_ENGINE_STACK_NAME" \
+  prerequisite/agentcore_policy_engine.yaml
+
+deploy_component_stack \
+  "$GATEWAY_STACK_NAME" \
+  prerequisite/agentcore_gateways.yaml
+
+deploy_component_stack \
+  "$GATEWAY_TARGET_STACK_NAME" \
+  prerequisite/agentcore_gateway_targets.yaml
+
+deploy_component_stack \
+  "$POLICY_STACK_NAME" \
+  prerequisite/agentcore_policies.yaml
+
+deploy_component_stack \
+  "$RATE_LIMIT_STACK_NAME" \
+  prerequisite/agentcore_gateway_rate_limits.yaml
+
+ensure_xray_cloudwatch_destination
+
+deploy_component_stack \
+  "$GATEWAY_OBSERVABILITY_STACK_NAME" \
+  prerequisite/agentcore_gateway_observability.yaml
+
+REGISTRY_RECORD_TIMESTAMP=$(/bin/date -u +"%Y-%m-%dT%H:%M:%SZ")
+deploy_component_stack \
+  "$REGISTRY_STACK_NAME" \
+  prerequisite/agent_registry.yaml \
+  --parameter-overrides RecordTimestamp="$REGISTRY_RECORD_TIMESTAMP"
+
+# AWS::AgentRegistry::RegistryRecord creates a DRAFT revision. Submission is a
+# separate Agent Registry lifecycle operation with no CloudFormation property.
+# The stack's APPROVE_ALL rule approves each submitted revision automatically.
+print_step "Submitting Agent Registry records for approval..."
 python scripts/registry_publisher.py
 
-print_step "Configuring AgentCore Gateway rate limits (per-user and per-target)..."
-python scripts/agentcore_rate_limits.py create
+deploy_component_stack \
+  "$MEMORY_STACK_NAME" \
+  prerequisite/agentcore_memory.yaml
 
-print_step "Creating AgentCore Policy Engine (Business Hours Enforcement)..."
-python scripts/agentcore_policy.py create
+deploy_component_stack \
+  "$MEMORY_OBSERVABILITY_STACK_NAME" \
+  prerequisite/agentcore_memory_observability.yaml
 
-print_step "Creating Bedrock Guardrails (Basic and Premium)..."
-python scripts/bedrock_guardrails.py create
+deploy_component_stack \
+  "$GUARDRAIL_STACK_NAME" \
+  prerequisite/bedrock_guardrails.yaml
 
-print_step "Setting up Cognito Credential Provider..."
-python scripts/cognito_credentials_provider.py create --name healthcare-cognito-provider
-
-print_step "Creating Memory Resources (Basic and Premium)..."
-python scripts/agentcore_memory.py create-all
-
-print_step "Enabling Memory Observability for cost tracking..."
-python scripts/setup_memory_observability.py enable-all || print_warning "Memory observability setup had issues — this is non-blocking. You can retry with: python scripts/setup_memory_observability.py enable-all"
-
-print_step "Verifying Memory Observability configuration..."
-python scripts/setup_memory_observability.py verify-all || echo -e "${YELLOW}[WARNING]${NC} Memory observability verification incomplete — deliveries may take time to propagate. This is non-blocking."
-
-print_step "Getting runtime role from SSM..."
-RUNTIME_ROLE=$(aws ssm get-parameter --name /app/healthcare/agentcore/runtime_iam_role --query 'Parameter.Value' --output text)
-
-if [ -z "$RUNTIME_ROLE" ]; then
-    print_error "Could not retrieve runtime IAM role from SSM parameters"
-    exit 1
-fi
-
-print_info "Runtime IAM Role: $RUNTIME_ROLE"
-
-print_step "Getting Cognito configuration for JWT authorization..."
-COGNITO_DISCOVERY_URL=$(aws ssm get-parameter --name /app/healthcare/agentcore/cognito_discovery_url --query 'Parameter.Value' --output text)
-COGNITO_MACHINE_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/machine_client_id --query 'Parameter.Value' --output text)
-COGNITO_WEB_CLIENT_ID=$(aws ssm get-parameter --name /app/healthcare/agentcore/web_client_id --query 'Parameter.Value' --output text)
-
-if [ -z "$COGNITO_DISCOVERY_URL" ] || [ -z "$COGNITO_MACHINE_CLIENT_ID" ] || [ -z "$COGNITO_WEB_CLIENT_ID" ]; then
-    print_error "Could not retrieve Cognito configuration from SSM parameters"
-    exit 1
-fi
-
-print_info "Cognito Discovery URL: $COGNITO_DISCOVERY_URL"
-print_info "Cognito Machine Client ID: $COGNITO_MACHINE_CLIENT_ID"
-print_info "Cognito Web Client ID: $COGNITO_WEB_CLIENT_ID"
-
-# Build JWT authorizer configuration with both allowedClients (for access tokens) and allowedAudience (for ID tokens)
-# AUTHORIZER_CONFIG="{\"customJWTAuthorizer\":{\"discoveryUrl\":\"$COGNITO_DISCOVERY_URL\",\"allowedClients\":[\"$COGNITO_MACHINE_CLIENT_ID\",\"$COGNITO_WEB_CLIENT_ID\"],\"allowedAudience\":[\"$COGNITO_WEB_CLIENT_ID\"]}}"
-AUTHORIZER_CONFIG="{\"customJWTAuthorizer\":{\"discoveryUrl\":\"$COGNITO_DISCOVERY_URL\",\"allowedAudience\":[\"$COGNITO_WEB_CLIENT_ID\"]}}"
-
-print_step "Configuring basic tier agent with JWT authorization..."
-if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_basic \
-      --deployment-type direct_code_deploy \
-      --runtime "$PYTHON_RUNTIME" \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-else
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_basic \
-      --deployment-type container \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-fi
-
-print_step "Configuring premium tier agent with JWT authorization..."
-if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_premium \
-      --deployment-type direct_code_deploy \
-      --runtime "$PYTHON_RUNTIME" \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-else
-    agentcore configure --entrypoint main.py \
-      -er "$RUNTIME_ROLE" \
-      --name healthcare_premium \
-      --deployment-type container \
-      --authorizer-config "$AUTHORIZER_CONFIG" \
-      --request-header-allowlist "Authorization" \
-      --non-interactive
-fi
+# The AgentCore OAuth2 credential provider is intentionally not created here.
+# It is currently unused, and its Cognito client secret source requires a
+# separate design decision before it can be managed safely by CloudFormation.
 
 print_step "Creating test users with clinic assignments..."
 python scripts/create_test_users.py
@@ -206,21 +235,84 @@ else
     print_warning "Some test users may have failed to create. Check output above."
 fi
 
-print_step "Deploying basic tier agent to AWS..."
-agentcore deploy --agent healthcare_basic
+# ----------------------------------------------------------------------------
+# AgentCore Runtimes (infrastructure as code)
+#
+# The runtimes are declared in prerequisite/agentcore_runtime.yaml rather than
+# created with 'agentcore configure' + 'agentcore deploy'. Two reasons:
+#
+#   1. The bedrock-agentcore-starter-toolkit is no longer supported, and its
+#      successor (@aws/agentcore) is a different toolchain entirely.
+#   2. Neither CLI can set platformVersion, so neither can create a V2 runtime.
+#      AWS::BedrockAgentCore::Runtime exposes PlatformVersion directly.
+#
+# The template reads the execution role and Cognito settings straight from SSM,
+# which is why the shell no longer fetches them and passes them along.
+# ----------------------------------------------------------------------------
 
-print_step "Deploying premium tier agent to AWS..."
-agentcore deploy --agent healthcare_premium
+print_step "Packaging agent bundle for AgentCore Runtime..."
+CODE_PREFIX=$(scripts/package_agent.sh "$FULL_BUCKET_NAME")
+
+if [ -z "$CODE_PREFIX" ]; then
+    print_error "Agent packaging failed; no bundle key returned"
+    exit 1
+fi
+
+print_info "Agent bundle: s3://$FULL_BUCKET_NAME/$CODE_PREFIX"
+
+print_step "Deploying AgentCore Runtimes (platform version ${AGENTCORE_PLATFORM_VERSION})..."
+print_info "A V2 runtime prepares and snapshots its environment, so this takes"
+print_info "several minutes per runtime rather than seconds."
+
+deploy_component_stack \
+  "$RUNTIME_STACK_NAME" \
+  prerequisite/agentcore_runtime.yaml \
+  --parameter-overrides \
+    CodeBucket="$FULL_BUCKET_NAME" \
+    CodePrefix="$CODE_PREFIX" \
+    PlatformVersion="$AGENTCORE_PLATFORM_VERSION" \
+    PythonRuntime="$PYTHON_RUNTIME"
+
+print_step "Verifying runtime platform version..."
+for tier in basic premium; do
+    runtime_id=$(aws ssm get-parameter \
+      --name "/app/healthcare/agentcore/${tier}_agent_id" \
+      --query 'Parameter.Value' --output text 2>/dev/null)
+
+    if [ -n "$runtime_id" ]; then
+        # Read back through Cloud Control, which uses the resource schema and
+        # therefore reports PlatformVersion even on AWS CLI versions whose
+        # bedrock-agentcore-control model predates the field.
+        details=$(aws cloudcontrol get-resource \
+          --type-name AWS::BedrockAgentCore::Runtime \
+          --identifier "$runtime_id" \
+          --region "$REGION" \
+          --query 'ResourceDescription.Properties' --output text 2>/dev/null)
+        print_info "$tier: $(echo "$details" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(f"{d[\"AgentRuntimeName\"]} status={d[\"Status\"]} platformVersion={d.get(\"PlatformVersion\",\"V1\")}")' 2>/dev/null || echo "$runtime_id")"
+    fi
+done
+
+print_step "Listing deployed SSM parameters..."
+chmod +x scripts/list_ssm_parameters.sh
+./scripts/list_ssm_parameters.sh
 
 print_step "Deployment completed successfully!"
 echo ""
 echo "🎉 Multi-tenant AgentCore deployment is ready!"
 echo ""
 echo "Deployment Configuration:"
-echo "  Type: $DEPLOYMENT_TYPE"
-if [ "$DEPLOYMENT_TYPE" = "direct_code_deploy" ]; then
-    echo "  Runtime: $PYTHON_RUNTIME"
-fi
+echo "  Type: direct code deployment (zip in S3)"
+echo "  Python runtime: $PYTHON_RUNTIME"
+echo "  Platform version: $AGENTCORE_PLATFORM_VERSION"
+echo "  Policy engine stack: $POLICY_ENGINE_STACK_NAME"
+echo "  Gateway stack: $GATEWAY_STACK_NAME"
+echo "  Gateway target stack: $GATEWAY_TARGET_STACK_NAME"
+echo "  Policy stack: $POLICY_STACK_NAME"
+echo "  Rate limit stack: $RATE_LIMIT_STACK_NAME"
+echo "  Memory stack: $MEMORY_STACK_NAME"
+echo "  Guardrail stack: $GUARDRAIL_STACK_NAME"
+echo "  Registry stack: $REGISTRY_STACK_NAME"
+echo "  Runtime stack: $RUNTIME_STACK_NAME"
 echo ""
 echo "Agents deployed and ready to use!"
 echo ""

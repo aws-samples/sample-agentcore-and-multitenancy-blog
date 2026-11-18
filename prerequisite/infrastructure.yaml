@@ -168,6 +168,18 @@ Resources:
                   - bedrock-agentcore:InvokeGateway
                 Resource:
                   - !Sub arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*
+              - Sid: AgentRegistryDiscovery
+                Effect: Allow
+                Action:
+                  - agent-registry:ListDiscoverableRegistryRecords
+                Resource:
+                  - !Sub arn:${AWS::Partition}:agent-registry:${AWS::Region}:${AWS::AccountId}:registry/*
+              - Sid: AgentRegistryRecordRead
+                Effect: Allow
+                Action:
+                  - agent-registry:GetDiscoverableRegistryRecord
+                Resource:
+                  - !Sub arn:${AWS::Partition}:agent-registry:${AWS::Region}:${AWS::AccountId}:registry/*/record/*
               - Sid: BedrockGuardrailAccess
                 Effect: Allow
                 Action:
